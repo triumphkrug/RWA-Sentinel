@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "asset-registry",
+    "attestation-store",
+    "tests",
+]
+resolver = "2"

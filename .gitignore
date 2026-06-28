@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+*.env.local
+coverage/
+.nyc_output/
+*.tsbuildinfo
+*.js.map
+target/
+*.wasm
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
