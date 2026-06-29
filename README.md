@@ -54,7 +54,11 @@ RWA-Sentinel is a decentralized AI agent that bridges off-chain real-world asset
 
 The system addresses a specific gap in RWA tokenization: **the oracle problem for trust, not price.** Unlike Chainlink-style price-feed oracles, RWA-Sentinel attests to the *validity and trustworthiness* of underlying assets through multi-factor analysis. Each attestation carries an expiration timestamp; DeFi protocols can query whether it is still valid before allowing collateral operations.
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Problem
 
@@ -78,7 +82,11 @@ These are not theoretical concerns. The collapse of several centralized RWA plat
 
 No comparable system on Casper (or other chains we reviewed) combines all three: transparent scoring + expiring attestations + challenge-with-stake.
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Pipeline Overview
 
@@ -100,7 +108,11 @@ External Data ──▶ Collector ──▶ Validator ──▶ Publisher ──
 3. **Publisher** — batches invoices with `S ≥ threshold` into a single `batch_attest` transaction, minting a time-limited attestation NFT.
 4. **Fallback** — caches recent scores for fast retrieval; detects data staleness and triggers re-scoring.
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Quickstart
 
@@ -136,7 +148,11 @@ docker-compose up
 > [!TIP]
 > To connect to Casper testnet, update `NODE_URL` and `DEPLOYER_KEY_PATH` in `.env`. See [Configuration](#configuration) for all options.
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Architecture
 
@@ -170,7 +186,11 @@ flowchart TD
 
 Full architecture diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Smart Contracts
 
@@ -212,7 +232,11 @@ cargo build --release --target wasm32-unknown-unknown --no-default-features
 
 Security audit: 18 findings addressed. Average risk score reduced from 4/10 to 2/10. Details in [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Scoring Model
 
@@ -240,7 +264,11 @@ Assets with `S ≥ 65` (configurable) proceed to on-chain publication. The facto
 
 This provides an immutable audit trail without revealing sensitive asset data.
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Configuration
 
@@ -259,7 +287,11 @@ All options set via environment variables (validated with [zod](https://zod.dev/
 
 See `.env.example` for a copy-paste template.
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Testing
 
@@ -282,7 +314,11 @@ cd contracts/tests && cargo test --release
 
 CI runs on every push: TypeScript lint (ESLint + Prettier) → Jest → WASM build → cargo test.
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Scope: Implemented vs Planned
 
@@ -301,7 +337,11 @@ CI runs on every push: TypeScript lint (ESLint + Prettier) → Jest → WASM bui
 | Mainnet deployment | 🗺 Planned | Pending external audit |
 | Real-time external data feeds | 🗺 Planned | Currently uses synthetic/demo data |
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## Prior Art
 
@@ -314,7 +354,11 @@ CI runs on every push: TypeScript lint (ESLint + Prettier) → Jest → WASM bui
 | Casper-native | ✅ | ❌ | ❌ | — |
 | *Where they're stronger* | — | ✅ Battle-tested infra, wide oracle network | ✅ Mature document protocol, real TVL | ✅ Legal enforceability |
 
+<div align="right">
+
 [![][back-to-top]](#readme-top)
+
+</div>
 
 ## SDK and MCP
 

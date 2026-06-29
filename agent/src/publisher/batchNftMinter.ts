@@ -28,9 +28,7 @@ export class BatchNftMinter {
    */
   mintBatchNft(batchId: string, assetIds: string[]): NftStatus {
     // Step 1: Compute metadata hash for the batch
-    const metadataHash = createHash('sha256')
-      .update(assetIds.join(','))
-      .digest('hex');
+    const metadataHash = createHash('sha256').update(assetIds.join(',')).digest('hex');
 
     // Step 2: Calculate validity window
     const now = new Date();

@@ -68,7 +68,10 @@ async function main(): Promise<void> {
     console.log(`[sentinel] Published batch ${publishResult.batchId} (${publishResult.status})`);
 
     // Step 8: Mint batch NFT
-    const nft = nftMinter.mintBatchNft(publishResult.batchId, passing.map((s) => s.invoiceId));
+    const nft = nftMinter.mintBatchNft(
+      publishResult.batchId,
+      passing.map((s) => s.invoiceId),
+    );
     console.log(`[sentinel] Minted NFT for batch ${nft.batchId}, valid until ${nft.validUntil}`);
 
     // Step 9: Cache results
