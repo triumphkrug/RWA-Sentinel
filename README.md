@@ -196,4 +196,4 @@ Built for the [Casper Agentic Buildathon](https://devfolio.co/casper-agentic-bui
 
 ## License
 
-Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details.
