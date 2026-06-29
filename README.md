@@ -4,24 +4,30 @@
 
 ---
 
+| | |
+|---|---|
+| ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg) | Licensed under Apache 2.0 |
+| ![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-green.svg) | Requires Node.js 20+ |
+| ![Casper](https://img.shields.io/badge/Casper-2.x_(Zug_Consensus)-red.svg) | Casper 2.x with Zug |
+| ![Tests](https://img.shields.io/badge/Jest-passing-brightgreen.svg) | Unit and integration tests |
+
 ## Abstract
 
 RWA-Sentinel is a decentralized AI agent that bridges off-chain Real-World Assets (RWA) — such as invoices, trade receivables, and supply chain documents — with on-chain trust attestations. It autonomously collects, validates, scores, and publishes asset data to Casper Network smart contracts, producing time-limited attestation NFTs that DeFi protocols can consume as verified data feeds.
 
-The system addresses a fundamental challenge in RWA tokenization: the oracle problem. Unlike traditional price-feed oracles, RWA-Sentinel operates as a _trust oracle_ — it does not provide pricing; instead, it attests to the validity and trustworthiness of underlying assets through multi-factor analysis.
+The system addresses a fundamental challenge in RWA tokenization: **the oracle problem**. Unlike traditional price-feed oracles, RWA-Sentinel operates as a _trust oracle_. It does not provide pricing; instead, it attests to the validity and trustworthiness of underlying assets through multi-factor analysis.
 
-## Table of Contents
+## Problem Statement
 
-- [Architecture](#architecture)
-- [Pipeline](#pipeline)
-- [Smart Contracts](#smart-contracts)
-- [Getting Started](#getting-started)
-- [Configuration](#configuration)
-- [Testing](#testing)
-- [Technical Design](#technical-design)
-- [License](#license)
+Current RWA tokenization relies on centralized custodians or manual verification processes. This creates three critical issues:
 
-## Architecture
+1. **Trust Concentration** — a single entity decides which assets are valid
+2. **Latency** — manual review introduces hours-to-days delays
+3. **Opacity** — verification criteria are often opaque to token holders
+
+## Solution
+
+RWA-Sentinel introduces a decentralized trust attestation pipeline:
 
 ```
                     ┌─────────────────────────────────────┐
@@ -39,34 +45,36 @@ The system addresses a fundamental challenge in RWA tokenization: the oracle pro
                     └─────────────────────────────────────┘
 ```
 
+Each attestation carries an expiration timestamp. DeFi protocols can query whether an attestation is still valid before allowing collateral operations.
+
 ## Pipeline
 
 The Sentinel agent follows a four-stage pipeline:
 
-### 1. Collection (`agent/src/collector/`)
+### Stage 1: Collection (`agent/src/collector/`)
 
 Ingests invoice data from external APIs or generates demo data for testing. Each invoice is hashed (SHA-256) for deduplication and later on-chain anchoring.
 
-### 2. Validation (`agent/src/validator/`)
+### Stage 2: Validation (`agent/src/validator/`)
 
 Scores each invoice against six weighted factors:
 
 | Factor | Weight | Description |
 |--------|--------|-------------|
-| Issuer History | 25% | Track record of the entity issuing the invoice |
+| Issuer History | 25% | Track record of the invoicing entity |
 | Debtor Rating | 20% | Payment reliability of the debtor |
-| Amount Reasonableness | 15% | Whether the amount is within expected bounds |
+| Amount Reasonableness | 15% | Whether the amount falls within expected bounds |
 | Time Validity | 15% | Freshness of issue date and proximity to due date |
 | Detail Level | 10% | Completeness of line items and metadata |
-| Cross-Reference | 15% | Corroboration against external sources |
+| Cross-Reference | 15% | Corroboration against external data sources |
 
-A composite trust score (0–100) determines whether the asset passes the attestation threshold.
+A composite trust score S ∈ [0, 100] is computed as the weighted average. Assets where S ≥ threshold (default: 65) proceed to Stage 3.
 
-### 3. Publishing (`agent/src/publisher/`)
+### Stage 3: Publishing (`agent/src/publisher/`)
 
-Approved attestations are submitted to Casper in batches via the `batch_attest` entry point on the `attestation-store` contract. Each batch produces a time-limited NFT that auto-invalidates after the configured validity window.
+Approved attestations are submitted to Casper in batches via `batch_attest`. Each batch produces a time-limited NFT that auto-invalidates after the configured validity window (default: 24h).
 
-### 4. Fallback (`agent/src/fallback/`)
+### Stage 4: Fallback (`agent/src/fallback/`)
 
 An in-memory cache stores recent scores for fast retrieval. A staleness detector monitors data age and triggers re-scoring when thresholds are exceeded.
 
@@ -74,25 +82,29 @@ An in-memory cache stores recent scores for fast retrieval. A staleness detector
 
 ### Asset Registry (`contracts/asset-registry/`)
 
-- `register_asset` — Register a new RWA with metadata
-- `update_asset` — Update asset details after re-evaluation
-- `get_asset` — Query asset by ID
+| Entry Point | Parameters | Description |
+|-------------|-----------|-------------|
+| `register_asset` | owner, asset_type, metadata_hash | Register a new RWA with metadata |
+| `update_asset` | asset_id, new_metadata_hash | Update asset details (owner only) |
+| `get_asset` | asset_id | Query asset record by ID |
 
 ### Attestation Store (`contracts/attestation-store/`)
 
-- `batch_attest` — Submit a batch of scored attestations
-- `get_attestation` — Query attestation by asset ID
-- `challenge` — Challenge an existing attestation (rate-limited)
-- `stake_oracle` — Stake CSPR as an oracle operator
-- `slash_oracle` — Slash a misbehaving oracle's stake
-- `dao_approve` — DAO governance approval for high-value attestations
-- `invalidate_nft` — Revoke an attestation NFT
+| Entry Point | Parameters | Description |
+|-------------|-----------|-------------|
+| `batch_attest` | asset_ids, trust_scores, evidence_hashes, ... | Submit a batch of scored attestations |
+| `get_attestation` | asset_id | Query attestation by asset ID |
+| `challenge` | asset_id, counter_evidence_hash | Challenge an existing attestation |
+| `stake_oracle` | source_purse, amount | Stake CSPR as an oracle operator |
+| `slash_oracle` | oracle | Slash a misbehaving oracle's stake |
+| `dao_approve` | asset_id, oracle_sigs | DAO governance approval for challenges |
+| `invalidate_nft` | batch_id | Revoke an attestation NFT |
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js ≥ 20
+- Node.js ≥ 20 and npm
 - Rust toolchain (for contract compilation)
 - Casper node access (testnet or local NCTL)
 
@@ -114,7 +126,7 @@ npm start
 
 ### Demo Mode
 
-The agent runs in demo mode by default, generating synthetic invoices and scoring them locally without requiring a Casper node connection:
+The agent runs in demo mode by default, generating synthetic invoices and scoring them locally:
 
 ```bash
 npm start
@@ -125,52 +137,70 @@ npm start
 # [sentinel] Pipeline complete. Cache size: 10
 ```
 
+### Docker
+
+```bash
+cp .env.example .env
+docker-compose up
+# Agent + dashboard available at http://localhost:3000
+```
+
 ## Configuration
 
-Configuration is validated at startup using [zod](https://zod.dev/). All values can be set via environment variables:
+All values are set via environment variables (validated with [zod](https://zod.dev/)):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NODE_URL` | `https://node.integration.cspr.cloud/` | Casper node RPC URL |
+| `NODE_URL` | `https://node.integration.cspr.cloud/` | Casper node RPC endpoint |
 | `CHAIN_NAME` | `casper-test` | Network chain name |
-| `DEPLOYER_KEY_PATH` | `./keys/secret_key.pem` | Path to deployer's secret key |
+| `DEPLOYER_KEY_PATH` | `./keys/secret_key.pem` | Path to deployer secret key |
 | `BATCH_SIZE` | `10` | Maximum attestations per batch |
 | `CHALLENGE_RATE_LIMIT` | `3` | Max challenges per block |
-| `NFT_VALIDITY_HOURS` | `24` | Attestation NFT lifetime |
+| `NFT_VALIDITY_HOURS` | `24` | Attestation NFT lifetime (hours) |
 | `STALE_THRESHOLD_MINUTES` | `30` | Data staleness threshold |
 | `DASHBOARD_PORT` | `3000` | Dashboard HTTP port |
 
 ## Testing
 
 ```bash
-# Run all tests
+# All tests
 npx jest
 
-# Run unit tests only
+# Unit tests
 npx jest tests/invoiceCollector.test.ts
 npx jest tests/localScorer.test.ts
 
-# Run integration tests
+# Integration tests
 npx jest tests/integration/
+
+# Contract tests
+cd contracts/tests && cargo test
 ```
 
 ## Technical Design
 
 ### Scoring Model
 
-The local scorer implements a weighted factor analysis model. Each factor is independently evaluated and produces a score (0–100). The composite trust score is the weighted average across all factors. Factors are modular and can be extended by implementing the `FactorDefinition` interface.
+The local scorer implements a weighted factor analysis model. Each factor independently evaluates the asset and produces a score in [0, 100]. The composite trust score is:
+
+```
+S = Σ(w_i × s_i) / Σ(w_i)
+```
+
+where `w_i` is the weight and `s_i` is the individual factor score. Factors are modular; new factors can be added by implementing the `FactorDefinition` interface.
 
 ### On-Chain Anchoring
 
-Every scored invoice produces two deterministic hashes:
-1. **Factors Hash** — SHA-256 of all factor names, scores, and weights
-2. **Evidence Hash** — SHA-256 of `rawHash:factorsHash`
+Every scored asset produces two deterministic hashes:
 
-These hashes are stored on-chain via the attestation-store contract, providing an immutable audit trail without revealing sensitive invoice data.
+1. **Factors Hash** — `SHA-256(factor_names || scores || weights)`
+2. **Evidence Hash** — `SHA-256(rawHash || factorsHash)`
+
+These hashes are stored on-chain via the attestation-store contract, providing an immutable audit trail without revealing sensitive asset data.
 
 ### Staleness Detection
 
-The agent tracks the last refresh timestamp for each data key. When a key's age exceeds the configurable threshold, it is flagged for re-collection and re-scoring. This ensures attestation freshness in volatile markets.
+The agent tracks the last refresh timestamp for each data key. When a key's age exceeds the configurable threshold, it is flagged for re-collection and re-scoring. This mechanism ensures attestation freshness in volatile markets.
 
 ## Project Structure
 
@@ -178,22 +208,31 @@ The agent tracks the last refresh timestamp for each data key. When a key's age 
 RWA-Sentinel/
 ├── agent/src/
 │   ├── collector/         # Invoice ingestion and dedup
-│   ├── validator/         # Scoring and cross-reference
+│   ├── validator/         # Scoring engine and cross-reference
 │   ├── publisher/         # Casper submission and NFT minting
 │   ├── fallback/          # Cache and staleness detection
 │   ├── config.ts          # Validated configuration
-│   └── index.ts           # Entry point
+│   └── index.ts           # Pipeline entry point
 ├── contracts/
 │   ├── asset-registry/    # RWA registration contract
-│   └── attestation-store/ # Attestation and NFT contract
+│   └── attestation-store/ # Attestation, staking, DAO contract
+├── dashboard/             # Express.js monitoring dashboard
 ├── tests/                 # Unit and integration tests
+├── landing/               # Project landing page
+├── docs/                  # Architecture and deployment docs
 └── docker-compose.yaml    # Container orchestration
 ```
 
-## Casper Agentic Buildathon 2026
+## References
 
-Built for the [Casper Agentic Buildathon](https://devfolio.co/casper-agentic-buildathon). Track: Agentic Infrastructure.
+- Casper Network 2.x Documentation: https://docs.casper.network/
+- CEP-88 Native Events: https://github.com/casper-network/ceps/blob/master/text/0088-native-events.md
+
+
+## Context
+
+This project was submitted to the [Casper Friendly Buildathon](https://dorahacks.io/hackathon/casper-the-friendly-buildathon) (2026 cohort) under the Agentic Infrastructure track.
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+Licensed under the Apache License, Version 2.0 — see [LICENSE](LICENSE) for details.
