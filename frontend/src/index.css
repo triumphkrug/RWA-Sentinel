@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { background: #0d1b2a; overflow-x: hidden; }
+  :focus-visible { outline: 2px solid #f4a261; outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0d1b2a; }
+  ::-webkit-scrollbar-thumb { background: #1b3050; border-radius: 3px; }
+}
+
+@layer components {
+  .rwa-section { @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .rwa-card {
+    @apply bg-rwa-card border border-rwa-border rounded-xl p-6 transition-all duration-300;
+  }
+  .rwa-card:hover {
+    border-color: rgba(244,162,97,0.25);
+    box-shadow: 0 0 20px rgba(244,162,97,0.06);
+  }
+  .rwa-btn {
+    @apply inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-full cursor-pointer transition-all duration-200;
+  }
+  .rwa-btn-primary {
+    @apply rwa-btn bg-rwa-amber text-rwa-bg;
+  }
+  .rwa-btn-primary:hover {
+    @apply bg-rwa-amber-bright;
+    box-shadow: 0 0 24px rgba(244,162,97,0.4);
+  }
+  .rwa-btn-outline {
+    @apply rwa-btn border border-rwa-border text-white;
+  }
+  .rwa-btn-outline:hover {
+    @apply border-rwa-gray;
+    background: rgba(255,255,255,0.04);
+  }
+  .rwa-gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-rwa-amber to-rwa-teal;
+  }
+  .rwa-icon {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center shrink-0;
+    background: rgba(244,162,97,0.1);
+    border: 1px solid rgba(244,162,97,0.2);
+  }
+}
