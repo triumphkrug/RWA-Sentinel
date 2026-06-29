@@ -2,7 +2,6 @@
  * Stale data detection and handling.
  */
 
-import { FallbackCache } from './cache.js';
 
 export interface StalenessReport {
   key: string;
