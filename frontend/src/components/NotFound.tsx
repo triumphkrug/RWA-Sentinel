@@ -1,15 +1,16 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft, ShieldOff } from 'lucide-react'
 
 export default function NotFound() {
   return (
-    <section className="min-h-[80vh] flex items-center justify-center">
-      <div className="text-center px-4 animate-fade-in-up">
-        <ShieldOff size={56} className="text-rwa-amber/50 mx-auto mb-4" />
-        <h1 className="text-6xl sm:text-8xl font-extrabold rwa-gradient-text mb-4">404</h1>
-        <p className="text-xl text-white font-semibold mb-2">Attestation Not Found</p>
-        <p className="text-rwa-gray mb-8 max-w-sm mx-auto">This asset has no verified record in the registry.</p>
-        <Link to="/" className="rwa-btn-primary"><ArrowLeft size={18} /> Back to Home</Link>
+    <section className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center px-6">
+        <img src="/images/mascot/god_why.png" alt="" className="w-40 mx-auto mb-6 drop-shadow-[0_10px_30px_rgba(184,144,48,0.15)]" />
+        <h1 className="text-6xl font-extrabold text-rwa-blue mb-4">404</h1>
+        <p className="text-xl text-gray-700 mb-2">The Oracle sees nothing here.</p>
+        <p className="text-sm text-gray-500 mb-8">This page has not been attested. It does not exist on-chain.</p>
+        <Link to="/" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-rwa-blue text-white font-semibold hover:scale-[1.02] transition-transform shadow-md">
+          Return Home
+        </Link>
       </div>
     </section>
   )
