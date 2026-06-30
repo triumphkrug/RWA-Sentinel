@@ -12,15 +12,22 @@ export default function Footer() {
     <footer className="bg-gray-900 text-gray-400 py-6">
       <div className="rwa-section flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
         <a href="/" className="flex items-center gap-2 mr-2 group">
+          <span
+            className="inline-flex items-center justify-center h-8 w-8 rounded-full shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, #b8860b, #ffd700, #daa520, #ffd700, #b8860b)',
+              backgroundSize: '300% 300%',
+              animation: 'logo-shimmer 3s ease-in-out infinite',
+              boxShadow: '0 0 8px rgba(255,215,0,0.5)',
+            }}
+          >
           <img
             src="/images/logo.png"
             alt="RWA-Sentinel"
-            className="h-5 w-auto"
-            style={{
-              filter: 'brightness(1.2) sepia(1) saturate(3) hue-rotate(10deg)',
-              animation: 'logo-shimmer 3s ease-in-out infinite',
-            }}
+            className="h-5 w-5 object-contain"
+            style={{ filter: 'brightness(0) invert(1)' }}
           />
+          </span>
           <span className="text-sm font-semibold shimmer-text-gold group-hover:opacity-80 transition-opacity" style={{ textTransform: 'none', letterSpacing: 'normal' }}>
             RWA-Sentinel
           </span>

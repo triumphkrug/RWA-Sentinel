@@ -40,6 +40,31 @@ export default function Dashboard() {
   const [inspected, setInspected] = useState<ScoreResult | null>(null)
   const logRef = useRef<HTMLDivElement>(null)
 
+  // Operations state
+  const [revokeId, setRevokeId] = useState('INV-D9A3087')
+  const [revokeMsg, setRevokeMsg] = useState<string | null>(null)
+  const [overrideId, setOverrideId] = useState('INV-B3E2045')
+  const [overrideScore, setOverrideScore] = useState('81')
+  const [overrideMsg, setOverrideMsg] = useState<string | null>(null)
+  const [votes, setVotes] = useState<Record<string, 'for' | 'against' | null>>({ 'RSP-014': null, 'RSP-015': null })
+  const [voteMsg, setVoteMsg] = useState<string | null>(null)
+
+  const handleRevoke = () => {
+    if (!revokeId) return
+    setRevokeMsg(`✓ Attestation ${revokeId} revoked on-chain. TX: 0x${Math.random().toString(16).slice(2, 10)}...`)
+    setTimeout(() => setRevokeMsg(null), 4000)
+  }
+  const handleOverride = () => {
+    if (!overrideId || !overrideScore) return
+    setOverrideMsg(`✓ Score for ${overrideId} overridden to ${overrideScore}. TX: 0x${Math.random().toString(16).slice(2, 10)}...`)
+    setTimeout(() => setOverrideMsg(null), 4000)
+  }
+  const handleVote = (proposal: string, side: 'for' | 'against') => {
+    setVotes(v => ({ ...v, [proposal]: side }))
+    setVoteMsg(`✓ Vote cast: ${proposal} — ${side.toUpperCase()}. TX: 0x${Math.random().toString(16).slice(2, 10)}...`)
+    setTimeout(() => setVoteMsg(null), 4000)
+  }
+
   const addLine = useCallback((l: LogLine) => {
     setLog(p => [...p, l])
     setTimeout(() => logRef.current?.scrollTo({ top: 9999, behavior: 'smooth' }), 50)
@@ -482,10 +507,13 @@ export default function Dashboard() {
                 <h3 className="font-bold text-gray-900 mb-2">Revoke Attestation</h3>
                 <p className="text-xs text-gray-500 mb-4">Invalidate an existing attestation NFT. Revoked attestations remain on-chain with a revoked flag for audit trail.</p>
                 <input
+                  value={revokeId}
+                  onChange={e => setRevokeId(e.target.value)}
                   placeholder="Attestation ID (e.g. INV-A7F1001)"
                   className="w-full px-3 py-2 text-sm rounded-lg bg-gray-50 border border-gray-200 mb-3 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400"
                 />
-                <button className="w-full py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">
+                {revokeMsg && <p className="text-xs text-green-600 mb-2">{revokeMsg}</p>}
+                <button onClick={handleRevoke} className="w-full py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">
                   Revoke
                 </button>
               </div>
@@ -498,17 +526,22 @@ export default function Dashboard() {
                 <h3 className="font-bold text-gray-900 mb-2">Score Override</h3>
                 <p className="text-xs text-gray-500 mb-4">Manually override the trust score for an asset when off-chain evidence supports a different assessment.</p>
                 <input
+                  value={overrideId}
+                  onChange={e => setOverrideId(e.target.value)}
                   placeholder="Asset ID"
                   className="w-full px-3 py-2 text-sm rounded-lg bg-gray-50 border border-gray-200 mb-2 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
                 <input
                   type="number"
+                  value={overrideScore}
+                  onChange={e => setOverrideScore(e.target.value)}
                   placeholder="New score (0-100)"
                   min="0"
                   max="100"
                   className="w-full px-3 py-2 text-sm rounded-lg bg-gray-50 border border-gray-200 mb-3 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
-                <button className="w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors">
+                {overrideMsg && <p className="text-xs text-green-600 mb-2">{overrideMsg}</p>}
+                <button onClick={handleOverride} className="w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors">
                   Override Score
                 </button>
               </div>
@@ -521,26 +554,25 @@ export default function Dashboard() {
                 <h3 className="font-bold text-gray-900 mb-2">DAO Vote</h3>
                 <p className="text-xs text-gray-500 mb-4">Cast a governance vote on pending oracle proposals. Attestation parameters and scoring weights are DAO-governed.</p>
                 <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  {voteMsg && <p className="text-xs text-green-600 mb-1">{voteMsg}</p>}
+                  {[{ id: 'RSP-014', label: 'RSP-014: Raise min score to 65', author: '0x83a5...d2f1' }, { id: 'RSP-015', label: 'RSP-015: Add supply-chain factor', author: '0x1a56...9b3e' }].map(p => (
+                  <div key={p.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="text-xs font-semibold text-gray-700">RSP-014: Raise min score to 65</p>
-                      <p className="text-[10px] text-gray-400">Proposed by 0x83a5...d2f1</p>
+                      <p className="text-xs font-semibold text-gray-700">{p.label}</p>
+                      <p className="text-[10px] text-gray-400">Proposed by {p.author}</p>
                     </div>
                     <div className="flex gap-1">
-                      <button className="px-2.5 py-1 text-[10px] font-bold bg-green-100 text-green-700 rounded hover:bg-green-200">FOR</button>
-                      <button className="px-2.5 py-1 text-[10px] font-bold bg-red-100 text-red-700 rounded hover:bg-red-200">AGAINST</button>
+                      <button
+                        onClick={() => handleVote(p.id, 'for')}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded transition-colors ${ votes[p.id] === 'for' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200' }`}
+                      >FOR</button>
+                      <button
+                        onClick={() => handleVote(p.id, 'against')}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded transition-colors ${ votes[p.id] === 'against' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }`}
+                      >AGAINST</button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-xs font-semibold text-gray-700">RSP-015: Add supply-chain factor</p>
-                      <p className="text-[10px] text-gray-400">Proposed by 0x1a56...9b3e</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <button className="px-2.5 py-1 text-[10px] font-bold bg-green-100 text-green-700 rounded hover:bg-green-200">FOR</button>
-                      <button className="px-2.5 py-1 text-[10px] font-bold bg-red-100 text-red-700 rounded hover:bg-red-200">AGAINST</button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
