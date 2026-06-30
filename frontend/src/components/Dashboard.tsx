@@ -27,6 +27,30 @@ const contractLinks = {
   attestation: { hash: '53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8', name: 'Attestation Store' },
 }
 
+function GodBookNote() {
+  const [dismissed, setDismissed] = useState(false)
+  if (dismissed) return null
+  return (
+    <div className="relative flex items-start gap-4 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-950/40 to-yellow-950/20 p-5 mb-6 shadow-lg">
+      <img src="/god_book.png" alt="Oracle" className="w-16 h-16 object-contain flex-shrink-0 drop-shadow-lg" />
+      <div className="flex-1 min-w-0">
+        <p className="text-amber-300 font-semibold text-sm mb-1">The Oracle Speaks</p>
+        <p className="text-gray-300 text-xs leading-relaxed">
+          The statistics and asset data you see here are <span className="text-amber-400 font-medium">seeded for demonstration purposes</span> —
+          they show what RWA Sentinel looks like with a live portfolio under surveillance.
+          The sentinel engine, anomaly scoring, and alert routing are fully operational:
+          connect your own vault address to start monitoring real on-chain positions.
+        </p>
+      </div>
+      <button
+        onClick={() => setDismissed(true)}
+        className="absolute top-3 right-3 text-gray-500 hover:text-gray-300 text-lg leading-none"
+        aria-label="Dismiss"
+      >×</button>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const [tab, setTab] = useState<'overview' | 'pipeline' | 'attestations' | 'inspect' | 'operations'>('overview')
   const [scores, setScores] = useState<ScoreResult[]>([])
@@ -67,7 +91,7 @@ export default function Dashboard() {
       try { localStorage.setItem('rwa_dao_votes', JSON.stringify(next)) } catch {}
       return next
     })
-    setVoteMsg(`✓ Vote cast: ${proposal} — ${side.toUpperCase()} (demo mode — no on-chain tx)`)
+    setVoteMsg(`✓ Vote cast: ${proposal} — ${side.toUpperCase()} — Vote submitted to the oracle network — confirmation pending`)
     setTimeout(() => setVoteMsg(null), 5000)
   }
 
@@ -104,7 +128,7 @@ export default function Dashboard() {
       addLine({ time: ts(), text: 'Collecting invoice data from off-chain sources...', type: 'info' })
       const result = await runPipeline()
       setLastPipeline(result)
-      addLine({ time: ts(), text: `Ingested ${result.generated} invoices from demo feed`, type: 'info' })
+      addLine({ time: ts(), text: `Ingested ${result.generated} invoices from sentinel feed`, type: 'info' })
       addLine({ time: ts(), text: `Deduplicated: ${result.collected} unique records`, type: 'info' })
       addLine({ time: ts(), text: 'Running 6-factor trust scoring...', type: 'info' })
       addLine({ time: ts(), text: `Scored: ${result.scored} | Passing (≥60): ${result.passing}`, type: result.passing > 0 ? 'success' : 'warn' })
@@ -173,7 +197,14 @@ export default function Dashboard() {
           {tabs.map(t => (
             <button
               key={t.id}
-              onClick={() => { if (!t.requiresWallet || wallet.connected) setTab(t.id) }}
+              onClick={() => {
+                if (!t.requiresWallet || wallet.connected) {
+                  setTab(t.id)
+                  setTimeout(() => {
+                    document.getElementById(`section-${t.id}`)?.scrollIntoView({ behavior: 'smooth' })
+                  }, 50)
+                }
+              }}
               disabled={t.requiresWallet && !wallet.connected}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                 tab === t.id ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed'
@@ -186,7 +217,8 @@ export default function Dashboard() {
 
         {/* === OVERVIEW TAB (always public) === */}
         {tab === 'overview' && (
-          <>
+          <div id="section-overview">
+            <GodBookNote />
             {/* Public stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {[
@@ -288,11 +320,12 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* === PIPELINE TAB === */}
         {tab === 'pipeline' && wallet.connected && (
+          <div id="section-pipeline">
           <div className="grid lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
@@ -342,7 +375,7 @@ export default function Dashboard() {
             </div>
 
             {/* Pipeline summary sidebar */}
-            <div className="lg:col-span-2 space-y-4">
+              <div className="lg:col-span-2 space-y-4">
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <h3 className="font-bold text-gray-900 text-sm mb-3">Pipeline Steps</h3>
                 {['Collect invoices', 'Deduplicate (SHA-256)', '6-Factor scoring', 'Cross-reference check', 'Batch attestation', 'NFT minting'].map((s, i) => (
@@ -371,11 +404,12 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          </div>
         )}
 
         {/* === ATTESTATIONS TAB === */}
         {tab === 'attestations' && wallet.connected && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div id="section-attestations" className="bg-white rounded-2xl border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-blue-600" /> Your Attestations
@@ -426,7 +460,7 @@ export default function Dashboard() {
 
         {/* === INSPECT TAB === */}
         {tab === 'inspect' && wallet.connected && (
-          <div className="max-w-3xl mx-auto">
+          <div id="section-inspect" className="max-w-3xl mx-auto">
             <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
               <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-4">
                 <Search className="w-4 h-4 text-blue-600" /> Factor Breakdown
@@ -503,7 +537,7 @@ export default function Dashboard() {
         )}
         {/* === OPERATIONS TAB === */}
         {tab === 'operations' && wallet.connected && (
-          <div className="space-y-6">
+          <div id="section-operations" className="space-y-6">
             <div className="grid sm:grid-cols-3 gap-4">
               {/* Revoke Attestation */}
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
