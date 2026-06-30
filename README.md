@@ -6,7 +6,7 @@
 
 **AI-powered trust oracle for real-world asset tokenization on Casper Network**
 
-*Automated 6-factor scoring · On-chain attestation NFTs · DAO governance · Telegram alerts*
+*Automated 6-factor scoring · On-chain attestation NFTs · DAO governance*
 
 [![Build & Test](https://github.com/triumphkrug/RWA-Sentinel/actions/workflows/build.yml/badge.svg)](https://github.com/triumphkrug/RWA-Sentinel/actions/workflows/build.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
@@ -21,7 +21,7 @@
 ---
 
 > [!IMPORTANT]
-> **Fully deployed.** Two smart contracts live on Casper testnet (asset-registry + attestation-store). The 6-factor AI scoring pipeline runs end-to-end. DAO vote panel and Telegram alerts active.
+> **Fully deployed.** Two smart contracts live on Casper testnet (asset-registry + attestation-store). The 6-factor AI scoring pipeline runs end-to-end. DAO vote panel.
 
 ---
 
@@ -277,7 +277,6 @@ Security: 18 findings addressed (risk score reduced from 4/10 to 2/10). See [doc
 | **SDK** | TypeScript SDK + MCP server (5 tools) |
 | **Testing** | Jest (TypeScript), cargo test (Rust) — 23 contract tests |
 | **CI/CD** | GitHub Actions |
-| **Notifications** | Telegram Bot API |
 | **Containerization** | Docker + docker-compose |
 
 <div align="right">
