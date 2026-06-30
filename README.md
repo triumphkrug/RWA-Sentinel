@@ -2,25 +2,26 @@
 
 <div align="center">
 
-# RWA-Sentinel
+# RWA Sentinel
 
-**Autonomous AI oracle for real-world asset verification on Casper Network**
+**AI-powered trust oracle for real-world asset tokenization on Casper Network**
 
-*Trust scores for off-chain assets, published on-chain as time-limited attestation NFTs.*
+*Automated 6-factor scoring · On-chain attestation NFTs · DAO governance · Telegram alerts*
 
 [![Build & Test](https://github.com/triumphkrug/RWA-Sentinel/actions/workflows/build.yml/badge.svg)](https://github.com/triumphkrug/RWA-Sentinel/actions/workflows/build.yml)
-[![Node.js 20+](https://img.shields.io/badge/node.js-20+-339933.svg?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
-[![Casper 2.x](https://img.shields.io/badge/Casper-2.x_(Zug)-FF0000.svg?style=flat-square)](https://casper.network)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
+[![Casper Network](https://img.shields.io/badge/Casper-2.x_(Zug)-FF0000.svg?style=flat-square)](https://casper.network)
+[![Node.js 20+](https://img.shields.io/badge/node.js-20+-339933.svg?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-rwa--sentinel.xyz-6366f1.svg?style=flat-square)](https://rwa-sentinel.xyz)
 
-[Landing Page](https://rwa-sentinel.xyz) · [Architecture](docs/ARCHITECTURE.md) · [SDK Reference](docs/SDK.md) · [Changelog](CHANGELOG.md)
+[**→ Live Demo**](https://rwa-sentinel.xyz) · [Architecture](docs/ARCHITECTURE.md) · [SDK Reference](docs/SDK.md) · [Changelog](CHANGELOG.md)
 
 </div>
 
 ---
 
 > [!IMPORTANT]
-> **Deployed and verified.** Two smart contracts live on Casper testnet — asset-registry and attestation-store. The agent pipeline runs end-to-end: collect invoices → score with weighted factors → publish batch attestations on-chain.
+> **Fully deployed.** Two smart contracts live on Casper testnet (asset-registry + attestation-store). The 6-factor AI scoring pipeline runs end-to-end. DAO vote panel and Telegram alerts active.
 
 ---
 
@@ -29,19 +30,18 @@
 
 - [Abstract](#abstract)
 - [Problem](#problem)
-- [Solution — What RWA-Sentinel Does Differently](#solution--what-rwa-sentinel-does-differently)
-- [Pipeline Overview](#pipeline-overview)
-- [Quickstart](#quickstart)
+- [Solution](#solution)
 - [Architecture](#architecture)
+- [6-Factor Scoring](#6-factor-scoring)
+- [DAO Governance](#dao-governance)
+- [Quickstart](#quickstart)
+- [Live Demo](#live-demo)
 - [Smart Contracts](#smart-contracts)
-- [Scoring Model](#scoring-model)
-- [Configuration](#configuration)
+- [Tech Stack](#tech-stack)
 - [Testing](#testing)
-- [Scope: Implemented vs Planned](#scope-implemented-vs-planned)
-- [Prior Art](#prior-art)
 - [SDK and MCP](#sdk-and-mcp)
 - [Project Structure](#project-structure)
-- [Author](#author)
+- [Team](#team)
 - [License](#license)
 
 </details>
@@ -50,37 +50,30 @@
 
 ## Abstract
 
-RWA-Sentinel is a decentralized AI agent that bridges off-chain real-world assets — invoices, trade receivables, supply-chain documents — with on-chain trust attestations. It autonomously collects, validates, scores, and publishes asset data to Casper Network smart contracts, producing time-limited attestation NFTs that DeFi protocols can consume as verified data feeds.
+RWA Sentinel is an autonomous AI oracle that replaces manual real-world asset audits with an automated 6-factor scoring pipeline. It ingests off-chain documents (invoices, trade receivables, supply-chain records), scores each one across six independent factors, and publishes the result to Casper Network as a time-limited attestation NFT. Challenged attestations go to DAO governance — token holders vote on-chain, misbehaving oracles get slashed.
 
-The system addresses a specific gap in RWA tokenization: **the oracle problem for trust, not price.** Unlike Chainlink-style price-feed oracles, RWA-Sentinel attests to the *validity and trustworthiness* of underlying assets through multi-factor analysis. Each attestation carries an expiration timestamp; DeFi protocols can query whether it is still valid before allowing collateral operations.
+The system solves the **trust oracle problem** for RWA tokenization: not price, but validity and trustworthiness of underlying assets — with transparent, auditable, on-chain evidence.
 
 <div align="right">
 
 [![][back-to-top]](#readme-top)
 
 </div>
+
+---
 
 ## Problem
 
-Current RWA tokenization relies on centralized custodians or manual verification. Three structural issues persist:
+Real-world asset tokenization is stuck behind manual verification:
 
-| Issue | Impact |
+| Pain Point | Impact |
 |---|---|
-| **Trust concentration** | A single entity decides which assets are valid. No independent verification path. |
-| **Latency** | Manual review introduces hours-to-days delays between asset origination and on-chain availability. |
-| **Opacity** | Verification criteria are opaque to token holders. There is no on-chain audit trail of *how* an asset was scored. |
+| **Manual audits** | Weeks of delay, five-figure costs, centralized trust |
+| **Frozen trust scores** | Tokens minted once; underlying risk changes silently |
+| **Opacity** | No on-chain audit trail of *how* an asset was evaluated |
+| **No accountability** | Custodian failure = total loss, no economic enforcement |
 
-These are not theoretical concerns. The collapse of several centralized RWA platforms in 2024–2025 (e.g., custodian fraud, stale attestation windows) demonstrates what happens when trust depends on a single point of failure.
-
-## Solution — What RWA-Sentinel Does Differently
-
-1. **Multi-factor scoring with transparent weights.** Every attestation decomposes into six independently auditable factors (issuer history, debtor rating, amount reasonableness, time validity, detail level, cross-reference). The weights and raw scores are hashed and stored on-chain as evidence — not just the pass/fail result.
-
-2. **Time-limited attestation NFTs.** Attestations expire after a configurable validity window (default: 24h). There is no "attest once, trust forever" — DeFi contracts check `is_valid(asset_id)` before accepting collateral.
-
-3. **Challenge-and-stake mechanism.** Any participant can challenge an attestation by submitting counter-evidence. Oracle operators must stake CSPR; misbehavior leads to slashing. This creates economic accountability absent from centralized custodians.
-
-No comparable system on Casper (or other chains we reviewed) combines all three: transparent scoring + expiring attestations + challenge-with-stake.
+The $16T RWA market cannot scale on manual processes. It needs programmable, continuous, transparent trust scoring.
 
 <div align="right">
 
@@ -88,35 +81,108 @@ No comparable system on Casper (or other chains we reviewed) combines all three:
 
 </div>
 
-## Pipeline Overview
+---
 
-The agent operates as a four-stage pipeline:
+## Solution
 
-```
-External Data ──▶ Collector ──▶ Validator ──▶ Publisher ──▶ Casper Network
-                     │              │              │
-                  dedup +       scoring +      batch NFT
-                  hashing     cross-ref        minting
-                                               
-                  ┌────────── Fallback ──────────┐
-                  │   in-memory cache + staleness │
-                  └──────────────────────────────┘
-```
+RWA Sentinel delivers three capabilities that no existing Casper-native system combines:
 
-1. **Collector** — ingests invoice data, deduplicates via SHA-256 hashing, normalizes to a common schema.
-2. **Validator** — scores each invoice against six weighted factors, produces a composite trust score `S ∈ [0, 100]`.
-3. **Publisher** — batches invoices with `S ≥ threshold` into a single `batch_attest` transaction, minting a time-limited attestation NFT.
-4. **Fallback** — caches recent scores for fast retrieval; detects data staleness and triggers re-scoring.
+1. **Automated 6-factor scoring** — every attestation decomposes into six independently auditable factors. Weights and raw scores are hashed and stored on-chain as evidence, not just the pass/fail result.
+
+2. **Time-limited attestation NFTs** — attestations expire after a configurable window (default 24h). DeFi contracts call `is_valid(asset_id)` before accepting collateral. No "attest once, trust forever."
+
+3. **Challenge-and-stake DAO governance** — any participant can challenge an attestation. Oracle operators stake CSPR; misbehavior triggers slashing. Governance is on-chain and economically enforced.
 
 <div align="right">
 
 [![][back-to-top]](#readme-top)
 
 </div>
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A["📄 RWA Document\n(invoice / receivable)"] --> B["6-Factor Scoring Pipeline"]
+
+    subgraph B["6-Factor Scoring Pipeline"]
+        direction TB
+        B1[Issuer History 25%] --> SCORE[Composite Trust Score]
+        B2[Document Integrity 20%] --> SCORE
+        B3[Cross-Reference 15%] --> SCORE
+        B4[Amount Plausibility 15%] --> SCORE
+        B5[Temporal Consistency 15%] --> SCORE
+        B6[Network Reputation 10%] --> SCORE
+    end
+
+    SCORE --> C{Score ≥ 65?}
+    C -->|Yes| D["Oracle Consensus\n(batch_attest tx)"]
+    C -->|No| REJECT[Rejected — not attested]
+
+    D --> E["On-Chain Attestation NFT\n(Casper testnet, 24h TTL)"]
+    E --> F["DAO Governance\n(challenge → vote → slash)"]
+    F --> G["DeFi Consumers\nis_valid(asset_id)"]
+```
+
+*The TypeScript agent collects documents, scores them through the weighted pipeline, and publishes passing batches to Casper smart contracts. Challenged attestations go to DAO vote; losing oracles are slashed. Downstream DeFi queries attestation validity before accepting RWA collateral.*
+
+Full diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+---
+
+## 6-Factor Scoring
+
+Each asset is independently evaluated across six weighted factors. The composite trust score `S = Σ(wᵢ × sᵢ) / Σ(wᵢ)` determines on-chain publication eligibility (threshold: 65/100, configurable).
+
+| # | Factor | Weight | What It Measures |
+|---|---|---|---|
+| 1 | **Issuer History** | 25% | Track record and reliability of the invoicing entity |
+| 2 | **Document Integrity** | 20% | Hash consistency and tamper-evidence of submitted document |
+| 3 | **Cross-Reference** | 15% | Corroboration against external data sources |
+| 4 | **Amount Plausibility** | 15% | Whether amount falls within expected bounds for asset class |
+| 5 | **Temporal Consistency** | 15% | Freshness of issue date; validity of due date proximity |
+| 6 | **Network Reputation** | 10% | On-chain wallet history and prior attestation record |
+
+**On-chain evidence anchoring:** both the factors hash (`SHA-256(names ‖ scores ‖ weights)`) and evidence hash are written to the attestation-store contract — fully auditable without exposing sensitive asset data.
+
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+---
+
+## DAO Governance
+
+Challenged attestations enter a transparent on-chain governance flow:
+
+1. Any participant submits a challenge with counter-evidence (rate-limited: max 3 per block)
+2. The challenge triggers a DAO vote — token holders vote **FOR** or **AGAINST** the original attestation
+3. If **AGAINST** wins: `dao_invalidate` is called → NFT revoked → oracle CSPR slashed → challenger rewarded
+4. If **FOR** wins: attestation remains valid, challenger loses stake
+
+The Oracle Panel dashboard exposes the live DAO vote panel with one-click FOR/AGAINST voting and real-time toast notifications.
+
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+---
 
 ## Quickstart
 
-Runs in under 5 minutes. Demo mode generates synthetic invoices — no Casper node or API keys needed.
+Runs in under 5 minutes. Demo mode generates synthetic invoices — no Casper node or API keys required.
 
 **Prerequisites:** Node.js ≥ 20, npm
 
@@ -142,11 +208,13 @@ npm start
 
 ```bash
 docker-compose up
-# Agent + dashboard at http://localhost:3000
+# Dashboard at http://localhost:3000
 ```
 
 > [!TIP]
-> To connect to Casper testnet, update `NODE_URL` and `DEPLOYER_KEY_PATH` in `.env`. See [Configuration](#configuration) for all options.
+> To connect to Casper testnet, set `NODE_URL` and `DEPLOYER_KEY_PATH` in `.env`. See [Configuration](#configuration) in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+*Last verified: 2026-06-30 · [commit history](https://github.com/triumphkrug/RWA-Sentinel/commits/main)*
 
 <div align="right">
 
@@ -154,83 +222,39 @@ docker-compose up
 
 </div>
 
-## Architecture
+---
 
-```mermaid
-flowchart TD
-    subgraph Agent["Sentinel Agent (TypeScript)"]
-        COL[Collector] --> VAL[Validator]
-        VAL --> PUB[Publisher]
-        PUB --> FB[Fallback Cache]
-    end
+## Live Demo
 
-    subgraph Contracts["Casper Smart Contracts"]
-        AR[asset-registry.wasm]
-        AS[attestation-store.wasm]
-    end
+**→ [rwa-sentinel.xyz](https://rwa-sentinel.xyz)**
 
-    subgraph Consumers["DeFi Consumers"]
-        DEFI[Lending Protocol]
-        QUERY["is_valid(asset_id)?"]
-    end
-
-    COL -->|raw invoices| VAL
-    VAL -->|scored batches| PUB
-    PUB -->|batch_attest tx| AS
-    PUB -->|register_asset tx| AR
-    QUERY --> AS
-    AS -->|valid/expired| DEFI
-```
-
-*Text description: The TypeScript agent collects invoices, scores them through a weighted validator, and publishes passing batches to two Casper contracts — asset-registry stores metadata, attestation-store holds scored attestations with expiration. Downstream DeFi protocols query attestation validity before accepting RWA collateral.*
-
-Full architecture diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+| Feature | URL |
+|---|---|
+| Oracle Panel Dashboard | [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard) |
+| DAO Vote Panel | [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard) (scroll to DAO section) |
+| Trust Score Table | [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard) |
+| Backend API | [rwa-sentinel-api.onrender.com](https://rwa-sentinel-api.onrender.com) |
 
 <div align="right">
 
 [![][back-to-top]](#readme-top)
 
 </div>
+
+---
 
 ## Smart Contracts
 
 Both deployed on Casper testnet.
 
-### asset-registry
-
-Contract hash: [`eac01f54...`](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3)
-
-| Entry Point | Access | Description |
+| Contract | Hash | Testnet Explorer |
 |---|---|---|
-| `register_asset` | Owner only | Register a new RWA with type and metadata hash |
-| `update_asset` | Owner only | Update asset metadata |
-| `get_asset` | Public | Query asset record by ID |
+| **asset-registry** | `eac01f54...` | [View on cspr.live](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) |
+| **attestation-store** | `53c9e877...` | [View on cspr.live](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8) |
 
-### attestation-store
+Key entry points: `register_asset`, `batch_attest`, `get_attestation`, `challenge`, `stake_oracle`, `slash_oracle`, `dao_invalidate`, `invalidate_nft`.
 
-Contract hash: [`53c9e877...`](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8)
-
-| Entry Point | Access | Description |
-|---|---|---|
-| `batch_attest` | Oracle only | Submit a batch of scored attestations |
-| `get_attestation` | Public | Query attestation by asset ID |
-| `challenge` | Any (rate-limited, max 3) | Challenge attestation with counter-evidence |
-| `stake_oracle` | Oracle | Stake CSPR as operator collateral |
-| `slash_oracle` | Admin | Slash misbehaving oracle (min 1 mote) |
-| `dao_invalidate` | Governance | DAO-initiated invalidation of challenged attestation |
-| `invalidate_nft` | Admin | Revoke an attestation NFT by batch ID |
-
-**Compile from source:**
-
-```bash
-cd contracts/asset-registry
-cargo build --release --target wasm32-unknown-unknown --no-default-features
-
-cd ../attestation-store
-cargo build --release --target wasm32-unknown-unknown --no-default-features
-```
-
-Security audit: 18 findings addressed. Average risk score reduced from 4/10 to 2/10. Details in [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
+Security: 18 findings addressed (risk score reduced from 4/10 to 2/10). See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
 
 <div align="right">
 
@@ -238,31 +262,23 @@ Security audit: 18 findings addressed. Average risk score reduced from 4/10 to 2
 
 </div>
 
-## Scoring Model
+---
 
-The local scorer implements a weighted factor analysis model. Each factor independently evaluates the asset and produces a score in `[0, 100]`.
+## Tech Stack
 
-| Factor | Weight | What it measures |
-|---|---|---|
-| Issuer History | 25% | Track record of the invoicing entity |
-| Debtor Rating | 20% | Payment reliability of the debtor |
-| Amount Reasonableness | 15% | Whether the amount falls within expected bounds for the asset type |
-| Time Validity | 15% | Freshness of issue date; proximity to due date |
-| Detail Level | 10% | Completeness of line items and metadata |
-| Cross-Reference | 15% | Corroboration against external data sources |
-
-Composite trust score:
-
-```
-S = Σ(wᵢ × sᵢ) / Σ(wᵢ)
-```
-
-Assets with `S ≥ 65` (configurable) proceed to on-chain publication. The factors hash and evidence hash are both anchored on-chain:
-
-- **Factors hash:** `SHA-256(factor_names ‖ scores ‖ weights)`
-- **Evidence hash:** `SHA-256(raw_hash ‖ factors_hash)`
-
-This provides an immutable audit trail without revealing sensitive asset data.
+| Layer | Technology |
+|---|---|
+| **Smart Contracts** | Rust → WASM, Casper 2.x (Zug) |
+| **Agent Pipeline** | TypeScript, Node.js 20+ |
+| **Configuration** | Zod schema validation |
+| **Frontend Dashboard** | React (Next.js), Tailwind CSS |
+| **Frontend Hosting** | Vercel |
+| **Backend API** | Node.js / Express on Render |
+| **SDK** | TypeScript SDK + MCP server (5 tools) |
+| **Testing** | Jest (TypeScript), cargo test (Rust) — 23 contract tests |
+| **CI/CD** | GitHub Actions |
+| **Notifications** | Telegram Bot API |
+| **Containerization** | Docker + docker-compose |
 
 <div align="right">
 
@@ -270,32 +286,11 @@ This provides an immutable audit trail without revealing sensitive asset data.
 
 </div>
 
-## Configuration
-
-All options set via environment variables (validated with [zod](https://zod.dev/)):
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `NODE_URL` | No | `https://node.testnet.casper.network/rpc` | Casper node RPC |
-| `CHAIN_NAME` | No | `casper-test` | Network identifier |
-| `DEPLOYER_KEY_PATH` | No | `./keys/secret_key.pem` | Deployer secret key |
-| `BATCH_SIZE` | No | `10` | Max attestations per batch |
-| `CHALLENGE_RATE_LIMIT` | No | `3` | Max challenges per block |
-| `NFT_VALIDITY_HOURS` | No | `24` | Attestation NFT lifetime |
-| `STALE_THRESHOLD_MINUTES` | No | `30` | Data staleness threshold |
-| `DASHBOARD_PORT` | No | `3000` | Dashboard HTTP port |
-
-See `.env.example` for a copy-paste template.
-
-<div align="right">
-
-[![][back-to-top]](#readme-top)
-
-</div>
+---
 
 ## Testing
 
-23 Rust contract tests + 3 TypeScript test suites. All passing.
+23 Rust contract tests + 3 TypeScript test suites. All passing in CI.
 
 ```bash
 # TypeScript tests
@@ -305,14 +300,12 @@ npx jest --ci
 cd contracts/tests && cargo test --release
 ```
 
-| Suite | Count | Scope |
-|---|---|---|
-| `invoiceCollector.test.ts` | Unit | Ingestion, dedup, hashing |
-| `localScorer.test.ts` | Unit | Scoring factors, threshold logic |
-| `fullPipeline.test.ts` | Integration | End-to-end collect → score → publish → cache |
-| `integration_tests.rs` | 23 | Contract entry points, access control, staking |
-
-CI runs on every push: TypeScript lint (ESLint + Prettier) → Jest → WASM build → cargo test.
+| Suite | Type | Count | Coverage |
+|---|---|---|---|
+| `invoiceCollector.test.ts` | Unit | — | Ingestion, dedup, SHA-256 hashing |
+| `localScorer.test.ts` | Unit | — | 6-factor scoring, threshold logic |
+| `fullPipeline.test.ts` | Integration | — | End-to-end collect → score → publish → cache |
+| `integration_tests.rs` | Contract | 23 | Entry points, access control, staking, slashing |
 
 <div align="right">
 
@@ -320,53 +313,14 @@ CI runs on every push: TypeScript lint (ESLint + Prettier) → Jest → WASM bui
 
 </div>
 
-## Scope: Implemented vs Planned
-
-| Component | Status | Evidence |
-|---|---|---|
-| Asset-registry contract | ✅ Deployed | [Testnet tx](https://testnet.cspr.live/deploy/e6be2486e09e8d8da2fd8728bed776848962080993ca1cd2a13b8f0b37e16d03) |
-| Attestation-store contract | ✅ Deployed | [Testnet tx](https://testnet.cspr.live/deploy/fb3625c205b50ffde3eb3dea2600ac1cbf5cd78de01018f0032d4ec53f18ebf0) |
-| Four-stage agent pipeline | ✅ Working | Demo mode + test suite |
-| Multi-factor scoring (6 factors) | ✅ Working | Unit + integration tests |
-| Challenge-and-stake mechanism | ✅ On-chain | Rate-limited, min slash enforced |
-| Time-limited attestation NFTs | ✅ On-chain | `batch_attest` + `invalidate_nft` |
-| TypeScript SDK | ✅ Available | `sdk/index.ts` |
-| MCP server (5 tools) | ✅ Available | `sdk/mcp.ts` |
-| Dashboard | ⚠️ Scaffold | UI shell, full implementation planned |
-| Multi-asset-class support | 🗺 Planned | Currently invoices only |
-| Mainnet deployment | 🗺 Planned | Pending external audit |
-| Real-time external data feeds | 🗺 Planned | Currently uses synthetic/demo data |
-
-<div align="right">
-
-[![][back-to-top]](#readme-top)
-
-</div>
-
-## Prior Art
-
-| | RWA-Sentinel | Chainlink (price feeds) | Centrifuge | Manual custodian |
-|---|---|---|---|---|
-| Oracle type | Trust attestation | Price feed | Document verification | Human review |
-| Scoring transparency | ✅ On-chain factor hashes | ❌ Aggregated, opaque | ⚠️ Partial | ❌ None |
-| Attestation expiry | ✅ Configurable TTL | ✅ Heartbeat | ❌ Permanent | ❌ N/A |
-| Challenge mechanism | ✅ Stake + slash | ❌ None | ⚠️ Governance only | ❌ None |
-| Casper-native | ✅ | ❌ | ❌ | — |
-| *Where they're stronger* | — | ✅ Battle-tested infra, wide oracle network | ✅ Mature document protocol, real TVL | ✅ Legal enforceability |
-
-<div align="right">
-
-[![][back-to-top]](#readme-top)
-
-</div>
+---
 
 ## SDK and MCP
 
-**TypeScript SDK** — typed client for the Sentinel agent API:
+**TypeScript SDK** — typed client for the Sentinel API:
 
 ```typescript
 import { SentinelClient } from './sdk';
-
 const client = new SentinelClient('http://localhost:3000');
 const attestation = await client.getAttestation('asset-001');
 ```
@@ -379,47 +333,51 @@ npx ts-node sdk/mcp.ts
 
 Full reference: [docs/SDK.md](docs/SDK.md)
 
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+---
+
 ## Project Structure
 
 ```
 RWA-Sentinel/
 ├── agent/src/
 │   ├── collector/          # Invoice ingestion and dedup
-│   ├── validator/          # Scoring engine, cross-reference checks
+│   ├── validator/          # 6-factor scoring engine
 │   ├── publisher/          # Casper batch submission, NFT minting
 │   ├── fallback/           # In-memory cache, staleness detection
-│   ├── config.ts           # Zod-validated configuration
 │   └── index.ts            # Pipeline entry point
 ├── contracts/
 │   ├── asset-registry/     # RWA registration (Rust/WASM)
 │   └── attestation-store/  # Attestation, staking, DAO (Rust/WASM)
+├── frontend/               # Oracle Panel dashboard (Next.js)
 ├── sdk/                    # TypeScript SDK + MCP server
-├── dashboard/              # Monitoring UI
 ├── tests/                  # Unit + integration tests
-├── docs/                   # Architecture, SDK docs, limitations
-├── landing/                # Project landing page
-├── .github/workflows/      # CI pipeline
+├── docs/                   # Architecture, SDK, limitations
 └── docker-compose.yaml
 ```
 
-## Author
+---
 
-**triumphkrug** — architecture, contracts, agent pipeline ([GitHub](https://github.com/triumphkrug))
+## Team
 
-Questions or feedback: [open an issue](https://github.com/triumphkrug/RWA-Sentinel/issues)
+**triumphkrug** — architecture, smart contracts, agent pipeline, dashboard
+→ [GitHub](https://github.com/triumphkrug) · [Issues](https://github.com/triumphkrug/RWA-Sentinel/issues)
+
+*Built for the Casper Agentic Buildathon 2026.*
 
 ---
 
 ## License
 
-Licensed under the [Apache License, Version 2.0](LICENSE).
+[Apache License 2.0](LICENSE)
 
-**Security notice:** This project operates on Casper testnet only. Deployer secret keys must never be committed to version control. Refer to [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for a comprehensive risk assessment.
+> **Security notice:** This project operates on Casper testnet only. Deployer secret keys must never be committed. See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for full risk assessment.
 
 ---
-
-> _RWA-Sentinel was built for the Casper Agentic Buildathon 2026. The oracle pipeline, scoring model, and attestation contracts are functional on testnet. Production readiness requires independent security review._
->
-> **Resources:** [Oracle Panel](https://rwa-sentinel.xyz/dashboard) · [TypeScript SDK](docs/SDK.md) · [Contract Architecture](docs/ARCHITECTURE.md) · [Scoring Methodology](docs/ARCHITECTURE.md#scoring-model)
 
 [back-to-top]: https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square

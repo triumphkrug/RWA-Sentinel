@@ -1,63 +1,107 @@
-# Video Walkthrough Script
+# VIDEO_SCRIPT.md — RWA Sentinel
+**Format:** Faceless tutorial · **Target length:** 2:00 min · **Language:** English
+**Topic:** Real-world assets on-chain: AI oracle + DAO governance + 6-factor trust scoring on Casper Network
 
-Target length: 2:00–2:30
+---
 
-## Pre-recording checklist
+## ⚡ HOOK VARIANTS (pick one — first 15 seconds)
 
-- rwa-sentinel.xyz open in Chrome
-- Backend running (rwa-sentinel-api.onrender.com)
-- Casper testnet explorer tab ready
+### Hook A — Problem Hook (recommended)
+> [SHOW: B-roll of paper invoices stacked on a desk, then cut to a "Transaction Pending" spinner]
+> [NARRATION: "There is $16 trillion in real-world assets waiting to go on-chain. The only thing standing in the way? Someone has to manually verify every single document. That bottleneck ends now."]
 
-## Intro (0:00–0:12)
+### Hook B — Curiosity Hook
+> [SHOW: rwa-sentinel.xyz landing page, hero section with oracle mascot shield]
+> [NARRATION: "What if an AI oracle could score the trustworthiness of any real-world asset in seconds — and publish that score to a blockchain automatically? That's exactly what RWA Sentinel does. Let me show you."]
 
-[SCREEN: rwa-sentinel.xyz landing page, hero with oracle mascot]
-"Real-world assets — invoices, bonds, trade receivables — they all need trust verification before going on-chain. RWA-Sentinel does that automatically."
+### Hook C — Social Proof Hook
+> [SHOW: Live deployment on rwa-sentinel.xyz, trust score numbers ticking]
+> [NARRATION: "We built a fully autonomous AI oracle for real-world asset verification on Casper Network — smart contracts live on testnet, DAO governance active, trust scores on-chain right now. Here's the full demo."]
 
-## The Problem (0:12–0:25)
+---
 
-[SCREEN: scroll to Problem section on landing]
-"Today, RWA tokenization is stuck behind manual audits. Slow, expensive, and centralized. One firm signs off, everyone trusts it. That's not how decentralized finance should work."
+## SEGMENT 1 — THE PROBLEM (0:15 → 0:30)
 
-## Pipeline Overview (0:25–0:50)
+[SHOW: Scroll down rwa-sentinel.xyz landing page to the Problem section]
+[NARRATION: "Right now, tokenizing a $2 million invoice means hiring an audit firm. Waiting weeks. Paying five figures. And trusting one signature. The token gets minted once — and that trust score is frozen forever. Markets change, issuers default, documents expire. The token doesn't know."]
 
-[SCREEN: scroll to Pipeline section]
-"RWA-Sentinel runs a 6-factor scoring pipeline. Each asset gets analyzed across issuer history, document integrity, cross-referencing, amount plausibility, temporal consistency, and network reputation. The weighted composite score determines if the asset gets an on-chain attestation."
+[B-ROLL: Static graphic — "Manual Audit → Weeks → $$$$ → Single Point of Failure"]
 
-## Oracle Panel Demo (0:50–1:25)
+---
 
-[SCREEN: navigate to /dashboard]
-"This is the Oracle Panel. Overview shows total scored assets, active attestations, average trust score, and expired records."
+## SEGMENT 2 — THE SOLUTION: 6-FACTOR SCORING (0:30 → 0:55)
 
-[SCREEN: click Pipeline tab, run pipeline]
-"Hit 'Run Pipeline' and watch the verification process in real time. Ingestion, deduplication, 6-factor scoring, cross-reference check, batch attestation minting."
+[SHOW: Navigate to https://rwa-sentinel.xyz/dashboard — Oracle Panel overview cards]
+[NARRATION: "RWA Sentinel replaces that manual process with a 6-factor AI scoring pipeline. Every asset gets analyzed across six independent dimensions:"]
 
-[SCREEN: click Attestations tab]
-"Each scored asset shows its composite trust score, pass/fail status, and on-chain factor hashes."
+[SHOW: Trust Score table on the dashboard — highlight each row as named]
+[NARRATION:
+"One — Issuer History: does this entity have a reliable track record?
+Two — Document Integrity: is the document hash consistent and unaltered?
+Three — Cross-Reference: does the data match external sources?
+Four — Amount Plausibility: is the invoice amount within expected bounds?
+Five — Temporal Consistency: is the issue date fresh and due date realistic?
+Six — Network Reputation: what does on-chain history say about this wallet?"]
 
-[SCREEN: click Inspect tab, enter an invoice ID]
-"You can inspect any asset — full factor breakdown with individual scores, weights, and evidence strings."
+[B-ROLL: Animated bar chart — 6 factors filling up to a composite trust score of 82/100]
 
-[SCREEN: click Operations tab]
-"New in this release: revoke attestations, manually override scores with evidence, and DAO governance voting on oracle parameters."
+---
 
-## Smart Contracts (1:25–1:45)
+## RE-HOOK @ 60 SECONDS
 
-[SCREEN: click contract link in Overview, open Casper Explorer]
-"Two contracts live on Casper testnet. The Scoring Registry stores factor hashes and composite scores. The Attestation Store manages NFT lifecycle — minting, TTL expiry, and revocation."
+[SHOW: Oracle Panel dashboard — attestation count badge updating]
+[NARRATION: "And every score above the threshold gets written to the Casper blockchain as a time-limited attestation NFT — automatically, in one transaction. No human in the loop."]
 
-## SDK (1:45–1:55)
+---
 
-[SCREEN: show terminal with SDK usage snippet]
-```typescript
-import { ScoringClient } from 'rwa-sentinel-sdk';
-const client = new ScoringClient({ nodeUrl: '...' });
-const score = await client.scoreAsset({ invoiceId: 'INV-A3E2045' });
-```
-"TypeScript SDK. Score assets, query attestations, verify factors. MCP server included for tool-use agents."
+## SEGMENT 3 — ORACLE PANEL DEMO (1:00 → 1:25)
 
-## Close (1:55–2:15)
+[SHOW: rwa-sentinel.xyz/dashboard — Oracle Panel with overview cards: Total Scored, Active Attestations, Avg Trust Score, Expired]
+[NARRATION: "The Oracle Panel gives you a real-time view of the entire pipeline. Total scored assets, active attestations, average trust score across the pool, and expired records."]
 
-[SCREEN: landing page CTA section]
-"RWA-Sentinel. Trust scores for off-chain assets, published on-chain. Try the Oracle Panel, read the docs, check the repo."
+[SHOW: Scroll to Trust Score table — rows with asset IDs, scores, and status badges]
+[NARRATION: "The trust score table shows every asset — its composite score, which factors passed, and whether the attestation is still valid or expired. Each attestation has a 24-hour TTL by default."]
 
-[SCREEN: rwa-sentinel.xyz + GitHub URL]
+[SHOW: Click into a single asset row — detail panel or expanded view]
+[NARRATION: "Click any asset to see the full factor breakdown. The score components and evidence hash are anchored on-chain — fully auditable, no black box."]
+
+---
+
+## SEGMENT 4 — DAO GOVERNANCE (1:25 → 1:45)
+
+[SHOW: Navigate to the DAO Vote panel on the dashboard]
+[NARRATION: "Now — the DAO angle. RWA Sentinel isn't just an oracle. It's governed. Any challenged attestation goes to a DAO vote."]
+
+[SHOW: DAO vote panel — a pending vote with FOR / AGAINST buttons visible]
+[NARRATION: "Token holders can vote FOR or AGAINST an attestation. If AGAINST wins, the contract calls dao_invalidate — the NFT is revoked, the oracle operator's staked CSPR gets slashed, and the challenger is rewarded."]
+
+[SHOW: Click the FOR button → toast notification appears]
+[NARRATION: "One click submits your vote on-chain. The result is immutable, transparent, and economically enforced."]
+
+---
+
+## SEGMENT 5 — TELEGRAM ALERT (1:45 → 1:55)
+
+[SHOW: Phone screen or Telegram desktop — alert notification from RWA Sentinel bot]
+[NARRATION: "And when a new attestation is published — or when one expires — you get a Telegram alert instantly. No dashboards to babysit."]
+
+[B-ROLL: Telegram message: "✅ Asset INV-2847 scored 79/100 — attestation live on Casper testnet"]
+
+---
+
+## CLOSE + CTA (1:55 → 2:00)
+
+[SHOW: rwa-sentinel.xyz homepage — hero with oracle mascot and live demo button]
+[NARRATION: "RWA Sentinel — AI oracle, DAO governance, 6-factor trust scoring. All live on Casper Network. Try the demo at rwa-sentinel.xyz. Link in the description."]
+
+[B-ROLL: Text card — "rwa-sentinel.xyz · github.com/triumphkrug/RWA-Sentinel"]
+
+---
+
+## PRODUCTION NOTES
+
+- **Tone:** Confident, technical, zero fluff. No hype words.
+- **Pacing:** One idea per sentence. Pause 0.5s between segments.
+- **Screen recording:** 1920×1080, Chrome, dark mode if available, no browser extensions visible.
+- **Font overlay (optional):** Use plain white text on semi-transparent black pill for key terms.
+- **Music:** Low, ambient, no beat drop. Fade out at close.
