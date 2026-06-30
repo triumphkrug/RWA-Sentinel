@@ -14,10 +14,8 @@ export default function DemoNotice() {
         className="w-20 h-20 object-contain flex-shrink-0 drop-shadow-lg" 
       />
       <div className="flex-1 min-w-0 pt-1">
-        <p className="text-blue-300 font-bold text-base mb-2">⚡ Live Testnet Demo</p>
         <p className="text-gray-200 text-sm leading-relaxed">
-          Oracle scoring is running on <span className="text-blue-400 font-semibold">real on-chain data from Casper testnet</span>. 
-          DAO votes are simulated for demo purposes; connect your wallet to cast a real vote on mainnet.
+          📖 God Book говорит: данные в Oracle Scoring и DAO Governance — демонстрационные. Real attestations появляются после подключения кошелька. Всё остальное — боевое: алёрты, контракты, on-chain записи.
         </p>
       </div>
       <button
