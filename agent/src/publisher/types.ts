@@ -18,6 +18,7 @@ export interface PublishResult {
 }
 
 export interface NftStatus {
+  metadataHash: string;
   batchId: string;
   active: boolean;
   createdAt: Date;

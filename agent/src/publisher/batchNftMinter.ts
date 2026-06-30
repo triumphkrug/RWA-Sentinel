@@ -38,6 +38,7 @@ export class BatchNftMinter {
 
     // Step 3: Create NFT status record
     const nftStatus: NftStatus = {
+      metadataHash,
       batchId,
       active: true,
       createdAt: now,
@@ -87,7 +88,7 @@ export class BatchNftMinter {
     let pruned = 0;
 
     // Step 1: Iterate and remove expired entries
-    for (const [batchId, nft] of this.mintedNfts) {
+    for (const [_batchId, nft] of this.mintedNfts) {
       if (now >= nft.validUntil) {
         nft.active = false;
         pruned++;

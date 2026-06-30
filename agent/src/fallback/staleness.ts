@@ -40,7 +40,7 @@ export class StalenessDetector {
 
     // Step 2: Compare against threshold
     const ageMs = Date.now() - lastRefresh;
-    return ageMs > this.thresholdMinutes * 60 * 1000;
+    return ageMs >= this.thresholdMinutes * 60 * 1000;
   }
 
   /**
@@ -58,7 +58,7 @@ export class StalenessDetector {
       key,
       ageMinutes: isFinite(ageMinutes) ? ageMinutes : -1,
       thresholdMinutes: this.thresholdMinutes,
-      isStale: ageMs > this.thresholdMinutes * 60 * 1000,
+      isStale: ageMs >= this.thresholdMinutes * 60 * 1000,
       lastRefreshedAt: lastRefresh !== undefined ? new Date(lastRefresh) : new Date(0),
     };
   }

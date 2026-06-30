@@ -68,6 +68,6 @@ describe('LocalScorer', () => {
     const r1 = scorer.scoreInvoice(collected[0]);
     const r2 = scorer.scoreInvoice(collected[1]);
 
-    expect(r1.factorsHash).not.toBe(r2.factorsHash);
+    expect(r1.evidenceHash).not.toBe(r2.evidenceHash);
   });
 });
