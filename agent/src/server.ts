@@ -22,6 +22,15 @@ const staleness = new StalenessDetector(config.staleThresholdMinutes);
 
 const app = Fastify({ logger: true });
 
+app.addHook('onRequest', async (request, reply) => {
+  reply.header('Access-Control-Allow-Origin', '*');
+  reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (request.method === 'OPTIONS') {
+    reply.status(204).send();
+  }
+});
+
 app.get('/', async () => ({
   name: 'RWA-Sentinel',
   version: '0.1.0',
