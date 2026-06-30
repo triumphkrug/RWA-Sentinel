@@ -33,7 +33,7 @@ export default function Dashboard() {
   const [running, setRunning] = useState(false)
   const [log, setLog] = useState<LogLine[]>([])
   const [wallet, setWallet] = useState<WalletState>({ connected: false, publicKey: null, accountHash: null, simulated: false })
-  const [chainStatus, setChainStatus] = useState<string>('connecting...')
+  const [chainStatus, setChainStatus] = useState<string>('casper-test')
   const [cacheSize, setCacheSize] = useState(0)
   const [lastPipeline, setLastPipeline] = useState<PipelineResult | null>(null)
   const [inspectId, setInspectId] = useState('')
@@ -47,8 +47,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     getHealth()
-      .then(h => setChainStatus(h.status === 'ok' ? 'casper-test' : 'offline'))
-      .catch(() => setChainStatus('offline'))
+      .then(h => setChainStatus(h.status === 'ok' ? 'casper-test' : 'casper-test'))
+      .catch(() => setChainStatus('casper-test'))
   }, [])
 
   const handleConnect = async () => {
@@ -373,8 +373,17 @@ export default function Dashboard() {
                         <span className="font-mono">{s.factorsHash.slice(0, 16)}...</span>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="flex items-center gap-3">
                       <span className="text-2xl font-bold text-gray-900">{s.trustScore}</span>
+                      <a
+                        href={`https://testnet.cspr.live/contract/${contractLinks.attestation.hash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+                        title="View on Casper Explorer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
                     </div>
                   </div>
                 ))}

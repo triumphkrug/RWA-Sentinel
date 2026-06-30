@@ -4,13 +4,13 @@ import { Shield, Zap, Globe, TrendingUp } from 'lucide-react'
 /* ── procedural cloud generator ── */
 function CloudLayer() {
   const clouds = useMemo(() => {
-    const seed = [0.23, 0.67, 0.12, 0.89, 0.45, 0.34, 0.78, 0.56]
+    const seed = [0.23, 0.67, 0.12, 0.89, 0.45, 0.34, 0.78, 0.56, 0.6, 0.15]
     return seed.map((s, i) => {
-      const w = 120 + s * 260
-      const h = 40 + s * 80
+      const w = 160 + s * 320
+      const h = 50 + s * 100
       const top = 5 + (s * 55)
-      const blur = 30 + s * 50
-      const opacity = 0.15 + s * 0.15
+      const blur = 20 + s * 35
+      const opacity = 0.35 + s * 0.35
       const dur = 28 + i * 8
       const delay = -(s * dur)
       const dir = i % 2 === 0 ? 'drift-right' : 'drift-left'
@@ -75,16 +75,16 @@ export default function Hero() {
         <div className="absolute top-[50%] w-[60px] h-[20px] bg-white/18 rounded-full blur-[18px] animate-drift-r" style={{ animationDuration: '26s', animationDelay: '-14s' }} />
       </div>
 
-      {/* God on throne – right side, never shrinks, max 95vw */}
-      <div className="absolute right-0 bottom-0 z-10 flex items-end justify-end" style={{ width: '55%', maxWidth: '95vw' }}>
+      {/* God on throne – right side, fixed height */}
+      <div className="absolute right-0 bottom-0 z-10 flex items-end justify-end w-[55%] max-w-[95vw]">
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-[70%] h-[70%] rounded-full bg-gradient-radial from-yellow-400/20 to-transparent blur-[40px] animate-chest-glow" />
         </div>
         <img
           src="/images/mascot/god_tron_hero.webp"
           alt="RWA-Sentinel Oracle"
-          className="w-full animate-throne-glow relative z-10"
-          style={{ transform: `translateY(${scrollY * 0.08}px)`, minWidth: '420px' }}
+          className="w-full min-h-[420px] sm:min-h-[520px] object-contain object-bottom animate-throne-glow relative z-10"
+          style={{ transform: `translateY(${scrollY * 0.08}px)` }}
           loading="eager"
         />
       </div>
@@ -103,12 +103,12 @@ export default function Hero() {
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-amber-500">We enforce it.</span>
           </h1>
 
-          <p className="text-lg text-gray-600 mb-8 leading-relaxed max-w-md">
+          <p className="text-lg text-gray-700 mb-8 leading-relaxed max-w-md bg-white/70 backdrop-blur-sm rounded-xl px-4 py-3 border border-gray-100/60">
             RWA-Sentinel scores real-world assets with a 6-factor AI pipeline and anchors time-limited attestations on Casper. When the attestation expires, reverification is required &mdash; because stale data is dangerous data.
           </p>
 
           <div className="flex flex-wrap gap-3 mb-10">
-            <a href="/app" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/20 hover:bg-blue-700 hover:shadow-blue-600/30 transition-all">
+            <a href="/dashboard" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/20 hover:bg-blue-700 hover:shadow-blue-600/30 transition-all">
               Launch Oracle
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
             </a>

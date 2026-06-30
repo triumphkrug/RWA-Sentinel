@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Menu, X, ExternalLink } from 'lucide-react'
+import { Menu, X, ExternalLink, Package, Plug, Github, FileText } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 
 interface Props {
   mobileOpen: boolean
@@ -15,21 +16,30 @@ const navLinks = [
   { href: '/#faq', label: 'FAQ' },
 ]
 
+const dashLinks = [
+  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/', label: 'Landing' },
+]
+
 const extLinks = [
-  { label: 'SDK', href: 'https://github.com/triumphkrug/RWA-Sentinel/tree/main/sdk', icon: '📦' },
-  { label: 'MCP', href: 'https://github.com/triumphkrug/RWA-Sentinel/tree/main/sdk/mcp.ts', icon: '🔌' },
-  { label: 'GitHub', href: 'https://github.com/triumphkrug/RWA-Sentinel', icon: '🐙' },
-  { label: 'Contracts', href: 'https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3', icon: '📜' },
+  { label: 'SDK', href: 'https://github.com/triumphkrug/RWA-Sentinel/tree/main/sdk', Icon: Package },
+  { label: 'MCP', href: 'https://github.com/triumphkrug/RWA-Sentinel/tree/main/sdk/mcp.ts', Icon: Plug },
+  { label: 'GitHub', href: 'https://github.com/triumphkrug/RWA-Sentinel', Icon: Github },
+  { label: 'Contracts', href: 'https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3', Icon: FileText },
 ]
 
 export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
   const [scrolled, setScrolled] = useState(false)
+  const location = useLocation()
+  const isDashboard = location.pathname === '/dashboard'
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40)
     window.addEventListener('scroll', handler, { passive: true })
     return () => window.removeEventListener('scroll', handler)
   }, [])
+
+  const activeLinks = isDashboard ? dashLinks : navLinks
 
   return (
     <>
@@ -42,14 +52,16 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
 
           {/* Desktop links */}
           <div className="hidden lg:flex items-center gap-6">
-            {navLinks.map(l => (
+            {activeLinks.map(l => (
               <a key={l.href} href={l.href} className={`text-sm font-medium transition-colors ${scrolled ? 'text-gray-600 hover:text-blue-600' : 'text-gray-700 hover:text-blue-600'}`}>
                 {l.label}
               </a>
             ))}
-            <a href="/app" className="ml-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-              Launch App
-            </a>
+            {!isDashboard && (
+              <a href="/dashboard" className="ml-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+                Launch App
+              </a>
+            )}
           </div>
 
           {/* Mobile toggle */}
@@ -101,7 +113,7 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
                     rel="noreferrer"
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
                   >
-                    <span>{l.icon}</span>
+                    <l.Icon className="w-4 h-4 text-gray-400" />
                     <span className="flex-1">{l.label}</span>
                     <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
                   </a>
@@ -112,7 +124,7 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
             {/* Launch App button at bottom */}
             <div className="px-5 py-4 border-t border-gray-100">
               <a
-                href="/app"
+                href="/dashboard"
                 onClick={() => setMobileOpen(false)}
                 className="block w-full text-center px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors shadow-sm"
               >
