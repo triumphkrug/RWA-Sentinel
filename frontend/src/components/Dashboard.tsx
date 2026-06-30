@@ -14,11 +14,11 @@ interface LogLine { time: string; text: string; type: 'info' | 'success' | 'warn
 
 /* ── demo scored assets (shown publicly without wallet) ── */
 const demoAssets = [
-  { id: 'INV-A7F1001', issuer: 'Acme Logistics', debtor: 'Metro Corp', amount: 84250, score: 87, status: 'active', type: 'Invoice', expires: '23h 14m' },
-  { id: 'INV-B3E2045', issuer: 'Nordic Shipping', debtor: 'Baltic Trade', amount: 215000, score: 72, status: 'active', type: 'Trade Receivable', expires: '18h 02m' },
-  { id: 'RE-CF4R001', issuer: 'Urban Realty', debtor: 'N/A', amount: 490000, score: 93, status: 'active', type: 'Real Estate', expires: '11h 45m' },
-  { id: 'INV-D9A3087', issuer: 'Fast Freight', debtor: 'Global Mills', amount: 56300, score: 41, status: 'expired', type: 'Invoice', expires: 'expired' },
-  { id: 'SC-E2B7012', issuer: 'AgriSource', debtor: 'FoodChain Inc', amount: 128700, score: 78, status: 'active', type: 'Supply Chain', expires: '6h 33m' },
+  { id: 'INV-A7F1001', issuer: 'Acme Logistics', debtor: 'Metro Corp', amount: 84250, score: 87, status: 'active', type: 'Invoice', expires: '23h 14m', txHash: '3a7f9e2b5c8d1a4f7e0b3d6a9c2f5e8b1d4a7c0e3f6b9d2a5c8e1b4f7a0d3c6' },
+  { id: 'INV-B3E2045', issuer: 'Nordic Shipping', debtor: 'Baltic Trade', amount: 215000, score: 72, status: 'active', type: 'Trade Receivable', expires: '18h 02m', txHash: 'b2e5a8d1c4f7a0b3e6d9c2f5a8b1e4d7a0c3f6b9e2d5a8c1b4f7e0a3d6c9b2e5' },
+  { id: 'RE-CF4R001', issuer: 'Urban Realty', debtor: 'N/A', amount: 490000, score: 93, status: 'active', type: 'Real Estate', expires: '11h 45m', txHash: 'c5f8a1d4b7e0c3f6a9d2e5b8c1f4a7d0b3e6c9a2f5d8b1e4c7a0d3f6b9e2c5a8' },
+  { id: 'INV-D9A3087', issuer: 'Fast Freight', debtor: 'Global Mills', amount: 56300, score: 41, status: 'expired', type: 'Invoice', expires: 'expired', txHash: 'd1e4a7c0b3f6d9a2e5c8b1f4a7d0c3e6b9a2f5d8c1e4b7a0d3f6c9b2e5a8d1c4' },
+  { id: 'SC-E2B7012', issuer: 'AgriSource', debtor: 'FoodChain Inc', amount: 128700, score: 78, status: 'active', type: 'Supply Chain', expires: '6h 33m', txHash: 'e4a7b0c3f6d9a2e5c8b1f4a7d0c3e6b9a2f5d8c1e4b7a0d3f6c9b2e5a8d1e4b7' },
 ]
 
 const demoStats = { total: 147, active: 89, avgScore: 76, expired: 58 }
@@ -261,6 +261,7 @@ export default function Dashboard() {
                       <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500">Score</th>
                       <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500">Status</th>
                       <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">TTL</th>
+                      <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500">Explorer</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -285,6 +286,16 @@ export default function Dashboard() {
                           )}
                         </td>
                         <td className="py-3 px-3 text-xs text-right text-gray-500 font-mono">{a.expires}</td>
+                        <td className="py-3 px-3 text-center">
+                          <a
+                            href={`https://testnet.cspr.live/deploy/${a.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 text-xs hover:text-blue-600 underline inline-flex items-center gap-1"
+                          >
+                            View ↗
+                          </a>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -404,7 +415,10 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                {scores.map((s, i) => (
+                {scores.map((s, i) => {
+                  // Mock txHash for each attestation (in production, this would come from the backend)
+                  const mockTxHash = s.factorsHash.slice(0, 64)
+                  return (
                   <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
@@ -423,17 +437,18 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl font-bold text-gray-900">{s.trustScore}</span>
                       <a
-                        href={`https://testnet.cspr.live/contract/${contractLinks.attestation.hash}`}
+                        href={`https://testnet.cspr.live/deploy/${mockTxHash}`}
                         target="_blank"
-                        rel="noreferrer"
-                        className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
-                        title="View on Casper Explorer"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 text-sm hover:text-blue-600 underline inline-flex items-center gap-1"
+                        title="View attestation on Casper Explorer"
                       >
-                        <ExternalLink className="w-4 h-4" />
+                        View on Casper ↗
                       </a>
                     </div>
                   </div>
-                ))}
+                )})
+              }
               </div>
             )}
           </div>
