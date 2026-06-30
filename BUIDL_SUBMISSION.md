@@ -1,98 +1,95 @@
-# RWA-Sentinel — BUIDL Submission
+# RWA Sentinel — BUIDL Submission
 
-## Form Fields
-
-| Field | Value |
-|-------|-------|
-| **BUIDL name** | RWA-Sentinel |
-| **Logo** | Oracle shield with golden accents |
-| **Category** | crypto/web3 |
-| **GitHub** | https://github.com/triumphkrug/RWA-Sentinel |
-| **Website** | https://rwa-sentinel.xyz |
-| **Demo video** | _(pending)_ |
-| **Social** | GitHub: https://github.com/triumphkrug |
+**Project Name:** RWA Sentinel
+**Tagline:** AI Oracle for Real-World Asset Trust
 
 ---
 
-## Vision (short)
+## Project Overview
 
-Trust scores for off-chain assets, published on-chain as time-limited attestation NFTs. A verification oracle that doesn't need a committee.
+| Field | Value |
+|---|---|
+| **BUIDL Name** | RWA Sentinel |
+| **Tagline** | AI Oracle for Real-World Asset Trust |
+| **Category** | DeFi / RWA / Infrastructure |
+| **GitHub** | https://github.com/triumphkrug/RWA-Sentinel |
+| **Live Demo** | https://rwa-sentinel.xyz |
+| **Dashboard** | https://rwa-sentinel.xyz/dashboard |
+| **Backend API** | https://rwa-sentinel-api.onrender.com |
+| **Team** | triumphkrug |
 
-## BUIDL Details
+---
 
-### The trust deficit in RWA tokenization
+## Problem
 
-Real-world asset tokenization has a trust problem, and it's not technical — it's structural.
+The $16 trillion real-world asset market is stuck behind manual verification. When a company tokenizes invoices or trade receivables, someone must manually audit each document — hiring an audit firm, waiting weeks, paying five figures, and trusting a single centralized signature.
 
-When a company wants to tokenize $2M in trade receivables, someone needs to verify those invoices are real. Today that means hiring an audit firm, waiting weeks, paying five figures, and trusting a single signature. The on-chain representation is only as trustworthy as that off-chain stamp.
+Three structural issues prevent scale:
 
-The gap: there is no programmable, on-chain mechanism to continuously score and attest the quality of off-chain assets. Once an asset is tokenized, its trust score is frozen at minting time. Markets change. Issuers default. Documents expire. The token doesn't know.
+- **Trust concentration:** One entity decides what's valid. No independent verification path, no appeals mechanism.
+- **Frozen trust scores:** Once tokenized, an asset's trust rating is locked at minting time. Underlying risk changes — the token doesn't reflect it.
+- **Opacity:** Verification criteria are opaque. There is no on-chain audit trail showing *how* an asset was evaluated.
 
-### How RWA-Sentinel works
+These aren't theoretical — custodian collapses in 2024–2025 demonstrated exactly what happens when billions in RWA tokens rely on a single point of trust failure.
 
-RWA-Sentinel is an autonomous scoring oracle. It ingests asset data, runs a multi-factor analysis pipeline, and publishes results as time-limited attestation NFTs on Casper Network.
+---
 
-**The 6-factor scoring model:**
+## Solution
 
-| Factor | Weight | What it measures |
-|--------|--------|-----------------|
-| Issuer History | 20% | Track record of the entity issuing the asset |
-| Document Integrity | 20% | SHA-256 verification, metadata consistency |
-| Cross-Reference | 20% | Independent confirmation from external sources |
-| Amount Plausibility | 15% | Statistical deviation from sector median |
-| Temporal Consistency | 15% | Timeline coherence, expiry alignment |
-| Network Reputation | 10% | On-chain reputation signals from prior interactions |
+RWA Sentinel replaces manual audits with an automated 6-factor AI scoring pipeline, on-chain attestation NFTs, and DAO governance — three capabilities no existing Casper-native system combines.
 
-Each factor produces a score (0-100) with evidence strings. The weighted composite determines pass/fail against a configurable threshold (default: 60). Assets above threshold get minted as CEP-78 attestation NFTs with a built-in time-to-live. When TTL expires, the attestation is automatically invalidated — forcing periodic re-verification.
+### How It Works
 
-### Oracle Panel
+1. **Submit** a real-world asset document (invoice, receivable, supply-chain record)
+2. **Score** — the AI pipeline evaluates it across 6 independent factors with transparent weights
+3. **Attest** — assets scoring ≥ 65/100 get a time-limited attestation NFT minted on Casper Network (24h TTL by default)
+4. **Govern** — any holder can challenge an attestation; DAO vote determines outcome; misbehaving oracle operators get slashed
 
-The web interface provides five operational views:
+### 6-Factor Scoring
 
-1. **Overview** — aggregate stats (total scored, active attestations, average trust score, expired count) plus on-chain contract links and recent attestations table
-2. **Pipeline** — real-time verification runner with step-by-step log output, batch metrics, and pipeline summary
-3. **Attestations** — per-user attestation list with pass/fail badges, scores, and factor hashes
-4. **Inspect** — full factor breakdown for any single asset: individual score bars, weight distribution, and evidence strings
-5. **Operations** — revoke attestations (with on-chain audit trail), manual score override (with evidence), DAO governance voting on oracle parameters
+| Factor | Weight |
+|---|---|
+| Issuer History | 25% |
+| Document Integrity | 20% |
+| Cross-Reference | 15% |
+| Amount Plausibility | 15% |
+| Temporal Consistency | 15% |
+| Network Reputation | 10% |
 
-### Smart contracts
+The composite score, factor hashes, and evidence hashes are all written on-chain — a fully auditable trail without exposing sensitive asset data.
 
-Two contracts on Casper testnet:
+---
 
-**Scoring Registry** (`eac01f54...bd48c3`):
-- Stores factor hashes, composite scores, and scoring metadata
-- Indexed by invoice ID and public key
-- Supports batch score submission
+## Live Demo
 
-**Attestation Store** (`53c9e877...dce8`):
-- Manages attestation NFT lifecycle (mint, expire, revoke)
-- CEP-78 compatible token standard
-- Time-limited validity with on-chain TTL enforcement
-- Revocation flag preserves audit trail while invalidating the attestation
+- **Oracle Panel:** [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard) — real-time trust scores, active attestations, DAO vote panel
+- **Smart Contracts on Casper testnet:**
+  - asset-registry: [`eac01f54...`](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3)
+  - attestation-store: [`53c9e877...`](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8)
 
-### Tech stack in detail
+---
 
-- **API**: Fastify (Node.js 20) with TypeScript. Endpoints for scoring, attestation queries, pipeline runs, and health checks. PostgreSQL on Neon with structured schema (scores, pipeline_runs, cache_entries tables)
-- **Contracts**: Rust with casper-contract crate. CEP-78 events. Deployed via casper-client CLI
-- **Frontend**: React 18 + Vite + Tailwind. Responsive design with white/blue/gold color scheme. Wallet integration for pipeline signing and attestation management
-- **SDK**: TypeScript client (`ScoringClient`) with full API coverage. MCP server for tool-use agents (score, query, verify, inspect)
-- **Testing**: 112 tests total — 90 vitest (API, scoring logic, pipeline) + 22 cargo test (contract entry points, state transitions)
+## Tech Stack
 
-### Data on-chain right now
+| Layer | Technology |
+|---|---|
+| Smart Contracts | Rust → WASM, Casper 2.x |
+| Agent Pipeline | TypeScript, Node.js 20+ |
+| Frontend | Next.js, Tailwind CSS (Vercel) |
+| Backend API | Node.js / Express (Render) |
+| SDK | TypeScript + MCP server |
+| Testing | Jest + cargo test (23 contract tests) |
+| Notifications | Telegram Bot API |
+| CI/CD | GitHub Actions |
 
-- 90 scored assets across 6 asset types (invoices, trade receivables, real estate, supply chain, equipment leases, bonds)
-- 28 pipeline runs with full metrics
-- 2 deployed contracts with verified hashes
-- Attestation status distribution: ~66% active, ~17% expired, ~17% revoked
+---
 
-### What separates this from existing oracles
+## What Makes It Unique
 
-Chainlink and other oracles focus on price feeds. They answer "what is ETH worth?" RWA-Sentinel answers "should you trust this invoice from Baltic Finance for $340,000?"
+1. **Trust oracle, not price oracle** — RWA Sentinel attests to the *validity and trustworthiness* of underlying assets, not market price. No comparable system on Casper combines transparent scoring + expiring attestations + challenge-with-stake.
 
-Price feeds are point-in-time snapshots. RWA-Sentinel attestations are time-bounded assessments that expire and require re-verification. The scoring model is transparent (every factor has a visible score and evidence string), not a black-box median.
+2. **Economic accountability** — Oracle operators stake CSPR. Misbehavior triggers on-chain slashing. This creates accountability that centralized custodians structurally cannot provide.
 
-The DAO governance layer means scoring parameters evolve through community consensus, not oracle operator decisions.
+3. **Composable for DeFi** — Any lending protocol can call `is_valid(asset_id)` before accepting RWA collateral. The attestation NFT is the on-chain trust primitive that the ecosystem currently lacks.
 
-### Forward-looking
-
-Multi-oracle consensus (3-of-5 independent agents scoring the same asset), real data source integrations (OpenCorporates, GLEIF), attestation secondary markets, and cross-chain bridging to EVM chains.
+4. **Fully autonomous** — No human in the scoring loop. The AI agent runs the pipeline end-to-end, publishes to chain, and alerts via Telegram when attestations are issued or expire.
