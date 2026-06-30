@@ -46,7 +46,9 @@ export default function Dashboard() {
   const [overrideId, setOverrideId] = useState('INV-B3E2045')
   const [overrideScore, setOverrideScore] = useState('81')
   const [overrideMsg, setOverrideMsg] = useState<string | null>(null)
-  const [votes, setVotes] = useState<Record<string, 'for' | 'against' | null>>({ 'RSP-014': null, 'RSP-015': null })
+  const [votes, setVotes] = useState<Record<string, 'for' | 'against' | null>>(() => {
+    try { return JSON.parse(localStorage.getItem('rwa_dao_votes') || 'null') || { 'RSP-014': null, 'RSP-015': null } } catch { return { 'RSP-014': null, 'RSP-015': null } }
+  })
   const [voteMsg, setVoteMsg] = useState<string | null>(null)
 
   const handleRevoke = () => {
@@ -60,9 +62,13 @@ export default function Dashboard() {
     setTimeout(() => setOverrideMsg(null), 4000)
   }
   const handleVote = (proposal: string, side: 'for' | 'against') => {
-    setVotes(v => ({ ...v, [proposal]: side }))
-    setVoteMsg(`✓ Vote cast: ${proposal} — ${side.toUpperCase()}. TX: 0x${Math.random().toString(16).slice(2, 10)}...`)
-    setTimeout(() => setVoteMsg(null), 4000)
+    setVotes(v => {
+      const next = { ...v, [proposal]: side }
+      try { localStorage.setItem('rwa_dao_votes', JSON.stringify(next)) } catch {}
+      return next
+    })
+    setVoteMsg(`✓ Vote cast: ${proposal} — ${side.toUpperCase()} (demo mode — no on-chain tx)`)
+    setTimeout(() => setVoteMsg(null), 5000)
   }
 
   const addLine = useCallback((l: LogLine) => {
