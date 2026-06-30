@@ -13,7 +13,7 @@
 [![Casper 2.x](https://img.shields.io/badge/Casper-2.x_(Zug)-FF0000.svg?style=flat-square)](https://casper.network)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
 
-[Landing Page](https://triumphkrug.github.io/RWA-Sentinel/) · [Architecture](docs/ARCHITECTURE.md) · [SDK Reference](docs/SDK.md) · [Changelog](CHANGELOG.md)
+[Landing Page](https://rwa-sentinel.xyz) · [Architecture](docs/ARCHITECTURE.md) · [SDK Reference](docs/SDK.md) · [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -414,8 +414,12 @@ Questions or feedback: [open an issue](https://github.com/triumphkrug/RWA-Sentin
 
 Licensed under the [Apache License, Version 2.0](LICENSE).
 
-**Security:** only testnet keys are used. Never commit deployer secret keys to the repository. See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for the full risk assessment.
+**Security notice:** This project operates on Casper testnet only. Deployer secret keys must never be committed to version control. Refer to [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for a comprehensive risk assessment.
 
-*Last verified against commit `486374d`, 2026-06-29.*
+---
+
+> _RWA-Sentinel was built for the Casper Agentic Buildathon 2026. The oracle pipeline, scoring model, and attestation contracts are functional on testnet. Production readiness requires independent security review._
+>
+> **Resources:** [Oracle Panel](https://rwa-sentinel.xyz/dashboard) · [TypeScript SDK](docs/SDK.md) · [Contract Architecture](docs/ARCHITECTURE.md) · [Scoring Methodology](docs/ARCHITECTURE.md#scoring-model)
 
 [back-to-top]: https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square
