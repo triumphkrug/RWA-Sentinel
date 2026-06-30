@@ -134,9 +134,9 @@ export default function Dashboard() {
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, s) => a + s.trustScore, 0) / scores.length) : 0
 
   const tabs = [
-    { id: 'overview' as const, label: 'Overview' },
-    { id: 'pipeline' as const, label: 'Pipeline', requiresWallet: true },
-    { id: 'attestations' as const, label: 'Attestations', requiresWallet: true },
+    { id: 'overview' as const, label: 'Overview', demo: true },
+    { id: 'pipeline' as const, label: 'Pipeline', requiresWallet: true, demo: true },
+    { id: 'attestations' as const, label: 'Attestations', requiresWallet: true, demo: true },
     { id: 'inspect' as const, label: 'Inspect', requiresWallet: true },
     { id: 'operations' as const, label: 'Operations', requiresWallet: true },
   ]
@@ -175,14 +175,30 @@ export default function Dashboard() {
               key={t.id}
               onClick={() => { if (!t.requiresWallet || wallet.connected) setTab(t.id) }}
               disabled={t.requiresWallet && !wallet.connected}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 tab === t.id ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed'
               }`}
             >
               {t.label}
+              {t.demo && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide bg-amber-100 text-amber-600 border border-amber-200">DEMO</span>}
             </button>
           ))}
         </div>
+
+        {/* Demo environment notice for seeded tabs */}
+        {(tab === 'overview' || tab === 'pipeline' || tab === 'attestations') && (
+          <div className="mb-6 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 flex gap-3 items-start">
+            <span className="mt-0.5 shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-xs font-bold border border-amber-200">i</span>
+            <div>
+              <p className="text-amber-700 text-sm font-semibold mb-0.5">Testnet Demo Environment</p>
+              <p className="text-gray-600 text-xs leading-relaxed">
+                This panel displays pre-seeded RWA attestation data that demonstrates realistic oracle scoring scenarios on Casper testnet.
+                The data models production-grade asset verification workflows — providing a meaningful preview for integrators and auditors.
+                Connect a Casper wallet to submit live attestation requests that are anchored on-chain.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* === OVERVIEW TAB (always public) === */}
         {tab === 'overview' && (
