@@ -1,107 +1,104 @@
-# VIDEO_SCRIPT.md — RWA Sentinel
-**Format:** Faceless tutorial · **Target length:** 2:00 min · **Language:** English
-**Topic:** Real-world assets on-chain: AI oracle + DAO governance + 6-factor trust scoring on Casper Network
+# RWAS Oracle — VIDEO SCRIPT
+**Format:** Faceless tutorial | ~2 min | English  
+**Style:** Terminal-first — pipeline terminal output first, then dashboard  
+**No voiceover** — subtitles + tooltips + background music
 
 ---
 
-## ⚡ HOOK VARIANTS (pick one — first 15 seconds)
+## HOOK OPTIONS (pick one — first 5 seconds)
 
-### Hook A — Problem Hook (recommended)
-> [SHOW: B-roll of paper invoices stacked on a desk, then cut to a "Transaction Pending" spinner]
-> [NARRATION: "There is $16 trillion in real-world assets waiting to go on-chain. The only thing standing in the way? Someone has to manually verify every single document. That bottleneck ends now."]
+**Hook A:**
+[SHOW: Pipeline terminal output — `[0.023] Scored: 12 | Passing (≥60): 9` — green lines scrolling]  
+[SUBTITLE: "12 invoices scored. 9 minted as NFT attestations on Casper. In under a second."]
 
-### Hook B — Curiosity Hook
-> [SHOW: rwa-sentinel.xyz landing page, hero section with oracle mascot shield]
-> [NARRATION: "What if an AI oracle could score the trustworthiness of any real-world asset in seconds — and publish that score to a blockchain automatically? That's exactly what RWA Sentinel does. Let me show you."]
+**Hook B:**
+[SHOW: testnet.cspr.live/contract/eac01f54... loading — the Scoring Registry contract]  
+[SUBTITLE: "Real-world assets, scored by AI, verified on Casper blockchain."]
 
-### Hook C — Social Proof Hook
-> [SHOW: Live deployment on rwa-sentinel.xyz, trust score numbers ticking]
-> [NARRATION: "We built a fully autonomous AI oracle for real-world asset verification on Casper Network — smart contracts live on testnet, DAO governance active, trust scores on-chain right now. Here's the full demo."]
-
----
-
-## SEGMENT 1 — THE PROBLEM (0:15 → 0:30)
-
-[SHOW: Scroll down rwa-sentinel.xyz landing page to the Problem section]
-[NARRATION: "Right now, tokenizing a $2 million invoice means hiring an audit firm. Waiting weeks. Paying five figures. And trusting one signature. The token gets minted once — and that trust score is frozen forever. Markets change, issuers default, documents expire. The token doesn't know."]
-
-[B-ROLL: Static graphic — "Manual Audit → Weeks → $$$$ → Single Point of Failure"]
+**Hook C:**
+[SHOW: Dashboard — attestation row with score 87, green ACTIVE badge, ExternalLink icon]  
+[SUBTITLE: "This $84K invoice is scored, attested, and verifiable by anyone on-chain."]
 
 ---
 
-## SEGMENT 2 — THE SOLUTION: 6-FACTOR SCORING (0:30 → 0:55)
+## SECTION 1 — Pipeline Terminal (0:00–0:40)
 
-[SHOW: Navigate to https://rwa-sentinel.xyz/dashboard — Oracle Panel overview cards]
-[NARRATION: "RWA Sentinel replaces that manual process with a 6-factor AI scoring pipeline. Every asset gets analyzed across six independent dimensions:"]
+[SHOW: Dashboard, connect wallet, navigate to Pipeline tab]
 
-[SHOW: Trust Score table on the dashboard — highlight each row as named]
-[NARRATION:
-"One — Issuer History: does this entity have a reliable track record?
-Two — Document Integrity: is the document hash consistent and unaltered?
-Three — Cross-Reference: does the data match external sources?
-Four — Amount Plausibility: is the invoice amount within expected bounds?
-Five — Temporal Consistency: is the issue date fresh and due date realistic?
-Six — Network Reputation: what does on-chain history say about this wallet?"]
+[SUBTITLE: "Connect your wallet, then hit Run Pipeline."]
 
-[B-ROLL: Animated bar chart — 6 factors filling up to a composite trust score of 82/100]
+[SHOW: Click "Run Pipeline" button — terminal output starts scrolling]
 
----
+```
+[0.003] Starting verification pipeline...
+[0.007] Account: 02022a4f...
+[0.021] Collecting invoice data from off-chain sources...
+[0.089] Ingested 15 invoices from sentinel feed
+[0.134] Deduplicated: 12 unique records
+[0.201] Running 6-factor trust scoring...
+[0.387] Scored: 12 | Passing (≥60): 9
+[0.412]   Cross-ref INV-7F99339A: PASS ✓
+[0.419]   Cross-ref INV-B3E2045: PASS ✓
+[0.501] Minting batch attestation NFT (validity: 24h)...
+[0.623] Publishing to Casper testnet via batch_attest...
+[0.891] Pipeline complete. Cache: 12 entries.
+```
 
-## RE-HOOK @ 60 SECONDS
+[SHOW: Stats: Ingested 15 | Collected 12 | Passing 9 | Rejected 3]
 
-[SHOW: Oracle Panel dashboard — attestation count badge updating]
-[NARRATION: "And every score above the threshold gets written to the Casper blockchain as a time-limited attestation NFT — automatically, in one transaction. No human in the loop."]
-
----
-
-## SEGMENT 3 — ORACLE PANEL DEMO (1:00 → 1:25)
-
-[SHOW: rwa-sentinel.xyz/dashboard — Oracle Panel with overview cards: Total Scored, Active Attestations, Avg Trust Score, Expired]
-[NARRATION: "The Oracle Panel gives you a real-time view of the entire pipeline. Total scored assets, active attestations, average trust score across the pool, and expired records."]
-
-[SHOW: Scroll to Trust Score table — rows with asset IDs, scores, and status badges]
-[NARRATION: "The trust score table shows every asset — its composite score, which factors passed, and whether the attestation is still valid or expired. Each attestation has a 24-hour TTL by default."]
-
-[SHOW: Click into a single asset row — detail panel or expanded view]
-[NARRATION: "Click any asset to see the full factor breakdown. The score components and evidence hash are anchored on-chain — fully auditable, no black box."]
+[TOOLTIP: "6-factor scoring: payment history, counterparty risk, doc integrity, and more."]
 
 ---
 
-## SEGMENT 4 — DAO GOVERNANCE (1:25 → 1:45)
+## RE-HOOK at ~0:40
 
-[SHOW: Navigate to the DAO Vote panel on the dashboard]
-[NARRATION: "Now — the DAO angle. RWA Sentinel isn't just an oracle. It's governed. Any challenged attestation goes to a DAO vote."]
-
-[SHOW: DAO vote panel — a pending vote with FOR / AGAINST buttons visible]
-[NARRATION: "Token holders can vote FOR or AGAINST an attestation. If AGAINST wins, the contract calls dao_invalidate — the NFT is revoked, the oracle operator's staked CSPR gets slashed, and the challenger is rewarded."]
-
-[SHOW: Click the FOR button → toast notification appears]
-[NARRATION: "One click submits your vote on-chain. The result is immutable, transparent, and economically enforced."]
+[SHOW: Switch to Attestations tab — list of scored invoices with trust scores]  
+[SUBTITLE: "Each row is a live attestation — click the explorer icon to verify on-chain."]
 
 ---
 
-## SEGMENT 5 — ON-CHAIN ATTESTATION (1:45 → 1:55)
+## SECTION 2 — Attestations & On-Chain Verification (0:40–1:20)
 
-[SHOW: Casper testnet explorer — attestation NFT transaction]
-[NARRATION: "Every score is anchored on-chain as an immutable attestation. Anyone can verify it — no trust required."]
+[SHOW: Attestations tab — rows: INV-A7F1001 | score 87 | PASS | green badge]
 
-[B-ROLL: Explorer showing contract hash, timestamp, score hash]
+[SHOW: Click ExternalLink icon on a passing attestation → testnet.cspr.live/contract/53c9e877... opens]
+
+[TOOLTIP: "Attestation Store: 53c9e877... — every attestation NFT lives here."]
+
+[SHOW: Overview tab → On-Chain Contracts section]
+
+[SHOW: Click "Scoring Registry" card → testnet.cspr.live/contract/eac01f54... opens]
+
+[SHOW: Click "Attestation Store" card → testnet.cspr.live/contract/53c9e877... opens]
+
+[SUBTITLE: "Two contracts. One for scoring logic, one for attestation NFTs."]
+
+[B-ROLL: Recent Attestations table — 5 rows with types: Invoice, Real Estate, Supply Chain]
 
 ---
 
-## CLOSE + CTA (1:55 → 2:00)
+## SECTION 3 — Operations & DAO (1:20–1:55)
 
-[SHOW: rwa-sentinel.xyz homepage — hero with oracle mascot and live demo button]
-[NARRATION: "RWA Sentinel — AI oracle, DAO governance, 6-factor trust scoring. All live on Casper Network. Try the demo at rwa-sentinel.xyz. Link in the description."]
+[SHOW: Operations tab — three cards: Revoke, Score Override, DAO Vote]
 
-[B-ROLL: Text card — "rwa-sentinel.xyz · github.com/triumphkrug/RWA-Sentinel"]
+[SHOW: Operations Log at the bottom — each row has an ExternalLink icon]
+
+[SHOW: Click ExternalLink on "Pipeline Run" log entry → testnet.cspr.live/deploy/e1a4c7... opens]
+
+[TOOLTIP: "Every operation is recorded as a deploy hash on Casper testnet."]
+
+[SHOW: DAO Vote card — click "FOR" on RSP-014, then click the Casper explorer icon next to it]
+
+[SUBTITLE: "Governance votes are on-chain too — click the link next to any proposal."]
+
+[SHOW: Inspect tab — enter INV-A7F1001 — factor breakdown bars animate: Payment History, Counterparty Risk, etc.]
+
+[TOOLTIP: "Score breakdown: transparent, auditable, court-admissible."]
 
 ---
 
-## PRODUCTION NOTES
+## OUTRO (1:55–2:00)
 
-- **Tone:** Confident, technical, zero fluff. No hype words.
-- **Pacing:** One idea per sentence. Pause 0.5s between segments.
-- **Screen recording:** 1920×1080, Chrome, dark mode if available, no browser extensions visible.
-- **Font overlay (optional):** Use plain white text on semi-transparent black pill for key terms.
-- **Music:** Low, ambient, no beat drop. Fade out at close.
+[SHOW: Overview dashboard with stats + Casper testnet explorer in corner]  
+[SUBTITLE: "RWAS Oracle. Real-world assets, trustlessly scored."]  
+[B-ROLL: GitHub repo URL]

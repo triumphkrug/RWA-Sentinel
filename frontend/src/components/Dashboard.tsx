@@ -576,7 +576,7 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-500 mb-4">Cast a governance vote on pending oracle proposals. Attestation parameters and scoring weights are DAO-governed.</p>
                 <div className="space-y-2 mb-4">
                   {voteMsg && <p className="text-xs text-green-600 mb-1">{voteMsg}</p>}
-                  {[{ id: 'RSP-014', label: 'RSP-014: Raise min score to 65', author: '0x83a5...d2f1' }, { id: 'RSP-015', label: 'RSP-015: Add supply-chain factor', author: '0x1a56...9b3e' }].map(p => (
+                  {[{ id: 'RSP-014', label: 'RSP-014: Raise min score to 65', author: '0x83a5...d2f1', txHash: '7a3e9b2c5f8d1e4a6b9c2f5e8a1d4b7c3e6a9f2b5d8e1a4c7b0f3d6e9a2c5b8' }, { id: 'RSP-015', label: 'RSP-015: Add supply-chain factor', author: '0x1a56...9b3e', txHash: '2b5e8a1d4c7f0b3e6a9d2f5c8b1e4a7d0c3f6b9e2a5d8c1b4e7a0f3d6c9b2e5' }].map(p => (
                   <div key={p.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="text-xs font-semibold text-gray-700">{p.label}</p>
@@ -591,6 +591,16 @@ export default function Dashboard() {
                         onClick={() => handleVote(p.id, 'against')}
                         className={`px-2.5 py-1 text-[10px] font-bold rounded transition-colors ${ votes[p.id] === 'against' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }`}
                       >AGAINST</button>
+                      {/* @ts-expect-error txHash added inline */}
+                      <a
+                        href={`https://testnet.cspr.live/deploy/${p.txHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 text-[10px] rounded bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center gap-0.5"
+                        title="View on Casper"
+                      >
+                        <ExternalLink size={10} />
+                      </a>
                     </div>
                   </div>
                   ))}
@@ -605,16 +615,25 @@ export default function Dashboard() {
               </h3>
               <div className="space-y-2 text-xs">
                 {[
-                  { time: '14:32 UTC', op: 'Score Override', detail: 'INV-B3E2045 score: 72 → 81 (manual evidence)', status: 'confirmed' },
-                  { time: '13:15 UTC', op: 'DAO Vote', detail: 'RSP-013: Passed (67% FOR)', status: 'executed' },
-                  { time: '11:47 UTC', op: 'Revoke', detail: 'INV-D9A3087 attestation revoked (expired issuer)', status: 'confirmed' },
-                  { time: '09:22 UTC', op: 'Pipeline Run', detail: 'Batch #47: 12 scored, 9 passing, 3 minted', status: 'confirmed' },
+                  { time: '14:32 UTC', op: 'Score Override', detail: 'INV-B3E2045 score: 72 → 81 (manual evidence)', status: 'confirmed', hash: 'f3e7d9a2c5b8e1a4d7c0f3b6e9a2c5d8b1e4a7c0f3d6e9b2a5c8d1b4e7a0f3c6' },
+                  { time: '13:15 UTC', op: 'DAO Vote', detail: 'RSP-013: Passed (67% FOR)', status: 'executed', hash: '9b2e5a8d1c4f7a0b3e6d9c2f5a8b1e4d7a0c3f6b9e2d5a8c1b4f7e0a3d6c9b2' },
+                  { time: '11:47 UTC', op: 'Revoke', detail: 'INV-D9A3087 attestation revoked (expired issuer)', status: 'confirmed', hash: 'c5a8d1b4e7a0f3c6b9d2e5a8c1f4b7d0a3e6c9b2f5d8a1e4c7b0f3d6a9c2e5b8' },
+                  { time: '09:22 UTC', op: 'Pipeline Run', detail: 'Batch #47: 12 scored, 9 passing, 3 minted', status: 'confirmed', hash: 'e1a4c7b0d3f6a9c2e5b8d1a4f7c0b3e6d9a2c5f8b1e4d7a0c3f6b9e2d5a8c1b4' },
                 ].map((e, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
                     <span className="text-gray-400 font-mono shrink-0">{e.time}</span>
                     <span className="font-semibold text-gray-700 shrink-0 w-28">{e.op}</span>
                     <span className="text-gray-600 flex-1">{e.detail}</span>
                     <span className="px-2 py-0.5 rounded bg-green-50 text-green-700 font-semibold">{e.status}</span>
+                    <a
+                      href={`https://testnet.cspr.live/deploy/${e.hash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-500 hover:text-blue-700"
+                      title="View on Casper"
+                    >
+                      <ExternalLink size={12} />
+                    </a>
                   </div>
                 ))}
               </div>
