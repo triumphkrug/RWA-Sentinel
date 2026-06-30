@@ -180,8 +180,12 @@ export default function Dashboard() {
                 if (!t.requiresWallet || wallet.connected) {
                   setTab(t.id)
                   setTimeout(() => {
-                    document.getElementById(`section-${t.id}`)?.scrollIntoView({ behavior: 'smooth' })
-                  }, 50)
+                    const el = document.getElementById(`section-${t.id}`)
+                    if (el) {
+                      const y = el.getBoundingClientRect().top + window.scrollY - 100
+                      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
+                    }
+                  }, 80)
                 }
               }}
               disabled={t.requiresWallet && !wallet.connected}
