@@ -138,6 +138,22 @@ Full diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ---
 
+## 📸 Screenshots
+
+| Homepage — scoring overview | Oracle dashboard | DAO vote panel | Attestation detail |
+|---|---|---|---|
+| ![Homepage](docs/screenshots/01-homepage.png) | ![Oracle dashboard](docs/screenshots/02-oracle-dashboard.png) | ![DAO vote](docs/screenshots/03-dao-vote.png) | ![Attestation detail](docs/screenshots/04-attestation-detail.png) |
+
+> Live at [rwa-sentinel.xyz](https://rwa-sentinel.xyz) · [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard)
+
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+---
+
 ## 6-Factor Scoring
 
 Each asset is independently evaluated across six weighted factors. The composite trust score `S = Σ(wᵢ × sᵢ) / Σ(wᵢ)` determines on-chain publication eligibility (threshold: 65/100, configurable).
@@ -364,8 +380,7 @@ RWA-Sentinel/
 
 ## Team
 
-**triumphkrug** — architecture, smart contracts, agent pipeline, dashboard
-→ [GitHub](https://github.com/triumphkrug) · [Issues](https://github.com/triumphkrug/RWA-Sentinel/issues)
+**triumphkrug** — systems architect and smart contract engineer focused on DeFi trust infrastructure. Designed and built RWA Sentinel end-to-end: two Casper WASM contracts (asset-registry, attestation-store), the TypeScript 6-factor scoring pipeline, DAO governance engine with CSPR staking and slashing, Oracle Panel dashboard in Next.js, and the TypeScript SDK with MCP server. Deeply interested in programmable trust and accountable oracle design for real-world asset markets. ([GitHub](https://github.com/triumphkrug) · [Issues](https://github.com/triumphkrug/RWA-Sentinel/issues))
 
 *Built for the Casper Agentic Buildathon 2026.*
 
