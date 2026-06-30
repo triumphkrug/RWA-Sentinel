@@ -1,53 +1,44 @@
+import { ExternalLink } from 'lucide-react'
+
+const extLinks = [
+  { label: 'SDK', href: 'https://github.com/triumphkrug/RWA-Sentinel/tree/main/sdk' },
+  { label: 'MCP Server', href: 'https://github.com/triumphkrug/RWA-Sentinel/tree/main/sdk/mcp.ts' },
+  { label: 'Repository', href: 'https://github.com/triumphkrug/RWA-Sentinel' },
+  { label: 'Scoring Registry', href: 'https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3' },
+  { label: 'Attestation Store', href: 'https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8' },
+]
+
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-gray-400 py-16">
+    <footer className="bg-gray-900 text-gray-400 py-12">
       <div className="rwa-section">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <img src="/images/logo.png" alt="RWA-Sentinel" className="h-7 w-auto object-contain brightness-200" />
-              <span className="font-bold text-white">RWA-Sentinel</span>
-            </div>
-            <p className="text-sm leading-relaxed">
-              AI-powered oracle for real-world asset verification on Casper Network. Time-limited attestations that expire because truth does too.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="text-white font-semibold mb-4 text-sm">Product</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href="/app" className="hover:text-white transition-colors">Oracle Dashboard</a></li>
-              <li><a href="#pipeline" className="hover:text-white transition-colors">Pipeline</a></li>
-              <li><a href="#factors" className="hover:text-white transition-colors">Trust Score</a></li>
-              <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-white font-semibold mb-4 text-sm">Developers</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href="https://github.com/triumphkrug/RWA-Sentinel" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">GitHub</a></li>
-              <li><a href="#developers" className="hover:text-white transition-colors">SDK</a></li>
-              <li><a href="#developers" className="hover:text-white transition-colors">MCP Server</a></li>
-              <li><a href="#developers" className="hover:text-white transition-colors">REST API</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-white font-semibold mb-4 text-sm">Built On</h4>
-            <div className="flex items-center gap-2 mb-4">
-              <img src="/images/casper-logo.png" alt="Casper" className="h-6 w-auto" />
-              <span className="text-sm text-gray-300">Casper Network</span>
-            </div>
-            <p className="text-xs text-gray-500">
-              3 smart contracts deployed on Casper testnet. Attestation NFTs, scoring registry, and governance module.
-            </p>
-          </div>
+        {/* External links – horizontal row */}
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-8">
+          {extLinks.map((l, i) => (
+            <a
+              key={i}
+              href={l.href}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              {l.label}
+              <ExternalLink className="w-3 h-3 opacity-50" />
+            </a>
+          ))}
         </div>
 
-        <div className="border-t border-gray-800 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-500">&copy; 2026 RWA-Sentinel. Apache-2.0 License.</p>
-          <p className="text-xs text-gray-500">Casper Agentic Buildathon 2026</p>
+        <div className="border-t border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          {/* Built On Casper */}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Built On</span>
+            <img src="/images/casper-logo.png" alt="Casper" className="h-5 w-auto brightness-200" />
+            <span className="text-gray-300 font-medium">Casper Network</span>
+          </div>
+
+          <p className="text-xs text-gray-600">
+            &copy; {new Date().getFullYear()} RWA-Sentinel &middot; Apache-2.0
+          </p>
         </div>
       </div>
     </footer>

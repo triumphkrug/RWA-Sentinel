@@ -18,51 +18,54 @@ const steps = [
     icon: BarChart3,
     label: 'Score',
     title: '6-Factor Analysis',
-    desc: 'Each asset is scored across 6 trust factors: provenance, market consistency, temporal freshness, cross-reference, anomaly detection, and source reliability.',
-    code: `// Trust factors (0-100 each)
-{
-  provenance:     92,
-  market:         87,
-  freshness:      95,
-  crossRef:       88,
-  anomaly:        91,
-  sourceReliability: 94
-  // → composite: 91.2
-}`,
-    color: 'blue',
+    desc: 'Each asset is scored across provenance, market consistency, freshness, cross-reference, anomaly detection, and source reliability.',
+    code: `const result = scorer.evaluate(asset)
+// result.trustScore = 87
+// result.factors = [
+//   { name: "Provenance", score: 92 },
+//   { name: "Market", score: 84 }, ...
+// ]`,
+    color: 'amber',
   },
   {
     icon: CheckCircle,
-    label: 'Verify',
-    title: 'Cross-Reference & Validate',
-    desc: 'Results are cross-referenced against independent data sources. Only assets above the trust threshold proceed to attestation.',
-    code: `crossRef.validate({
-  invoiceId: "INV-7F99339A",
-  threshold: 75,
-  sources: 3,
-  result: "PASS" // 91.2 > 75 ✓
-})`,
-    color: 'amber',
+    label: 'Attest',
+    title: 'Time-Limited Proof',
+    desc: 'Passing assets get an attestation NFT with an expiration window. Expired attestations require reverification.',
+    code: `const nft = minter.mintBatchNft(
+  batchId,
+  passingAssetIds,
+  { validityHours: 24 }
+)
+// nft.validUntil → 2026-07-01T15:00Z`,
+    color: 'green',
   },
   {
     icon: Upload,
-    label: 'Attest',
-    title: 'Anchor On-Chain',
-    desc: 'A time-limited attestation NFT is minted on Casper. It carries the trust score, evidence hash, and an expiration timestamp. When it expires, re-verification is required.',
-    code: `casper.deploy("attestation_nft", {
-  assetId: "INV-7F99339A",
-  trustScore: 91,
-  evidenceHash: "0x8a7f...",
-  expiresAt: "2026-07-15T00:00Z",
-  // Auto-expires in 14 days
-})`,
-    color: 'amber',
+    label: 'Publish',
+    title: 'On-Chain Anchor',
+    desc: 'Evidence hashes, trust scores, and attestation metadata are published to Casper smart contracts.',
+    code: `const deploy = publisher.publishBatch({
+  assetIds,
+  trustScores,
+  factorsHashes,
+  evidenceHashes
+})
+// deploy.transactionHash → 0x7a3f...`,
+    color: 'purple',
   },
 ]
 
+const colorMap: Record<string, { bg: string; text: string; line: string }> = {
+  blue: { bg: 'bg-blue-50', text: 'text-blue-600', line: 'bg-blue-500' },
+  amber: { bg: 'bg-amber-50', text: 'text-amber-600', line: 'bg-amber-500' },
+  green: { bg: 'bg-green-50', text: 'text-green-600', line: 'bg-green-500' },
+  purple: { bg: 'bg-purple-50', text: 'text-purple-600', line: 'bg-purple-500' },
+}
+
 export default function Pipeline() {
   const ref = useRef<HTMLElement>(null)
-  const [activeStep, setActiveStep] = useState(0)
+  const [activeIdx, setActiveIdx] = useState(0)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -71,69 +74,67 @@ export default function Pipeline() {
     return () => obs.disconnect()
   }, [])
 
+  const active = steps[activeIdx]
+  const c = colorMap[active.color]
+
   return (
-    <section ref={ref} id="pipeline" className="py-24 bg-gray-50/50">
+    <section ref={ref} id="pipeline" className="py-24 bg-white">
       <div className="rwa-section">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <p className="text-sm font-semibold text-blue-600 tracking-wide mb-3">THE PIPELINE</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-            From raw data to on-chain truth.
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">
+            <span className="shimmer-text">THE PIPELINE:</span>{' '}
+            From data to on-chain truth
           </h2>
-          <p className="text-gray-500 text-lg">
-            Four stages. Fully autonomous. Every attestation carries its own expiration date.
-          </p>
         </div>
 
-        {/* Step tabs */}
-        <div className={`flex justify-center mb-10 transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="inline-flex bg-white rounded-2xl border border-gray-200 p-1.5 shadow-sm">
-            {steps.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveStep(i)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  activeStep === i
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <s.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{s.label}</span>
-                <span className="sm:hidden">{i + 1}</span>
-              </button>
-            ))}
+        <div className={`transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          {/* Step selector tabs */}
+          <div className="flex items-center justify-center gap-2 mb-10">
+            {steps.map((s, i) => {
+              const sc = colorMap[s.color]
+              const isActive = i === activeIdx
+              return (
+                <button
+                  key={i}
+                  onClick={() => setActiveIdx(i)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    isActive ? `${sc.bg} ${sc.text} shadow-sm` : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <s.icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{s.label}</span>
+                  <span className="sm:hidden">{i + 1}</span>
+                </button>
+              )
+            })}
           </div>
-        </div>
 
-        {/* Active step detail */}
-        <div className={`max-w-5xl mx-auto transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          {/* Active step detail */}
           <div className="grid lg:grid-cols-2 gap-8 items-start">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">
-                STEP {activeStep + 1} OF 4
+            <div>
+              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${c.bg} ${c.text} text-xs font-semibold mb-4`}>
+                <active.icon className="w-3.5 h-3.5" />
+                Step {activeIdx + 1}: {active.label}
               </div>
-              <h3 className="text-2xl font-bold text-gray-900">{steps[activeStep].title}</h3>
-              <p className="text-gray-600 leading-relaxed text-lg">{steps[activeStep].desc}</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">{active.title}</h3>
+              <p className="text-gray-600 leading-relaxed mb-6">{active.desc}</p>
 
-              {/* Progress bar */}
-              <div className="flex gap-1.5 pt-4">
+              {/* Progress indicator */}
+              <div className="flex items-center gap-2">
                 {steps.map((_, i) => (
-                  <div key={i} className={`h-1 rounded-full flex-1 transition-colors ${i <= activeStep ? 'bg-blue-600' : 'bg-gray-200'}`} />
+                  <div key={i} className={`h-1.5 rounded-full transition-all ${i === activeIdx ? `w-8 ${c.line}` : 'w-3 bg-gray-200'}`} />
                 ))}
               </div>
             </div>
 
-            {/* Code block - terminal style */}
-            <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 shadow-xl">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="text-gray-500 text-xs ml-2 font-mono">sentinel-pipeline.ts</span>
+            <div className="bg-gray-900 rounded-2xl p-5 font-mono text-sm overflow-x-auto">
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="w-3 h-3 rounded-full bg-red-500" />
+                <span className="w-3 h-3 rounded-full bg-yellow-500" />
+                <span className="w-3 h-3 rounded-full bg-green-500" />
+                <span className="ml-2 text-gray-500 text-xs">{active.label.toLowerCase()}.ts</span>
               </div>
-              <pre className="p-5 text-sm font-mono text-gray-300 overflow-x-auto leading-relaxed">
-                <code>{steps[activeStep].code}</code>
-              </pre>
+              <pre className="text-green-400 whitespace-pre-wrap">{active.code}</pre>
             </div>
           </div>
         </div>

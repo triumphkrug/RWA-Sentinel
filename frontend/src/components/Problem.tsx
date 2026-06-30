@@ -15,32 +15,31 @@ export default function Problem() {
     { icon: ShieldOff, title: '$3.2B in RWA fraud', desc: 'Annual losses from unverified or stale real-world asset data in DeFi protocols.' },
     { icon: Clock, title: 'Static attestations lie', desc: 'A property appraised 6 months ago may have lost 30% of its value. Static proofs hide this.' },
     { icon: FileX, title: 'Manual verification fails', desc: 'Human oracles are slow, expensive, and introduce single points of failure.' },
-    { icon: AlertTriangle, title: 'No expiration = no accountability', desc: 'Most oracle attestations live forever. Truth doesn\'t. Neither should proofs.' },
+    { icon: AlertTriangle, title: 'No expiration = no accountability', desc: "Most oracle attestations live forever. Truth doesn't. Neither should proofs." },
   ]
 
   return (
-    <section ref={ref} className="py-24 bg-white border-t border-gray-100">
+    <section ref={ref} id="problem" className="py-24 bg-slate-50 border-y border-gray-100">
       <div className="rwa-section">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-semibold text-amber-600 tracking-wide mb-3">THE PROBLEM</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-            Stale data costs billions.
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">
+            <span className="shimmer-text">THE PROBLEM:</span>{' '}
+            Stale data costs billions
           </h2>
-          <p className="text-gray-500 text-lg">
-            DeFi protocols trust oracle data that was accurate once. RWA-Sentinel ensures accuracy is continuous.
-          </p>
         </div>
 
-        <div className={`grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0 translate-y-8'}`}>
+        <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-5 transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           {problems.map((p, i) => (
-            <div key={i} className="flex gap-4 p-6 rounded-2xl bg-red-50/50 border border-red-100/50" style={{ animationDelay: `${i * 0.1}s` }}>
-              <div className="w-11 h-11 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-                <p.icon className="w-5 h-5 text-red-600" />
+            <div
+              key={i}
+              className="rwa-card text-center"
+              style={{ transitionDelay: `${i * 100}ms` }}
+            >
+              <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+                <p.icon className="w-6 h-6 text-red-500" />
               </div>
-              <div>
-                <h3 className="font-bold text-gray-900 mb-1">{p.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{p.desc}</p>
-              </div>
+              <h3 className="font-bold text-gray-900 mb-2">{p.title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{p.desc}</p>
             </div>
           ))}
         </div>

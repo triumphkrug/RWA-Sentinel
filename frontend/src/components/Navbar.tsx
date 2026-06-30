@@ -1,67 +1,127 @@
 import { useState, useEffect } from 'react'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, ExternalLink } from 'lucide-react'
 
 interface Props {
   mobileOpen: boolean
   setMobileOpen: (v: boolean) => void
 }
 
-const links = [
-  { href: '#home', label: 'Home' },
-  { href: '#pipeline', label: 'Pipeline' },
-  { href: '#factors', label: 'Trust Score' },
-  { href: '#developers', label: 'Developers' },
-  { href: '#faq', label: 'FAQ' },
+const navLinks = [
+  { href: '/#home', label: 'Home' },
+  { href: '/#pipeline', label: 'Pipeline' },
+  { href: '/#factors', label: 'Trust Score' },
+  { href: '/#use-cases', label: 'Use Cases' },
+  { href: '/#developers', label: 'Developers' },
+  { href: '/#faq', label: 'FAQ' },
+]
+
+const extLinks = [
+  { label: 'SDK', href: 'https://github.com/triumphkrug/RWA-Sentinel/tree/main/sdk', icon: '📦' },
+  { label: 'MCP', href: 'https://github.com/triumphkrug/RWA-Sentinel/tree/main/sdk/mcp.ts', icon: '🔌' },
+  { label: 'GitHub', href: 'https://github.com/triumphkrug/RWA-Sentinel', icon: '🐙' },
+  { label: 'Contracts', href: 'https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3', icon: '📜' },
 ]
 
 export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 50)
+    const handler = () => setScrolled(window.scrollY > 40)
     window.addEventListener('scroll', handler, { passive: true })
     return () => window.removeEventListener('scroll', handler)
   }, [])
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur shadow-sm border-b border-gray-100' : 'bg-transparent'}`}>
-      <div className="rwa-section flex items-center justify-between h-16">
-        <a href="/" className="flex items-center gap-2.5">
-          <img src="/images/logo.png" alt="RWA-Sentinel" className="h-8 w-auto object-contain" />
-          <span className="font-bold text-gray-900 text-lg hidden sm:block">RWA-Sentinel</span>
-        </a>
-
-        <div className="hidden md:flex items-center gap-1">
-          {links.map(l => (
-            <a key={l.href} href={l.href} className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 rounded-lg hover:bg-blue-50/50 transition-colors">
-              {l.label}
-            </a>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-3">
-          <a href="/app" className="hidden sm:inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-            Launch App
+    <>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur shadow-sm' : 'bg-transparent'}`}>
+        <div className="rwa-section flex items-center justify-between h-16">
+          <a href="/" className="flex items-center gap-2">
+            <img src="/images/logo.png" alt="RWA-Sentinel" className="h-7 w-auto object-contain" />
+            <span className={`font-bold text-sm ${scrolled ? 'text-gray-900' : 'text-gray-800'}`}>RWA-Sentinel</span>
           </a>
-          <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-gray-600">
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
 
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 shadow-lg">
-          <div className="px-4 py-3 space-y-1">
-            {links.map(l => (
-              <a key={l.href} href={l.href} onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 text-gray-700 font-medium rounded-lg hover:bg-gray-50">
+          {/* Desktop links */}
+          <div className="hidden lg:flex items-center gap-6">
+            {navLinks.map(l => (
+              <a key={l.href} href={l.href} className={`text-sm font-medium transition-colors ${scrolled ? 'text-gray-600 hover:text-blue-600' : 'text-gray-700 hover:text-blue-600'}`}>
                 {l.label}
               </a>
             ))}
-            <a href="/app" className="block px-3 py-2.5 text-blue-600 font-semibold">Launch App</a>
+            <a href="/app" className="ml-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+              Launch App
+            </a>
+          </div>
+
+          {/* Mobile toggle */}
+          <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile sidebar – right */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-[55] lg:hidden" onClick={() => setMobileOpen(false)}>
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+          <div
+            className="absolute top-0 right-0 bottom-0 w-72 bg-white shadow-2xl flex flex-col animate-slide-in-right"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Close */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <span className="font-bold text-gray-900 text-sm">Menu</span>
+              <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Nav links */}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="space-y-1 mb-6">
+                {navLinks.map(l => (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                  >
+                    {l.label}
+                  </a>
+                ))}
+              </div>
+
+              {/* External links – visually separated */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">External</p>
+                {extLinks.map(l => (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <span>{l.icon}</span>
+                    <span className="flex-1">{l.label}</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Launch App button at bottom */}
+            <div className="px-5 py-4 border-t border-gray-100">
+              <a
+                href="/app"
+                onClick={() => setMobileOpen(false)}
+                className="block w-full text-center px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                Launch App
+              </a>
+            </div>
           </div>
         </div>
       )}
-    </nav>
+    </>
   )
 }

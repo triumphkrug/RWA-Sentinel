@@ -5,13 +5,14 @@ import Hero from './components/Hero'
 import Problem from './components/Problem'
 import Pipeline from './components/Pipeline'
 import TrustFactors from './components/TrustFactors'
+import UseCases from './components/UseCases'
 import WhyTimeLimited from './components/WhyTimeLimited'
 import SDKSection from './components/SDKSection'
 import Architecture from './components/Architecture'
 import FAQ from './components/FAQ'
 import CtaFooter from './components/CtaFooter'
 import Footer from './components/Footer'
-import ScrollProgress from './components/ScrollProgress'
+import ScrollToTop from './components/ScrollToTop'
 import NotFound from './components/NotFound'
 import Dashboard from './components/Dashboard'
 
@@ -22,6 +23,7 @@ function Landing() {
       <Problem />
       <Pipeline />
       <TrustFactors />
+      <UseCases />
       <WhyTimeLimited />
       <SDKSection />
       <Architecture />
@@ -41,7 +43,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <ScrollProgress />
+      <ScrollToTop />
       <Navbar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
       <main className="flex-1" onClick={mobileOpen ? closeMobile : undefined}>
         <Routes>

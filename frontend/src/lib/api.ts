@@ -48,6 +48,24 @@ export interface HealthResponse {
   status: string
   uptime: number
   timestamp: string
+  chain?: string
+  contracts?: Record<string, string>
+  totalScored?: number
+}
+
+export interface StatsResponse {
+  totalScored: number
+  activeAttestations: number
+  expiredAttestations: number
+  avgTrustScore: number
+  assetTypes: Record<string, number>
+}
+
+export interface AttestationListResponse {
+  attestations: ScoreResult[]
+  total: number
+  page: number
+  limit: number
 }
 
 export function getHealth(): Promise<HealthResponse> {
@@ -64,4 +82,27 @@ export function getScores(): Promise<{ scores: ScoreResult[] }> {
 
 export function getCacheStats(): Promise<CacheStats> {
   return request('/api/v1/cache/stats')
+}
+
+export function getStats(): Promise<StatsResponse> {
+  return request('/api/v1/stats')
+}
+
+export function getAttestations(params?: {
+  page?: number
+  limit?: number
+  status?: string
+  minScore?: number
+}): Promise<AttestationListResponse> {
+  const qs = new URLSearchParams()
+  if (params?.page) qs.set('page', String(params.page))
+  if (params?.limit) qs.set('limit', String(params.limit))
+  if (params?.status) qs.set('status', params.status)
+  if (params?.minScore) qs.set('min_score', String(params.minScore))
+  const q = qs.toString()
+  return request(`/api/v1/attestations${q ? '?' + q : ''}`)
+}
+
+export function getAttestation(id: string): Promise<ScoreResult> {
+  return request(`/api/v1/attestations/${encodeURIComponent(id)}`)
 }

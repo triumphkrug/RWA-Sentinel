@@ -19,45 +19,43 @@ const faqs = [
     a: 'Traditional oracles relay data points. RWA-Sentinel scores trust. Instead of just reporting a price, we analyze provenance, cross-reference multiple sources, detect anomalies, and attach an expiration to every attestation. The trust score is the product, not the raw data.',
   },
   {
-    q: 'Are verification results stored permanently?',
-    a: 'Attestation hashes and trust scores are anchored on Casper Network permanently. The detailed evidence data is cached in the backend with configurable TTL. The on-chain record serves as an immutable proof of verification at a point in time.',
+    q: 'What happens when an attestation expires?',
+    a: 'The attestation NFT becomes inactive on-chain. DeFi protocols calling is_valid() get false, blocking new loans or collateral positions until the asset is re-scored and a fresh attestation is minted.',
   },
   {
-    q: 'Can I integrate RWA-Sentinel into my AI agent?',
-    a: 'Yes. We provide a Model Context Protocol (MCP) server that any LLM agent (Claude, GPT, etc.) can use to run verifications, check scores, and query attestation status. See the SDK section above for setup instructions.',
+    q: 'Can I customize scoring weights?',
+    a: 'Yes. The scoring engine accepts custom FactorDefinition arrays. Adjust weights, add new factors, or replace the default evaluator functions via the SDK or direct API configuration.',
   },
 ]
 
 export default function FAQ() {
-  const [open, setOpen] = useState<number | null>(0)
+  const [openIdx, setOpenIdx] = useState<number | null>(null)
 
   return (
     <section id="faq" className="py-24 bg-white">
       <div className="rwa-section">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-14">
-            <p className="text-sm font-semibold text-blue-600 tracking-wide mb-3">FAQ</p>
-            <h2 className="text-3xl font-extrabold text-gray-900">
-              Common questions.
-            </h2>
-          </div>
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">
+            <span className="shimmer-text">FAQ:</span>{' '}
+            Common questions
+          </h2>
+        </div>
 
-          <div className="space-y-3">
-            {faqs.map((f, i) => (
-              <div key={i} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                <button
-                  onClick={() => setOpen(open === i ? null : i)}
-                  className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <span className="font-semibold text-gray-900 pr-4">{f.q}</span>
-                  <ChevronDown className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${open === i ? 'rotate-180' : ''}`} />
-                </button>
-                <div className={`overflow-hidden transition-all duration-300 ${open === i ? 'max-h-96' : 'max-h-0'}`}>
-                  <p className="px-5 pb-5 text-gray-600 leading-relaxed">{f.a}</p>
-                </div>
+        <div className="max-w-3xl mx-auto space-y-3">
+          {faqs.map((f, i) => (
+            <div key={i} className="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
+              <button
+                onClick={() => setOpenIdx(openIdx === i ? null : i)}
+                className="w-full flex items-center justify-between px-6 py-5 text-left"
+              >
+                <span className="font-semibold text-gray-900 pr-4">{f.q}</span>
+                <ChevronDown className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${openIdx === i ? 'rotate-180' : ''}`} />
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ${openIdx === i ? 'max-h-96 pb-5' : 'max-h-0'}`}>
+                <p className="px-6 text-sm text-gray-600 leading-relaxed">{f.a}</p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

@@ -19,70 +19,52 @@ console.log(result.passing, 'assets verified')`,
   {
     icon: Package,
     name: 'MCP Server',
-    desc: 'Model Context Protocol server for AI agent integration. Connect any LLM agent to real-world asset verification.',
-    install: 'npx @rwa-sentinel/mcp-server',
-    code: `// claude_desktop_config.json
-{
-  "mcpServers": {
-    "rwa-sentinel": {
-      "command": "npx",
-      "args": ["@rwa-sentinel/mcp-server"],
-      "env": {
-        "SENTINEL_API": "https://rwa-sentinel-api.onrender.com"
-      }
-    }
-  }
-}`,
+    desc: 'Model Context Protocol server for AI agent integration. Feed attestation data directly into LLM workflows.',
+    install: 'npx rwa-sentinel-mcp',
+    code: `// MCP tools exposed:
+// rwa_run_pipeline   — execute full pipeline
+// rwa_get_scores     — fetch scored assets
+// rwa_check_validity — query attestation status
+// rwa_cache_stats    — monitor cache health`,
   },
   {
     icon: Cpu,
     name: 'REST API',
-    desc: 'Direct HTTP endpoints for pipeline execution, score retrieval, and cache management. OpenAPI spec available.',
+    desc: 'Direct HTTP endpoints for custom integrations. Run pipelines, query scores, check cache, and verify attestations.',
     install: 'curl https://rwa-sentinel-api.onrender.com/health',
-    code: `# Run verification pipeline
-curl -X POST \\
-  https://rwa-sentinel-api.onrender.com/api/v1/pipeline \\
-  -H "Content-Type: application/json" \\
-  -d '{}'
-
-# Get all scores
-curl https://rwa-sentinel-api.onrender.com/api/v1/scores`,
+    code: `POST /api/v1/pipeline     — run verification
+GET  /api/v1/scores       — fetch scored invoices
+GET  /api/v1/cache/stats   — cache health
+GET  /health              — service status`,
   },
 ]
 
 export default function SDKSection() {
   return (
-    <section id="developers" className="py-24 bg-gray-50/50">
+    <section id="developers" className="py-24 bg-slate-50 border-y border-gray-100">
       <div className="rwa-section">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <p className="text-sm font-semibold text-blue-600 tracking-wide mb-3">FOR DEVELOPERS</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-            Integrate in minutes.
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">
+            <span className="shimmer-text">DEVELOPERS:</span>{' '}
+            Integrate in minutes
           </h2>
-          <p className="text-gray-500 text-lg">
-            SDK, MCP server, and REST API. Pick your integration path.
-          </p>
         </div>
 
-        <div className="space-y-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6">
           {tools.map((t, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-              <div className="grid lg:grid-cols-2">
-                <div className="p-8 flex flex-col justify-center">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-4">
-                    <t.icon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{t.name}</h3>
-                  <p className="text-gray-600 mb-4">{t.desc}</p>
-                  <div className="bg-gray-100 rounded-lg px-4 py-2 font-mono text-sm text-gray-700 inline-flex items-center gap-2 w-fit">
-                    <span className="text-gray-400">$</span> {t.install}
-                  </div>
+            <div key={i} className="rwa-card flex flex-col">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <t.icon className="w-5 h-5 text-blue-600" />
                 </div>
-                <div className="bg-gray-900 p-6 lg:rounded-l-none">
-                  <pre className="text-sm font-mono text-gray-300 overflow-x-auto leading-relaxed whitespace-pre-wrap">
-                    <code>{t.code}</code>
-                  </pre>
-                </div>
+                <h3 className="font-bold text-gray-900">{t.name}</h3>
+              </div>
+              <p className="text-sm text-gray-500 leading-relaxed mb-4">{t.desc}</p>
+              <div className="bg-gray-900 rounded-xl p-4 font-mono text-xs mb-3">
+                <p className="text-green-400 mb-2">$ {t.install}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 font-mono text-xs text-gray-600 flex-1 whitespace-pre-wrap">
+                {t.code}
               </div>
             </div>
           ))}

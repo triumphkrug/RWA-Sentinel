@@ -27,15 +27,48 @@
   }
 }
 
-/* Cloud drift keyframes */
+/* ── Shimmer text (blue) ── */
+.shimmer-text {
+  background: linear-gradient(90deg, #1a56db 0%, #60a5fa 40%, #1a56db 80%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s ease-in-out infinite;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+/* ── Shimmer text (gold) ── */
+.shimmer-text-gold {
+  background: linear-gradient(90deg, #b89030 0%, #f5d98e 40%, #b89030 80%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s ease-in-out infinite;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Cloud drift ── */
 @keyframes drift-right {
   0% { transform: translateX(-40%); }
-  100% { transform: translateX(120%); }
+  100% { transform: translateX(120vw); }
 }
 @keyframes drift-left {
-  0% { transform: translateX(120%); }
+  0% { transform: translateX(120vw); }
   100% { transform: translateX(-40%); }
 }
+
+/* ── Throne glow ── */
 @keyframes throne-glow {
   0%, 100% { filter: drop-shadow(0 0 30px rgba(184,144,48,0.2)); }
   50% { filter: drop-shadow(0 0 60px rgba(184,144,48,0.5)); }
@@ -44,12 +77,23 @@
   0%, 100% { opacity: 0.3; }
   50% { opacity: 0.7; }
 }
+
+/* ── Fade up ── */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Slide in right (mobile menu) ── */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* ── Animation classes ── */
 .animate-drift-r { animation: drift-right 35s linear infinite; }
 .animate-drift-l { animation: drift-left 45s linear infinite; }
 .animate-throne-glow { animation: throne-glow 4s ease-in-out infinite; }
 .animate-chest-glow { animation: chest-glow 3s ease-in-out infinite; }
 .animate-fade-up { animation: fade-up 0.7s ease-out both; }
+.animate-slide-in-right { animation: slide-in-right 0.25s ease-out; }
