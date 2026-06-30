@@ -80,12 +80,12 @@ Six — Network Reputation: what does on-chain history say about this wallet?"]
 
 ---
 
-## SEGMENT 5 — TELEGRAM ALERT (1:45 → 1:55)
+## SEGMENT 5 — ON-CHAIN ATTESTATION (1:45 → 1:55)
 
-[SHOW: Phone screen or Telegram desktop — alert notification from RWA Sentinel bot]
-[NARRATION: "And when a new attestation is published — or when one expires — you get a Telegram alert instantly. No dashboards to babysit."]
+[SHOW: Casper testnet explorer — attestation NFT transaction]
+[NARRATION: "Every score is anchored on-chain as an immutable attestation. Anyone can verify it — no trust required."]
 
-[B-ROLL: Telegram message: "✅ Asset INV-2847 scored 79/100 — attestation live on Casper testnet"]
+[B-ROLL: Explorer showing contract hash, timestamp, score hash]
 
 ---
 

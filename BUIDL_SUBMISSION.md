@@ -79,7 +79,6 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 | Backend API | Node.js / Express (Render) |
 | SDK | TypeScript + MCP server |
 | Testing | Jest + cargo test (23 contract tests) |
-| Notifications | Telegram Bot API |
 | CI/CD | GitHub Actions |
 
 ---
@@ -92,4 +91,4 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 3. **Composable for DeFi** — Any lending protocol can call `is_valid(asset_id)` before accepting RWA collateral. The attestation NFT is the on-chain trust primitive that the ecosystem currently lacks.
 
-4. **Fully autonomous** — No human in the scoring loop. The AI agent runs the pipeline end-to-end, publishes to chain, and alerts via Telegram when attestations are issued or expire.
+4. **Fully autonomous** — No human in the scoring loop. The AI agent runs the pipeline end-to-end, publishes to chain,.
