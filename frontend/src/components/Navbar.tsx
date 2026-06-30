@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Menu, X, ExternalLink, Package, Plug, Github, FileText } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 interface Props {
   mobileOpen: boolean
@@ -32,10 +32,37 @@ const extLinks = [
   { label: 'Contracts', href: 'https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3', Icon: FileText },
 ]
 
+function smoothScrollToSection(sectionId: string) {
+  const el = document.getElementById(sectionId)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' })
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
 export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
   const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
   const isDashboard = location.pathname === '/dashboard'
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault()
+    const [path, hash] = href.split('#')
+    const sectionId = hash || ''
+    if (path === '/' || path === '' || path === '/#') {
+      if (location.pathname !== '/') {
+        navigate('/')
+        setTimeout(() => smoothScrollToSection(sectionId), 300)
+      } else {
+        smoothScrollToSection(sectionId)
+      }
+    } else {
+      navigate(href)
+    }
+    if (mobileOpen) setMobileOpen(false)
+  }
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40)
@@ -57,7 +84,12 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
           {/* Desktop links */}
           <div className="hidden lg:flex items-center gap-6">
             {activeLinks.map(l => (
-              <a key={l.href} href={l.href} className={`text-sm font-medium transition-colors ${scrolled ? 'text-gray-600 hover:text-blue-600' : 'text-gray-700 hover:text-blue-600'}`}>
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={e => handleNavClick(e, l.href)}
+                className={`text-sm font-medium transition-colors ${scrolled ? 'text-gray-600 hover:text-blue-600' : 'text-gray-700 hover:text-blue-600'}`}
+              >
                 {l.label}
               </a>
             ))}
@@ -98,7 +130,7 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
                   <a
                     key={l.href}
                     href={l.href}
-                    onClick={() => setMobileOpen(false)}
+                    onClick={e => handleNavClick(e, l.href)}
                     className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                   >
                     {l.label}

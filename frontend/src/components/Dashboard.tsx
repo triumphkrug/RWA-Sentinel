@@ -8,6 +8,7 @@ import { runPipeline, getScores, getCacheStats, getHealth } from '../lib/api'
 import type { ScoreResult, PipelineResult } from '../lib/api'
 import { connectWallet, disconnectWallet, shortKey } from '../lib/wallet'
 import type { WalletState } from '../lib/wallet'
+import DemoNotice from './DemoNotice'
 
 interface LogLine { time: string; text: string; type: 'info' | 'success' | 'warn' | 'error' | 'hash' }
 
@@ -27,29 +28,7 @@ const contractLinks = {
   attestation: { hash: '53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8', name: 'Attestation Store' },
 }
 
-function GodBookNote() {
-  const [dismissed, setDismissed] = useState(false)
-  if (dismissed) return null
-  return (
-    <div className="relative flex items-start gap-4 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-950/40 to-yellow-950/20 p-5 mb-6 shadow-lg">
-      <img src="/god_book.png" alt="Oracle" className="w-16 h-16 object-contain flex-shrink-0 drop-shadow-lg" />
-      <div className="flex-1 min-w-0">
-        <p className="text-amber-300 font-semibold text-sm mb-1">The Oracle Speaks</p>
-        <p className="text-gray-300 text-xs leading-relaxed">
-          The statistics and asset data you see here are <span className="text-amber-400 font-medium">seeded for demonstration purposes</span> —
-          they show what RWA Sentinel looks like with a live portfolio under surveillance.
-          The sentinel engine, anomaly scoring, and alert routing are fully operational:
-          connect your own vault address to start monitoring real on-chain positions.
-        </p>
-      </div>
-      <button
-        onClick={() => setDismissed(true)}
-        className="absolute top-3 right-3 text-gray-500 hover:text-gray-300 text-lg leading-none"
-        aria-label="Dismiss"
-      >×</button>
-    </div>
-  )
-}
+
 
 export default function Dashboard() {
   const [tab, setTab] = useState<'overview' | 'pipeline' | 'attestations' | 'inspect' | 'operations'>('overview')
@@ -158,9 +137,9 @@ export default function Dashboard() {
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, s) => a + s.trustScore, 0) / scores.length) : 0
 
   const tabs = [
-    { id: 'overview' as const, label: 'Overview', demo: true },
-    { id: 'pipeline' as const, label: 'Pipeline', requiresWallet: true, demo: true },
-    { id: 'attestations' as const, label: 'Attestations', requiresWallet: true, demo: true },
+    { id: 'overview' as const, label: 'Overview' },
+    { id: 'pipeline' as const, label: 'Pipeline', requiresWallet: true },
+    { id: 'attestations' as const, label: 'Attestations', requiresWallet: true },
     { id: 'inspect' as const, label: 'Inspect', requiresWallet: true },
     { id: 'operations' as const, label: 'Operations', requiresWallet: true },
   ]
@@ -206,35 +185,21 @@ export default function Dashboard() {
                 }
               }}
               disabled={t.requiresWallet && !wallet.connected}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                 tab === t.id ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed'
               }`}
             >
               {t.label}
-              {t.demo && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide bg-amber-100 text-amber-600 border border-amber-200">DEMO</span>}
             </button>
           ))}
         </div>
 
-        {/* Demo environment notice for seeded tabs */}
-        {(tab === 'overview' || tab === 'pipeline' || tab === 'attestations') && (
-          <div className="mb-6 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 flex gap-3 items-start">
-            <span className="mt-0.5 shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-xs font-bold border border-amber-200">i</span>
-            <div>
-              <p className="text-amber-700 text-sm font-semibold mb-0.5">Testnet Demo Environment</p>
-              <p className="text-gray-600 text-xs leading-relaxed">
-                This panel displays pre-seeded RWA attestation data that demonstrates realistic oracle scoring scenarios on Casper testnet.
-                The data models production-grade asset verification workflows — providing a meaningful preview for integrators and auditors.
-                Connect a Casper wallet to submit live attestation requests that are anchored on-chain.
-              </p>
-            </div>
-          </div>
-        )}
+
 
         {/* === OVERVIEW TAB (always public) === */}
         {tab === 'overview' && (
           <div id="section-overview">
-            <GodBookNote />
+            <DemoNotice />
             {/* Public stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {[
