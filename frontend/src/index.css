@@ -97,3 +97,13 @@
 .animate-chest-glow { animation: chest-glow 3s ease-in-out infinite; }
 .animate-fade-up { animation: fade-up 0.7s ease-out both; }
 .animate-slide-in-right { animation: slide-in-right 0.25s ease-out; }
+
+/* ── Logo golden shimmer ── */
+@keyframes logo-shimmer {
+  0%, 100% {
+    filter: brightness(1.2) sepia(1) saturate(3) hue-rotate(10deg);
+  }
+  50% {
+    filter: brightness(1.6) sepia(1) saturate(4) hue-rotate(15deg) drop-shadow(0 0 8px rgba(184,144,48,0.5));
+  }
+}

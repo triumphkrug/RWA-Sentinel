@@ -20,7 +20,7 @@ export default function CtaFooter() {
                 Real-world assets on-chain
               </h2>
               <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-                Launch the oracle dashboard, connect your wallet, and run your first verification pipeline in under a minute.
+                Launch the oracle panel, connect your wallet, and run your first verification pipeline in under a minute.
               </p>
               <div className="flex flex-wrap gap-3">
                 <a href="/dashboard" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all">

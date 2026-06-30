@@ -17,8 +17,12 @@ const navLinks = [
 ]
 
 const dashLinks = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/', label: 'Landing' },
+  { href: '/#home', label: 'Home' },
+  { href: '/#pipeline', label: 'Pipeline' },
+  { href: '/#factors', label: 'Trust Score' },
+  { href: '/#use-cases', label: 'Use Cases' },
+  { href: '/#developers', label: 'Developers' },
+  { href: '/#faq', label: 'FAQ' },
 ]
 
 const extLinks = [
@@ -59,7 +63,7 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
             ))}
             {!isDashboard && (
               <a href="/dashboard" className="ml-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-                Launch App
+                Launch Oracle
               </a>
             )}
           </div>
@@ -128,7 +132,7 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
                 onClick={() => setMobileOpen(false)}
                 className="block w-full text-center px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors shadow-sm"
               >
-                Launch App
+                Launch Oracle
               </a>
             </div>
           </div>

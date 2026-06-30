@@ -28,7 +28,7 @@ const contractLinks = {
 }
 
 export default function Dashboard() {
-  const [tab, setTab] = useState<'overview' | 'pipeline' | 'attestations' | 'inspect'>('overview')
+  const [tab, setTab] = useState<'overview' | 'pipeline' | 'attestations' | 'inspect' | 'operations'>('overview')
   const [scores, setScores] = useState<ScoreResult[]>([])
   const [running, setRunning] = useState(false)
   const [log, setLog] = useState<LogLine[]>([])
@@ -107,6 +107,7 @@ export default function Dashboard() {
     { id: 'pipeline' as const, label: 'Pipeline', requiresWallet: true },
     { id: 'attestations' as const, label: 'Attestations', requiresWallet: true },
     { id: 'inspect' as const, label: 'Inspect', requiresWallet: true },
+    { id: 'operations' as const, label: 'Operations', requiresWallet: true },
   ]
 
   return (
@@ -115,8 +116,8 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-extrabold text-gray-900">Oracle Dashboard</h1>
-            <p className="text-gray-500 text-sm mt-1">RWA verification pipeline &amp; attestation explorer</p>
+            <h1 className="text-2xl font-extrabold text-gray-900">Oracle Panel</h1>
+            <p className="text-gray-500 text-sm mt-1">RWA verification pipeline &amp; asset attestation manager</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-xs">
@@ -466,6 +467,104 @@ export default function Dashboard() {
               {inspected === null && inspectId && (
                 <p className="text-sm text-gray-500 text-center py-4">No attestation found for this ID. Run the pipeline first.</p>
               )}
+            </div>
+          </div>
+        )}
+        {/* === OPERATIONS TAB === */}
+        {tab === 'operations' && wallet.connected && (
+          <div className="space-y-6">
+            <div className="grid sm:grid-cols-3 gap-4">
+              {/* Revoke Attestation */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center mb-4">
+                  <XCircle className="w-5 h-5 text-red-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2">Revoke Attestation</h3>
+                <p className="text-xs text-gray-500 mb-4">Invalidate an existing attestation NFT. Revoked attestations remain on-chain with a revoked flag for audit trail.</p>
+                <input
+                  placeholder="Attestation ID (e.g. INV-A7F1001)"
+                  className="w-full px-3 py-2 text-sm rounded-lg bg-gray-50 border border-gray-200 mb-3 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+                <button className="w-full py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">
+                  Revoke
+                </button>
+              </div>
+
+              {/* Manual Score Override */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-4">
+                  <BarChart3 className="w-5 h-5 text-amber-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2">Score Override</h3>
+                <p className="text-xs text-gray-500 mb-4">Manually override the trust score for an asset when off-chain evidence supports a different assessment.</p>
+                <input
+                  placeholder="Asset ID"
+                  className="w-full px-3 py-2 text-sm rounded-lg bg-gray-50 border border-gray-200 mb-2 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <input
+                  type="number"
+                  placeholder="New score (0-100)"
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 text-sm rounded-lg bg-gray-50 border border-gray-200 mb-3 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <button className="w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors">
+                  Override Score
+                </button>
+              </div>
+
+              {/* DAO Vote */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-4">
+                  <Shield className="w-5 h-5 text-blue-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2">DAO Vote</h3>
+                <p className="text-xs text-gray-500 mb-4">Cast a governance vote on pending oracle proposals. Attestation parameters and scoring weights are DAO-governed.</p>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-700">RSP-014: Raise min score to 65</p>
+                      <p className="text-[10px] text-gray-400">Proposed by 0x83a5...d2f1</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button className="px-2.5 py-1 text-[10px] font-bold bg-green-100 text-green-700 rounded hover:bg-green-200">FOR</button>
+                      <button className="px-2.5 py-1 text-[10px] font-bold bg-red-100 text-red-700 rounded hover:bg-red-200">AGAINST</button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-700">RSP-015: Add supply-chain factor</p>
+                      <p className="text-[10px] text-gray-400">Proposed by 0x1a56...9b3e</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button className="px-2.5 py-1 text-[10px] font-bold bg-green-100 text-green-700 rounded hover:bg-green-200">FOR</button>
+                      <button className="px-2.5 py-1 text-[10px] font-bold bg-red-100 text-red-700 rounded hover:bg-red-200">AGAINST</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Activity log */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-4">
+                <Activity className="w-4 h-4 text-blue-600" /> Operations Log
+              </h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { time: '14:32 UTC', op: 'Score Override', detail: 'INV-B3E2045 score: 72 → 81 (manual evidence)', status: 'confirmed' },
+                  { time: '13:15 UTC', op: 'DAO Vote', detail: 'RSP-013: Passed (67% FOR)', status: 'executed' },
+                  { time: '11:47 UTC', op: 'Revoke', detail: 'INV-D9A3087 attestation revoked (expired issuer)', status: 'confirmed' },
+                  { time: '09:22 UTC', op: 'Pipeline Run', detail: 'Batch #47: 12 scored, 9 passing, 3 minted', status: 'confirmed' },
+                ].map((e, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                    <span className="text-gray-400 font-mono shrink-0">{e.time}</span>
+                    <span className="font-semibold text-gray-700 shrink-0 w-28">{e.op}</span>
+                    <span className="text-gray-600 flex-1">{e.detail}</span>
+                    <span className="px-2 py-0.5 rounded bg-green-50 text-green-700 font-semibold">{e.status}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
