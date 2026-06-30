@@ -39,7 +39,9 @@ export class PgStore {
       )
     `);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_scores_invoice ON scores(invoice_id)`);
-    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_scores_status ON scores(attestation_status)`);
+    await this.pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_scores_status ON scores(attestation_status)`,
+    );
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_scores_trust ON scores(trust_score)`);
 
     await this.pool.query(`
@@ -58,16 +60,20 @@ export class PgStore {
   }
 
   /** Save a scored result to the database. */
-  async saveScore(result: ScoringResult, meta?: {
-    issuerId?: string;
-    debtorId?: string;
-    amount?: number;
-    currency?: string;
-    assetType?: string;
-    publicKey?: string;
-  }): Promise<void> {
+  async saveScore(
+    result: ScoringResult,
+    meta?: {
+      issuerId?: string;
+      debtorId?: string;
+      amount?: number;
+      currency?: string;
+      assetType?: string;
+      publicKey?: string;
+    },
+  ): Promise<void> {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
-    await this.pool.query(`
+    await this.pool.query(
+      `
       INSERT INTO scores (invoice_id, trust_score, is_above_threshold, scored_at,
         issuer_id, debtor_id, amount, currency, asset_type,
         factors_hash, evidence_hash, factors,
@@ -82,23 +88,40 @@ export class PgStore {
         factors = EXCLUDED.factors,
         attestation_status = EXCLUDED.attestation_status,
         attestation_expires_at = EXCLUDED.attestation_expires_at
-    `, [
-      result.invoiceId, result.trustScore, result.isAboveThreshold,
-      result.scoredAt,
-      meta?.issuerId ?? null, meta?.debtorId ?? null,
-      meta?.amount ?? null, meta?.currency ?? 'USD',
-      meta?.assetType ?? 'invoice',
-      result.factorsHash, result.evidenceHash, JSON.stringify(result.factors),
-      result.isAboveThreshold ? 'active' : 'below_threshold',
-      result.isAboveThreshold ? expiresAt : null,
-      meta?.publicKey ?? null,
-    ]);
+    `,
+      [
+        result.invoiceId,
+        result.trustScore,
+        result.isAboveThreshold,
+        result.scoredAt,
+        meta?.issuerId ?? null,
+        meta?.debtorId ?? null,
+        meta?.amount ?? null,
+        meta?.currency ?? 'USD',
+        meta?.assetType ?? 'invoice',
+        result.factorsHash,
+        result.evidenceHash,
+        JSON.stringify(result.factors),
+        result.isAboveThreshold ? 'active' : 'below_threshold',
+        result.isAboveThreshold ? expiresAt : null,
+        meta?.publicKey ?? null,
+      ],
+    );
   }
 
   /** Batch save scored results. */
-  async saveBatch(results: ScoringResult[], invoiceMap?: Map<string, {
-    issuerId: string; debtorId: string; amount: number; currency: string;
-  }>): Promise<void> {
+  async saveBatch(
+    results: ScoringResult[],
+    invoiceMap?: Map<
+      string,
+      {
+        issuerId: string;
+        debtorId: string;
+        amount: number;
+        currency: string;
+      }
+    >,
+  ): Promise<void> {
     for (const r of results) {
       const meta = invoiceMap?.get(r.invoiceId);
       await this.saveScore(r, {
@@ -111,28 +134,56 @@ export class PgStore {
   }
 
   /** Save a pipeline run record. */
-  async savePipelineRun(runId: string, data: {
-    generated: number; collected: number; scored: number;
-    passing: number; cacheSize: number; publicKey?: string;
-  }): Promise<void> {
-    await this.pool.query(`
+  async savePipelineRun(
+    runId: string,
+    data: {
+      generated: number;
+      collected: number;
+      scored: number;
+      passing: number;
+      cacheSize: number;
+      publicKey?: string;
+    },
+  ): Promise<void> {
+    await this.pool.query(
+      `
       INSERT INTO pipeline_runs (run_id, generated, collected, scored, passing, cache_size, public_key)
       VALUES ($1,$2,$3,$4,$5,$6,$7)
       ON CONFLICT (run_id) DO NOTHING
-    `, [runId, data.generated, data.collected, data.scored, data.passing, data.cacheSize, data.publicKey ?? null]);
+    `,
+      [
+        runId,
+        data.generated,
+        data.collected,
+        data.scored,
+        data.passing,
+        data.cacheSize,
+        data.publicKey ?? null,
+      ],
+    );
   }
 
   /** Get aggregate stats. */
   async getStats(): Promise<{
-    totalScored: number; activeAttestations: number;
-    expiredAttestations: number; avgTrustScore: number;
+    totalScored: number;
+    activeAttestations: number;
+    expiredAttestations: number;
+    avgTrustScore: number;
     assetTypes: Record<string, number>;
   }> {
     const total = await this.pool.query(`SELECT count(*) as c FROM scores`);
-    const active = await this.pool.query(`SELECT count(*) as c FROM scores WHERE attestation_status = 'active' AND (attestation_expires_at IS NULL OR attestation_expires_at > NOW())`);
-    const expired = await this.pool.query(`SELECT count(*) as c FROM scores WHERE attestation_expires_at IS NOT NULL AND attestation_expires_at <= NOW()`);
-    const avg = await this.pool.query(`SELECT COALESCE(ROUND(AVG(trust_score)), 0) as a FROM scores`);
-    const types = await this.pool.query(`SELECT asset_type, count(*) as c FROM scores GROUP BY asset_type`);
+    const active = await this.pool.query(
+      `SELECT count(*) as c FROM scores WHERE attestation_status = 'active' AND (attestation_expires_at IS NULL OR attestation_expires_at > NOW())`,
+    );
+    const expired = await this.pool.query(
+      `SELECT count(*) as c FROM scores WHERE attestation_expires_at IS NOT NULL AND attestation_expires_at <= NOW()`,
+    );
+    const avg = await this.pool.query(
+      `SELECT COALESCE(ROUND(AVG(trust_score)), 0) as a FROM scores`,
+    );
+    const types = await this.pool.query(
+      `SELECT asset_type, count(*) as c FROM scores GROUP BY asset_type`,
+    );
 
     const assetTypes: Record<string, number> = {};
     for (const row of types.rows) {
@@ -150,7 +201,10 @@ export class PgStore {
 
   /** List attestations with pagination and filters. */
   async listAttestations(opts: {
-    page?: number; limit?: number; status?: string; minScore?: number;
+    page?: number;
+    limit?: number;
+    status?: string;
+    minScore?: number;
   }): Promise<{ attestations: ScoringResult[]; total: number; page: number; limit: number }> {
     const page = opts.page ?? 1;
     const limit = Math.min(opts.limit ?? 20, 100);
@@ -204,7 +258,9 @@ export class PgStore {
     return {
       invoiceId: row.invoice_id as string,
       trustScore: row.trust_score as number,
-      factors: (row.factors as Array<{ name: string; weight: number; score: number; evidence: string }>) ?? [],
+      factors:
+        (row.factors as Array<{ name: string; weight: number; score: number; evidence: string }>) ??
+        [],
       factorsHash: (row.factors_hash as string) ?? '',
       evidenceHash: (row.evidence_hash as string) ?? '',
       scoredAt: row.scored_at as Date,

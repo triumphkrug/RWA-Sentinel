@@ -104,7 +104,10 @@ app.post('/api/v1/pipeline', async () => {
         evidenceHashes: passing.map((s) => s.evidenceHash),
       });
       publishHash = pubResult.transactionHash;
-      nftMinter.mintBatchNft(pubResult.batchId, passing.map((s) => s.invoiceId));
+      nftMinter.mintBatchNft(
+        pubResult.batchId,
+        passing.map((s) => s.invoiceId),
+      );
     } catch (err) {
       console.warn('[pipeline] publish failed:', err);
     }
@@ -112,15 +115,17 @@ app.post('/api/v1/pipeline', async () => {
 
   // Persist to DB
   if (store) {
-    const invoiceMap = new Map(collected.map((c) => [
-      c.invoiceId,
-      {
-        issuerId: c.invoice.issuer,
-        debtorId: c.invoice.debtor,
-        amount: c.invoice.amountCents / 100,
-        currency: c.invoice.currencyCode,
-      },
-    ]));
+    const invoiceMap = new Map(
+      collected.map((c) => [
+        c.invoiceId,
+        {
+          issuerId: c.invoice.issuer,
+          debtorId: c.invoice.debtor,
+          amount: c.invoice.amountCents / 100,
+          currency: c.invoice.currencyCode,
+        },
+      ]),
+    );
     await store.saveBatch(scores, invoiceMap);
     const runId = randomUUID().slice(0, 8);
     await store.savePipelineRun(runId, {
@@ -183,21 +188,18 @@ app.get<{ Querystring: { page?: string; limit?: string; status?: string; min_sco
   },
 );
 
-app.get<{ Params: { id: string } }>(
-  '/api/v1/attestations/:id',
-  async (request, reply) => {
-    if (store) {
-      const att = await store.getAttestation(request.params.id);
-      if (!att) {
-        reply.status(404);
-        return { error: 'attestation not found' };
-      }
-      return att;
+app.get<{ Params: { id: string } }>('/api/v1/attestations/:id', async (request, reply) => {
+  if (store) {
+    const att = await store.getAttestation(request.params.id);
+    if (!att) {
+      reply.status(404);
+      return { error: 'attestation not found' };
     }
-    reply.status(404);
-    return { error: 'no database configured' };
-  },
-);
+    return att;
+  }
+  reply.status(404);
+  return { error: 'no database configured' };
+});
 
 app.get('/api/v1/cache/stats', async () => ({
   size: cache.size,
