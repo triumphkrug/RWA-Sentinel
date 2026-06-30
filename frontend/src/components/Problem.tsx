@@ -1,82 +1,48 @@
 import { useEffect, useRef, useState } from 'react'
-
-const features = [
-  {
-    icon: '🛡️',
-    title: 'AI Verified',
-    desc: 'Intelligent verification powered by multi-model consensus.',
-    color: 'border-rwa-blue/20 hover:border-rwa-blue/50',
-  },
-  {
-    icon: '🔗',
-    title: 'On-Chain',
-    desc: 'Tamper-proof attestations on Casper Network.',
-    color: 'border-rwa-gold/20 hover:border-rwa-gold/50',
-  },
-  {
-    icon: '🏛️',
-    title: 'Trustless',
-    desc: 'Decentralized. Transparent. Always verifiable.',
-    color: 'border-green-200 hover:border-green-400',
-  },
-]
+import { AlertTriangle, Clock, FileX, ShieldOff } from 'lucide-react'
 
 export default function Problem() {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLElement>(null)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true) }, { threshold: 0.2 })
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true) }, { threshold: 0.15 })
     if (ref.current) obs.observe(ref.current)
     return () => obs.disconnect()
   }, [])
 
+  const problems = [
+    { icon: ShieldOff, title: '$3.2B in RWA fraud', desc: 'Annual losses from unverified or stale real-world asset data in DeFi protocols.' },
+    { icon: Clock, title: 'Static attestations lie', desc: 'A property appraised 6 months ago may have lost 30% of its value. Static proofs hide this.' },
+    { icon: FileX, title: 'Manual verification fails', desc: 'Human oracles are slow, expensive, and introduce single points of failure.' },
+    { icon: AlertTriangle, title: 'No expiration = no accountability', desc: 'Most oracle attestations live forever. Truth doesn\'t. Neither should proofs.' },
+  ]
+
   return (
-    <section className="py-20 bg-gray-50" ref={ref}>
+    <section ref={ref} className="py-24 bg-white border-t border-gray-100">
       <div className="rwa-section">
-        <div className="grid md:grid-cols-3 gap-6">
-          {features.map((f, i) => (
-            <div
-              key={i}
-              className={`group p-6 rounded-2xl bg-white border-2 ${f.color} shadow-sm hover:shadow-lg transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
-              style={{ transitionDelay: `${i * 120}ms` }}
-            >
-              <span className="text-3xl mb-4 block">{f.icon}</span>
-              <h3 className="text-lg font-bold text-gray-900 mb-2 uppercase tracking-wide">{f.title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <p className="text-sm font-semibold text-amber-600 tracking-wide mb-3">THE PROBLEM</p>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+            Stale data costs billions.
+          </h2>
+          <p className="text-gray-500 text-lg">
+            DeFi protocols trust oracle data that was accurate once. RWA-Sentinel ensures accuracy is continuous.
+          </p>
         </div>
 
-        {/* Oracle section */}
-        <div className="mt-20 grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-rwa-gold font-semibold mb-2">The Oracle</p>
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Guardian of Truth</h2>
-            <div className="space-y-4 text-sm text-gray-600">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 w-6 h-6 rounded-full bg-rwa-gold/10 flex items-center justify-center text-rwa-gold shrink-0">✦</span>
-                <p>Symbolizes wisdom, trust, and divine verification</p>
+        <div className={`grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0 translate-y-8'}`}>
+          {problems.map((p, i) => (
+            <div key={i} className="flex gap-4 p-6 rounded-2xl bg-red-50/50 border border-red-100/50" style={{ animationDelay: `${i * 0.1}s` }}>
+              <div className="w-11 h-11 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <p.icon className="w-5 h-5 text-red-600" />
               </div>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 w-6 h-6 rounded-full bg-rwa-gold/10 flex items-center justify-center text-rwa-gold shrink-0">✦</span>
-                <p>Guardian of real-world truth in a decentralized future</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 w-6 h-6 rounded-full bg-rwa-gold/10 flex items-center justify-center text-rwa-gold shrink-0">✦</span>
-                <p>Powered by crypto. Secured by consensus. Driven by purpose.</p>
+              <div>
+                <h3 className="font-bold text-gray-900 mb-1">{p.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{p.desc}</p>
               </div>
             </div>
-          </div>
-          <div className="flex justify-end">
-            <img
-              src="/images/mascot/god_why.png"
-              alt="Oracle"
-              className={`w-64 lg:w-80 drop-shadow-[0_10px_40px_rgba(184,144,48,0.15)] transition-all duration-700 ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
-              style={{ transitionDelay: '400ms' }}
-              loading="lazy"
-            />
-          </div>
+          ))}
         </div>
       </div>
     </section>

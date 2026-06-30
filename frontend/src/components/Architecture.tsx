@@ -1,63 +1,46 @@
-import { ExternalLink } from 'lucide-react'
-
-const STACK = ['Node.js', 'TypeScript', 'Fastify', 'Rust', 'casper-contract 5.1', 'SHA-256']
-
 export default function Architecture() {
   return (
-    <section id="architecture" className="py-16 sm:py-24 bg-gray-50">
+    <section id="architecture" className="py-24 bg-white">
       <div className="rwa-section">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-4">Architecture</h2>
-        <p className="text-gray-500 text-center max-w-lg mx-auto mb-10">
-          Two on-chain contracts + AI scoring agent. Deployed on Casper testnet.
-        </p>
-
-        <div className="max-w-3xl mx-auto space-y-4 mb-8">
-          {[
-            { name: 'asset-registry', hash: 'eac01f54e99d', deploy: 'e6be2486e09e', desc: 'Asset registration, dedup, metadata' },
-            { name: 'attestation-store', hash: '53c9e87755a9', deploy: 'fb3625c205b5', desc: 'Time-limited NFT attestations, expiry' },
-          ].map(c => (
-            <div key={c.name} className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm">
-                <div>
-                  <span className="text-gray-500 text-xs uppercase tracking-wider block mb-1">Contract</span>
-                  <span className="font-mono text-rwa-blue text-xs">{c.name}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 text-xs uppercase tracking-wider block mb-1">Hash</span>
-                  <a href={`https://testnet.cspr.live/contract/${c.hash}`} target="_blank" rel="noopener noreferrer"
-                    className="font-mono text-xs text-gray-600 hover:text-rwa-blue transition-colors inline-flex items-center gap-1 cursor-pointer">
-                    {c.hash}... <ExternalLink size={10} />
-                  </a>
-                </div>
-                <div>
-                  <span className="text-gray-500 text-xs uppercase tracking-wider block mb-1">Deploy TX</span>
-                  <a href={`https://testnet.cspr.live/deploy/${c.deploy}`} target="_blank" rel="noopener noreferrer"
-                    className="font-mono text-xs text-gray-600 hover:text-rwa-blue transition-colors inline-flex items-center gap-1 cursor-pointer">
-                    {c.deploy}... <ExternalLink size={10} />
-                  </a>
-                </div>
-                <div>
-                  <span className="text-gray-500 text-xs uppercase tracking-wider block mb-1">Role</span>
-                  <span className="text-xs text-gray-600">{c.desc}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <p className="text-sm font-semibold text-blue-600 tracking-wide mb-3">ARCHITECTURE</p>
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">
+            Three contracts. Full pipeline.
+          </h2>
         </div>
 
-        {/* Flow */}
-        <div className="max-w-3xl mx-auto rounded-xl border border-gray-200 bg-white shadow-sm p-6 mb-8">
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-mono">
-            {['AI Agent', '→', 'Fastify API', '→', 'Scoring Engine', '→', 'Casper RPC', '→', 'Contracts'].map((s, i) => (
-              <span key={i} className={s === '→' ? 'text-rwa-gold font-bold' : 'bg-gray-50 px-3 py-1.5 rounded border border-gray-200 text-gray-700'}>{s}</span>
+        {/* Architecture diagram */}
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            {[
+              { name: 'Scoring Registry', hash: '0x7a3f...e8b1', desc: 'Stores trust scores and evidence hashes. Queryable by any DeFi protocol.' },
+              { name: 'Attestation NFT', hash: '0x2c91...f4d3', desc: 'Mints time-limited NFTs representing verified asset status. Auto-expires.' },
+              { name: 'Governance', hash: '0x5e8d...a2c7', desc: 'DAO module for adjusting scoring weights, threshold, and attestation TTL.' },
+            ].map((c, i) => (
+              <div key={i} className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center mb-3">
+                  <span className="text-blue-600 font-bold text-sm">{i + 1}</span>
+                </div>
+                <h3 className="font-bold text-gray-900 mb-1">{c.name}</h3>
+                <p className="font-mono text-xs text-blue-600 mb-3">{c.hash}</p>
+                <p className="text-sm text-gray-600">{c.desc}</p>
+              </div>
             ))}
           </div>
-        </div>
 
-        <div className="flex flex-wrap justify-center gap-2">
-          {STACK.map(s => (
-            <span key={s} className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-xs text-gray-600 shadow-sm">{s}</span>
-          ))}
+          {/* Flow diagram */}
+          <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+            <pre className="text-sm font-mono text-gray-300 text-center leading-loose overflow-x-auto">{`
+  ┌──────────┐     ┌───────────┐     ┌──────────────┐     ┌────────────┐
+  │ Off-Chain │ ──▶ │  Sentinel │ ──▶ │   Scoring    │ ──▶ │ Attestation│
+  │  Sources  │     │  Pipeline │     │  Registry    │     │    NFT     │
+  └──────────┘     └───────────┘     └──────────────┘     └────────────┘
+       ↑                                    │                     │
+       │                              ┌─────▼─────┐              │
+       └──── re-verify on expiry ◀────│ Governance │◀─────────────┘
+                                      └───────────┘
+            `}</pre>
+          </div>
         </div>
       </div>
     </section>

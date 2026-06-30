@@ -4,8 +4,11 @@ import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import Problem from './components/Problem'
 import Pipeline from './components/Pipeline'
+import TrustFactors from './components/TrustFactors'
 import WhyTimeLimited from './components/WhyTimeLimited'
+import SDKSection from './components/SDKSection'
 import Architecture from './components/Architecture'
+import FAQ from './components/FAQ'
 import CtaFooter from './components/CtaFooter'
 import Footer from './components/Footer'
 import ScrollProgress from './components/ScrollProgress'
@@ -18,8 +21,11 @@ function Landing() {
       <Hero />
       <Problem />
       <Pipeline />
+      <TrustFactors />
       <WhyTimeLimited />
+      <SDKSection />
       <Architecture />
+      <FAQ />
       <CtaFooter />
     </>
   )

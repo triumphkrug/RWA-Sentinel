@@ -1,17 +1,22 @@
-import { Link } from 'react-router-dom'
+import { AlertTriangle } from 'lucide-react'
 
 export default function NotFound() {
   return (
-    <section className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center px-6">
-        <img src="/images/mascot/god_why.png" alt="" className="w-40 mx-auto mb-6 drop-shadow-[0_10px_30px_rgba(184,144,48,0.15)]" />
-        <h1 className="text-6xl font-extrabold text-rwa-blue mb-4">404</h1>
-        <p className="text-xl text-gray-700 mb-2">The Oracle sees nothing here.</p>
-        <p className="text-sm text-gray-500 mb-8">This page has not been attested. It does not exist on-chain.</p>
-        <Link to="/" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-rwa-blue text-white font-semibold hover:scale-[1.02] transition-transform shadow-md">
-          Return Home
-        </Link>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="text-center max-w-md">
+        <div className="mb-6">
+          <img src="/images/mascot/god_why.png" alt="Oracle confused" className="w-48 mx-auto" />
+        </div>
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500" />
+          <span className="text-amber-600 font-semibold text-sm">ATTESTATION NOT FOUND</span>
+        </div>
+        <h1 className="text-6xl font-extrabold text-gray-900 mb-3">404</h1>
+        <p className="text-gray-500 mb-8">This page has expired — just like our attestations should.</p>
+        <a href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
+          Return to Oracle
+        </a>
       </div>
-    </section>
+    </div>
   )
 }

@@ -5,6 +5,7 @@
 @layer base {
   * { box-sizing: border-box; }
   body { background: #f8fafc; color: #1e293b; overflow-x: hidden; }
+  ::selection { background: rgba(26,86,219,0.2); color: #1e293b; }
   :focus-visible { outline: 2px solid #1a56db; outline-offset: 2px; border-radius: 4px; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -17,35 +18,38 @@
 @layer components {
   .rwa-section { @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
   .rwa-card {
-    @apply bg-white border border-gray-200 rounded-xl p-6 transition-all duration-300 shadow-sm;
+    @apply bg-white border border-gray-200 rounded-2xl p-6 transition-all duration-300 shadow-sm;
   }
   .rwa-card:hover {
     border-color: rgba(26,86,219,0.25);
-    box-shadow: 0 4px 20px rgba(26,86,219,0.08);
-  }
-  .rwa-btn {
-    @apply inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-full cursor-pointer transition-all duration-200;
-  }
-  .rwa-btn-primary {
-    @apply rwa-btn bg-rwa-blue text-white;
-  }
-  .rwa-btn-primary:hover {
-    @apply bg-blue-700;
-    box-shadow: 0 4px 16px rgba(26,86,219,0.3);
-  }
-  .rwa-btn-outline {
-    @apply rwa-btn border border-gray-300 text-gray-700;
-  }
-  .rwa-btn-outline:hover {
-    @apply border-rwa-blue text-rwa-blue;
-    background: rgba(26,86,219,0.04);
-  }
-  .rwa-gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-rwa-blue to-rwa-gold;
-  }
-  .rwa-icon {
-    @apply w-12 h-12 rounded-xl flex items-center justify-center shrink-0;
-    background: rgba(26,86,219,0.08);
-    border: 1px solid rgba(26,86,219,0.15);
+    box-shadow: 0 8px 32px rgba(26,86,219,0.08);
+    transform: translateY(-2px);
   }
 }
+
+/* Cloud drift keyframes */
+@keyframes drift-right {
+  0% { transform: translateX(-40%); }
+  100% { transform: translateX(120%); }
+}
+@keyframes drift-left {
+  0% { transform: translateX(120%); }
+  100% { transform: translateX(-40%); }
+}
+@keyframes throne-glow {
+  0%, 100% { filter: drop-shadow(0 0 30px rgba(184,144,48,0.2)); }
+  50% { filter: drop-shadow(0 0 60px rgba(184,144,48,0.5)); }
+}
+@keyframes chest-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-drift-r { animation: drift-right 35s linear infinite; }
+.animate-drift-l { animation: drift-left 45s linear infinite; }
+.animate-throne-glow { animation: throne-glow 4s ease-in-out infinite; }
+.animate-chest-glow { animation: chest-glow 3s ease-in-out infinite; }
+.animate-fade-up { animation: fade-up 0.7s ease-out both; }

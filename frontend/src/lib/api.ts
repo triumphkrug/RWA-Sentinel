@@ -55,7 +55,7 @@ export function getHealth(): Promise<HealthResponse> {
 }
 
 export function runPipeline(): Promise<PipelineResult> {
-  return request('/api/v1/pipeline', { method: 'POST' })
+  return request('/api/v1/pipeline', { method: 'POST', body: '{}' })
 }
 
 export function getScores(): Promise<{ scores: ScoreResult[] }> {
