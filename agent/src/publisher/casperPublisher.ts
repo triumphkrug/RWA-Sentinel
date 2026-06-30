@@ -87,7 +87,7 @@ export class CasperPublisher {
           params: { deploy_hash: result.transactionHash },
         }),
       });
-      const data = await resp.json() as Record<string, unknown>;
+      const data = (await resp.json()) as Record<string, unknown>;
       if (data.result) {
         result.status = 'confirmed';
       }
@@ -115,14 +115,21 @@ export class CasperPublisher {
       params: {
         deploy: {
           header: {
-            account: this.deployerKey ? 'from-key' : '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79',
+            account: this.deployerKey
+              ? 'from-key'
+              : '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79',
             timestamp: new Date().toISOString(),
             ttl: '30m',
             gas_price: 1,
             chain_name: this.config.chainName,
           },
           payment: {
-            ModuleBytes: { module_bytes: '', args: [['amount', { cl_type: 'U512', bytes: '0500e8764817', parsed: '100000000000' }]] },
+            ModuleBytes: {
+              module_bytes: '',
+              args: [
+                ['amount', { cl_type: 'U512', bytes: '0500e8764817', parsed: '100000000000' }],
+              ],
+            },
           },
           session: {
             StoredContractByHash: {
@@ -151,7 +158,10 @@ export class CasperPublisher {
       signal: AbortSignal.timeout(15000),
     });
 
-    const data = await resp.json() as { result?: { deploy_hash?: string }; error?: { message: string } };
+    const data = (await resp.json()) as {
+      result?: { deploy_hash?: string };
+      error?: { message: string };
+    };
     if (data.error) {
       throw new Error(`RPC error: ${data.error.message}`);
     }

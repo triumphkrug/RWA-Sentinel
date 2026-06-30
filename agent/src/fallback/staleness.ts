@@ -2,7 +2,6 @@
  * Stale data detection and handling.
  */
 
-
 export interface StalenessReport {
   key: string;
   ageMinutes: number;
