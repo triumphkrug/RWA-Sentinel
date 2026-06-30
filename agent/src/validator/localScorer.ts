@@ -90,13 +90,18 @@ export class LocalScorer {
     return Math.floor(diffMs / (1000 * 60 * 60 * 24));
   }
 
-  private lookupIssuerHistory(_issuer: string): number {
-    // Step 1: In production, query on-chain history
-    // Step 2: For MVP, return demo value
-    return 10;
+  private issuerCounts = new Map<string, number>();
+  private debtorCounts = new Map<string, number>();
+
+  private lookupIssuerHistory(issuer: string): number {
+    const count = this.issuerCounts.get(issuer) ?? 0;
+    this.issuerCounts.set(issuer, count + 1);
+    return count + 1;
   }
 
-  private lookupDebtorHistory(_debtor: string): number {
-    return 5;
+  private lookupDebtorHistory(debtor: string): number {
+    const count = this.debtorCounts.get(debtor) ?? 0;
+    this.debtorCounts.set(debtor, count + 1);
+    return count + 1;
   }
 }

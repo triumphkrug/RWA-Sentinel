@@ -14,6 +14,8 @@ import { LocalScorer } from './validator/localScorer.js';
 import { CrossRefChecker } from './validator/crossRef.js';
 import { FallbackCache } from './fallback/cache.js';
 import { StalenessDetector } from './fallback/staleness.js';
+import { CasperPublisher } from './publisher/casperPublisher.js';
+import { BatchNftMinter } from './publisher/batchNftMinter.js';
 import { PgStore } from './store/pg.js';
 
 const config = loadConfig();
@@ -22,6 +24,14 @@ const scorer = new LocalScorer({ trustThreshold: 60 });
 const crossRef = new CrossRefChecker();
 const cache = new FallbackCache(config.staleThresholdMinutes);
 const staleness = new StalenessDetector(config.staleThresholdMinutes);
+const nftMinter = new BatchNftMinter({ validityHours: 24 });
+
+const publisher = new CasperPublisher({
+  nodeUrl: process.env.CASPER_NODE_URL || 'https://rpc.testnet.casperlabs.io',
+  chainName: process.env.CASPER_CHAIN || 'casper-test',
+  contractHash: '53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8',
+  deployerKeyPath: process.env.DEPLOYER_KEY_PATH || '/etc/secrets/deployer.pem',
+});
 
 const dbUrl = process.env.DATABASE_URL;
 let store: PgStore | null = null;
@@ -83,6 +93,23 @@ app.post('/api/v1/pipeline', async () => {
     }
   }
 
+  // Publish passing attestations on-chain
+  let publishHash = '';
+  if (passing.length > 0) {
+    try {
+      const pubResult = await publisher.publishBatch({
+        assetIds: passing.map((s) => s.invoiceId),
+        trustScores: passing.map((s) => s.trustScore),
+        factorsHashes: passing.map((s) => s.factorsHash),
+        evidenceHashes: passing.map((s) => s.evidenceHash),
+      });
+      publishHash = pubResult.transactionHash;
+      nftMinter.mintBatchNft(pubResult.batchId, passing.map((s) => s.invoiceId));
+    } catch (err) {
+      console.warn('[pipeline] publish failed:', err);
+    }
+  }
+
   // Persist to DB
   if (store) {
     const invoiceMap = new Map(collected.map((c) => [
@@ -112,6 +139,7 @@ app.post('/api/v1/pipeline', async () => {
     passing: passing.length,
     crossRefResults,
     cacheSize: cache.size,
+    publishHash: publishHash || undefined,
   };
 });
 
