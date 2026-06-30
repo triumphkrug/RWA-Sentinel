@@ -1,6 +1,6 @@
 # RWA Sentinel — BUIDL Submission
 
-**Project Name:** RWA Sentinel
+**Project Name:** RWA Sentinel  
 **Tagline:** AI Oracle for Real-World Asset Trust
 
 ---
@@ -16,7 +16,6 @@
 | **Live Demo** | https://rwa-sentinel.xyz |
 | **Dashboard** | https://rwa-sentinel.xyz/dashboard |
 | **Backend API** | https://rwa-sentinel-api.onrender.com |
-| **Team** | triumphkrug |
 
 ---
 
@@ -69,6 +68,11 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 ---
 
+## Video
+[Video](TBD)
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -91,4 +95,14 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 3. **Composable for DeFi** — Any lending protocol can call `is_valid(asset_id)` before accepting RWA collateral. The attestation NFT is the on-chain trust primitive that the ecosystem currently lacks.
 
-4. **Fully autonomous** — No human in the scoring loop. The AI agent runs the pipeline end-to-end, publishes to chain,.
+4. **Fully autonomous** — No human in the scoring loop. The AI agent runs the pipeline end-to-end, publishes attestation batches to chain, monitors challenges, and responds to governance votes — all programmatically.
+
+5. **Transparent methodology** — Factor weights and raw scores are hashed and stored on-chain as evidence. Downstream auditors can verify *why* an asset passed or failed without re-running the AI model.
+
+---
+
+## Team
+
+**triumphkrug** — Solo builder architecting trust infrastructure for the RWA space. Designed the 6-factor scoring model, built the autonomous TypeScript agent pipeline, wrote both Casper smart contracts (asset-registry and attestation-store), developed the Next.js Oracle Panel dashboard with one-click DAO voting, and deployed the full system to testnet. Background in decentralized systems and on-chain governance; focus on making RWA verification programmable and accountable.
+
+GitHub: [github.com/triumphkrug](https://github.com/triumphkrug)
