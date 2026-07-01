@@ -28,7 +28,13 @@ export class CasperPublisher {
 
   private loadKey(): void {
     try {
-      this.deployerKey = readFileSync(this.config.deployerKeyPath, 'utf-8').trim();
+      const keyPath = this.config.deployerKeyPath;
+      // Validate path to prevent directory traversal
+      if (keyPath.includes('..') || !keyPath.match(/^[\w.\-/]+$/)) {
+        console.warn('[publisher] invalid deployer key path');
+        return;
+      }
+      this.deployerKey = readFileSync(keyPath, 'utf-8').trim();
       console.log('[publisher] deployer key loaded');
     } catch {
       console.warn('[publisher] no deployer key found, submits will generate deterministic hashes');

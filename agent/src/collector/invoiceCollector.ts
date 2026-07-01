@@ -60,13 +60,14 @@ export class InvoiceCollector {
    * Compute SHA-256 hash of invoice for dedup and on-chain anchoring.
    */
   computeHash(invoice: RawInvoice): string {
+    // Use explicitly ordered keys for deterministic hashing across JS engines
     const payload = JSON.stringify({
-      id: invoice.invoiceId,
-      issuer: invoice.issuer,
-      debtor: invoice.debtor,
       amount: invoice.amountCents,
       currency: invoice.currencyCode,
-      issued: invoice.issuedAt,
+      debtor: invoice.debtor,
+      id: invoice.invoiceId,
+      issued: invoice.issuedAt instanceof Date ? invoice.issuedAt.toISOString() : String(invoice.issuedAt),
+      issuer: invoice.issuer,
     });
     return createHash('sha256').update(payload).digest('hex');
   }
