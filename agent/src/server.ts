@@ -68,6 +68,7 @@ app.get('/', async () => ({
     '/api/v1/attestations',
     '/api/v1/attestations/:id',
     '/api/v1/cache/stats',
+    '/api/v1/chain/all',
     '/api/v1/chain/overview',
     '/api/v1/chain/activity',
     '/api/v1/chain/transactions',
@@ -230,43 +231,114 @@ const ALLIUM_QUERIES: Record<string, string> = {
   large_tx: 'VIEIH4vq8dwoVve1TTrb',  // Large Transactions
 };
 
-// In-memory cache for Allium results (avoid rate limits)
+// Long-lived cache (30 min) — Allium Explorer has strict rate limits
 const alliumCache = new Map<string, { data: unknown; ts: number }>();
-const ALLIUM_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const ALLIUM_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+// Mutex: prevent duplicate in-flight requests for the same query
+const alliumInFlight = new Map<string, Promise<unknown>>();
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchWithRetry(url: string, opts: RequestInit, retries = 3): Promise<Response> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    const resp = await fetch(url, opts);
+    if (resp.status === 429) {
+      const wait = Math.min(5000 * (attempt + 1), 15000);
+      console.warn(`[allium] 429 rate-limited, waiting ${wait}ms (attempt ${attempt + 1}/${retries})`);
+      await delay(wait);
+      continue;
+    }
+    return resp;
+  }
+  // Last attempt, return whatever we get
+  return fetch(url, opts);
+}
+
+async function _runAlliumQuery(queryId: string): Promise<unknown> {
+  if (!ALLIUM_KEY) return { error: 'ALLIUM_API_KEY not configured' };
+
+  try {
+    const runResp = await fetchWithRetry(`${ALLIUM_BASE}/queries/${queryId}/run-async`, {
+      method: 'POST',
+      headers: { 'X-API-KEY': ALLIUM_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parameters: {} }),
+    });
+    if (runResp.status === 429) return { error: 'Rate limited — try again later' };
+    const body = await runResp.json() as Record<string, unknown>;
+    const run_id = body.run_id as string;
+    if (!run_id) return { error: 'Failed to create query run', detail: body };
+
+    // Poll for results (max 60s, with increasing delays)
+    for (let i = 0; i < 12; i++) {
+      await delay(3000 + i * 1000); // 3s, 4s, 5s, ...
+      const statusResp = await fetchWithRetry(`${ALLIUM_BASE}/query-runs/${run_id}/status`, {
+        headers: { 'X-API-KEY': ALLIUM_KEY },
+      });
+      if (statusResp.status === 429) { await delay(5000); continue; }
+      const status = await statusResp.json();
+      if (status === 'success') {
+        await delay(2000); // Extra pause before results fetch
+        const resultResp = await fetchWithRetry(`${ALLIUM_BASE}/query-runs/${run_id}/results?f=json`, {
+          headers: { 'X-API-KEY': ALLIUM_KEY },
+        });
+        if (resultResp.status === 429) return { error: 'Rate limited on results — cached data will refresh later' };
+        const data = await resultResp.json();
+        if (data && typeof data === 'object' && 'detail' in data && (data as Record<string,unknown>).detail === 'Too Many Requests') {
+          return { error: 'Rate limited on results' };
+        }
+        alliumCache.set(queryId, { data, ts: Date.now() });
+        return data;
+      }
+      if (status === 'failed') return { error: 'Query execution failed' };
+    }
+    return { error: 'Query timeout (60s)' };
+  } catch (err) {
+    console.error('[allium] query error:', err);
+    return { error: 'Allium API request failed' };
+  }
+}
 
 async function runAlliumQuery(queryId: string): Promise<unknown> {
+  // Return cache if fresh
   const cached = alliumCache.get(queryId);
   if (cached && Date.now() - cached.ts < ALLIUM_TTL_MS) return cached.data;
 
-  if (!ALLIUM_KEY) return { error: 'ALLIUM_API_KEY not configured' };
+  // De-duplicate: if a fetch is already in-flight, wait for it
+  const existing = alliumInFlight.get(queryId);
+  if (existing) return existing;
 
-  const runResp = await fetch(`${ALLIUM_BASE}/queries/${queryId}/run-async`, {
-    method: 'POST',
-    headers: { 'X-API-KEY': ALLIUM_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ parameters: {} }),
+  const promise = _runAlliumQuery(queryId).finally(() => {
+    alliumInFlight.delete(queryId);
   });
-  const { run_id } = (await runResp.json()) as { run_id: string };
-  if (!run_id) return { error: 'Failed to create query run' };
+  alliumInFlight.set(queryId, promise);
 
-  // Poll for results (max 30s)
-  for (let i = 0; i < 15; i++) {
-    await new Promise((r) => setTimeout(r, 2000));
-    const statusResp = await fetch(`${ALLIUM_BASE}/query-runs/${run_id}/status`, {
-      headers: { 'X-API-KEY': ALLIUM_KEY },
-    });
-    const status = await statusResp.json();
-    if (status === 'success') {
-      const resultResp = await fetch(`${ALLIUM_BASE}/query-runs/${run_id}/results?f=json`, {
-        headers: { 'X-API-KEY': ALLIUM_KEY },
-      });
-      const data = await resultResp.json();
-      alliumCache.set(queryId, { data, ts: Date.now() });
-      return data;
+  const result = await promise;
+  // If query failed but we have stale cached data, return stale data
+  if (result && typeof result === 'object' && 'error' in result) {
+    if (cached) {
+      console.warn(`[allium] returning stale cache for ${queryId} due to error`);
+      return cached.data;
     }
-    if (status === 'failed') return { error: 'Query execution failed' };
   }
-  return { error: 'Query timeout' };
+  return result;
 }
+
+// Single endpoint that returns all 3 datasets at once (saves rate-limit budget)
+app.get('/api/v1/chain/all', async () => {
+  // Run queries SEQUENTIALLY with delays to avoid rate limits
+  const overview = await runAlliumQuery(ALLIUM_QUERIES.network);
+  await delay(2000);
+  const activity = await runAlliumQuery(ALLIUM_QUERIES.activity);
+  await delay(2000);
+  const transactions = await runAlliumQuery(ALLIUM_QUERIES.large_tx);
+  return {
+    source: 'allium',
+    overview,
+    activity,
+    transactions,
+  };
+});
 
 app.get('/api/v1/chain/overview', async () => {
   const data = await runAlliumQuery(ALLIUM_QUERIES.network);
