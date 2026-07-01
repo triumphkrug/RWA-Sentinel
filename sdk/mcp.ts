@@ -77,6 +77,92 @@ const TOOLS = [
       required: ['oracleId'],
     },
   },
+  {
+    name: 'run_pipeline',
+    description: 'Run the full attestation pipeline for an asset — collect, score, attest.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        assetId: { type: 'number', description: 'Asset ID to process' },
+      },
+      required: ['assetId'],
+    },
+  },
+  {
+    name: 'get_scores',
+    description: 'Get all trust scores computed by the scoring engine.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        minScore: { type: 'number', description: 'Minimum score filter (0-100)' },
+      },
+    },
+  },
+  {
+    name: 'get_stats',
+    description: 'Get aggregate statistics: total assets, attestations, average score.',
+    inputSchema: { type: 'object' as const, properties: {} },
+  },
+  {
+    name: 'get_cache_stats',
+    description: 'Get data cache hit/miss statistics for the oracle.',
+    inputSchema: { type: 'object' as const, properties: {} },
+  },
+  {
+    name: 'health_check',
+    description: 'Check API, database, and blockchain connection health.',
+    inputSchema: { type: 'object' as const, properties: {} },
+  },
+  {
+    name: 'list_attestations',
+    description: 'List recent attestation NFTs with status.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        limit: { type: 'number', description: 'Max results', default: 20 },
+      },
+    },
+  },
+  {
+    name: 'get_scoring_factors',
+    description: 'Get the current scoring factor weights and descriptions.',
+    inputSchema: { type: 'object' as const, properties: {} },
+  },
+  {
+    name: 'submit_dao_vote',
+    description: 'Cast a vote on a DAO governance proposal.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        proposalId: { type: 'number' },
+        vote: { type: 'string', enum: ['for', 'against', 'abstain'] },
+        voter: { type: 'string', description: 'Voter account hash' },
+      },
+      required: ['proposalId', 'vote', 'voter'],
+    },
+  },
+  {
+    name: 'get_asset_history',
+    description: 'Get the full attestation history for an asset.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        assetId: { type: 'number' },
+      },
+      required: ['assetId'],
+    },
+  },
+  {
+    name: 'verify_attestation',
+    description: 'Verify an attestation NFT is valid and not expired.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        tokenId: { type: 'number', description: 'CEP-78 token ID' },
+      },
+      required: ['tokenId'],
+    },
+  },
 ];
 
 async function handleTool(name: string, args: Record<string, unknown>): Promise<string> {
@@ -126,6 +212,68 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         await client.getOracleStake(args.oracleId as string),
         null,
         2,
+      );
+
+    case 'run_pipeline':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/pipeline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetId: args.assetId }) }).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'get_scores': {
+      const qs = args.minScore ? `?min=${args.minScore}` : '';
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/scores${qs}`).then(r => r.json()),
+        null, 2,
+      );
+    }
+
+    case 'get_stats':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/stats`).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'get_cache_stats':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/cache/stats`).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'health_check':
+      return JSON.stringify(
+        await fetch(`${API_URL}/health`).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'list_attestations':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/attestations?limit=${args.limit ?? 20}`).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'get_scoring_factors':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/factors`).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'submit_dao_vote':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/dao/vote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(args) }).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'get_asset_history':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/assets/${args.assetId}/history`).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'verify_attestation':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/attestations/${args.tokenId}/verify`).then(r => r.json()),
+        null, 2,
       );
 
     default:
