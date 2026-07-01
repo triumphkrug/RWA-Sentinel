@@ -1,6 +1,8 @@
 /**
  * Publishes attestations to Casper Network via RPC.
  *
+ * Uses NOWNodes as the primary RPC provider with automatic
+ * fallback to the default node URL when NOWNodes is unavailable.
  * Uses the account_put_deploy JSON-RPC call to submit deploys
  * to the attestation-store smart contract.
  */
@@ -9,20 +11,28 @@ import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { PublishRequest, PublishResult } from './types.js';
 
+const NOWNODES_URL = 'https://casper.nownodes.io/rpc';
+
 interface CasperPublisherConfig {
   nodeUrl: string;
   chainName: string;
   contractHash: string;
   deployerKeyPath: string;
+  nownodesApiKey?: string;
 }
 
 export class CasperPublisher {
   private readonly config: CasperPublisherConfig;
   private readonly pendingTxs = new Map<string, PublishResult>();
   private deployerKey: string | null = null;
+  private readonly nownodesKey: string;
 
   constructor(config: CasperPublisherConfig) {
     this.config = config;
+    this.nownodesKey = config.nownodesApiKey || process.env.NOWNODES_API_KEY || '';
+    if (this.nownodesKey) {
+      console.log('[publisher] NOWNodes RPC configured as primary provider');
+    }
     this.loadKey();
   }
 
@@ -83,17 +93,12 @@ export class CasperPublisher {
     if (!result) return null;
 
     try {
-      const resp = await fetch(this.config.nodeUrl + '/rpc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'info_get_deploy',
-          params: { deploy_hash: result.transactionHash },
-        }),
+      const data = await this.rpcCall({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'info_get_deploy',
+        params: { deploy_hash: result.transactionHash },
       });
-      const data = (await resp.json()) as Record<string, unknown>;
       if (data.result) {
         result.status = 'confirmed';
       }
@@ -156,15 +161,41 @@ export class CasperPublisher {
     return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
   }
 
-  private async submitDeploy(payload: Record<string, unknown>): Promise<string> {
+  /**
+   * Send a JSON-RPC request. Tries NOWNodes first, then falls back
+   * to the configured default node URL.
+   */
+  private async rpcCall(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (this.nownodesKey) {
+      try {
+        const resp = await fetch(NOWNODES_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'api-key': this.nownodesKey,
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(15000),
+        });
+        const data = (await resp.json()) as Record<string, unknown>;
+        if (!data.error) return data;
+        console.warn('[publisher] NOWNodes RPC error, falling back:', data.error);
+      } catch (err) {
+        console.warn('[publisher] NOWNodes unavailable, falling back to default node:', err);
+      }
+    }
+    // Fallback to default node
     const resp = await fetch(this.config.nodeUrl + '/rpc', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15000),
     });
+    return (await resp.json()) as Record<string, unknown>;
+  }
 
-    const data = (await resp.json()) as {
+  private async submitDeploy(payload: Record<string, unknown>): Promise<string> {
+    const data = (await this.rpcCall(payload)) as {
       result?: { deploy_hash?: string };
       error?: { message: string };
     };

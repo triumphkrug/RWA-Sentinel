@@ -10,7 +10,7 @@ const tools = [
 
 const sentinel = new Sentinel({
   endpoint: 'https://rwa-sentinel-api.onrender.com',
-  casperRPC: 'https://rpc.testnet.casperlabs.io'
+  casperRPC: 'https://casper.nownodes.io/rpc'  // Powered by NOWNodes
 })
 
 const result = await sentinel.pipeline.run()
