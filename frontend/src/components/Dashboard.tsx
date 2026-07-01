@@ -610,7 +610,6 @@ export default function Dashboard() {
                         onClick={() => handleVote(p.id, 'against')}
                         className={`px-2.5 py-1 text-[10px] font-bold rounded transition-colors ${ votes[p.id] === 'against' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }`}
                       >AGAINST</button>
-                      {/* @ts-expect-error txHash added inline */}
                       <a
                         href={`https://testnet.cspr.live/deploy/${p.txHash}`}
                         target="_blank"
