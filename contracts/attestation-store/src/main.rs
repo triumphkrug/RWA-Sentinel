@@ -329,10 +329,14 @@ pub extern "C" fn slash_oracle() {
         runtime::revert(ApiError::User(ERR_SLASH_EXCEEDS_STAKE));
     }
 
+    // Use checked arithmetic to prevent overflow
+    let computed = current_stake
+        .checked_mul(SLASH_PERCENT)
+        .unwrap_or(u64::MAX)
+        / 100;
     // Ensure at least 1 unit is slashed to prevent zero-slash edge case
-    let computed = current_stake * SLASH_PERCENT / 100;
     let slash_amount = if computed == 0 && current_stake > 0 { 1 } else { computed };
-    let remaining = current_stake - slash_amount;
+    let remaining = current_stake.saturating_sub(slash_amount);
     storage::dictionary_put(stakes_dict, &oracle_address, remaining);
 
     // Transfer slashed amount to installer

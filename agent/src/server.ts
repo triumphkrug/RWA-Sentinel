@@ -38,8 +38,16 @@ let store: PgStore | null = null;
 
 const app = Fastify({ logger: true });
 
+const ALLOWED_ORIGINS = process.env.CORS_ORIGINS?.split(',') ?? ['*'];
+
 app.addHook('onRequest', async (request, reply) => {
-  reply.header('Access-Control-Allow-Origin', '*');
+  const origin = request.headers.origin ?? '*';
+  const allowedOrigin = ALLOWED_ORIGINS.includes('*')
+    ? '*'
+    : ALLOWED_ORIGINS.includes(origin)
+      ? origin
+      : ALLOWED_ORIGINS[0];
+  reply.header('Access-Control-Allow-Origin', allowedOrigin);
   reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Public-Key');
   if (request.method === 'OPTIONS') {
@@ -176,12 +184,15 @@ app.get<{ Querystring: { page?: string; limit?: string; status?: string; min_sco
   '/api/v1/attestations',
   async (request) => {
     const { page, limit, status, min_score } = request.query;
+    // Validate and sanitize query params
+    const parsedPage = page ? Math.max(1, parseInt(page, 10) || 1) : undefined;
+    const parsedLimit = limit ? Math.min(100, Math.max(1, parseInt(limit, 10) || 20)) : undefined;
     if (store) {
       return store.listAttestations({
-        page: page ? parseInt(page, 10) : undefined,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        status: status ?? undefined,
-        minScore: min_score ? parseInt(min_score, 10) : undefined,
+        page: parsedPage,
+        limit: parsedLimit,
+        status: status && /^[a-z_]+$/.test(status) ? status : undefined,
+        minScore: min_score ? Math.max(0, Math.min(100, parseInt(min_score, 10) || 0)) : undefined,
       });
     }
     return { attestations: [], total: 0, page: 1, limit: 20 };

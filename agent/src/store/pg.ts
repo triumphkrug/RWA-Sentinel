@@ -11,7 +11,12 @@ export class PgStore {
   private pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
+    this.pool = new Pool({
+      connectionString,
+      ssl: process.env.NODE_ENV === 'production'
+        ? { rejectUnauthorized: true }  // Require valid SSL certs in production
+        : { rejectUnauthorized: false }, // Allow self-signed in dev/test
+    });
   }
 
   /** Ensure tables exist on startup. */

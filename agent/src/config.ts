@@ -7,7 +7,10 @@ import { z } from 'zod';
 const ConfigSchema = z.object({
   nodeUrl: z.string().url().default('https://node.integration.cspr.cloud/'),
   chainName: z.string().default('casper-test'),
-  deployerKeyPath: z.string().default('./keys/secret_key.pem'),
+  deployerKeyPath: z.string().default('./keys/secret_key.pem').refine(
+    (p) => !p.includes('..'),
+    { message: 'Key path must not contain directory traversal (..)' },
+  ),
   batchSize: z.coerce.number().min(1).max(10).default(10),
   challengeRateLimit: z.coerce.number().min(1).default(3),
   nftValidityHours: z.coerce.number().min(1).default(24),
