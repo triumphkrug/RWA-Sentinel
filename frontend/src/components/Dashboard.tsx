@@ -698,7 +698,7 @@ interface LargeTx {
   native_transfer_count: number
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://rwa-sentinel-api.onrender.com'
+const API_BASE = 'https://rwa-sentinel-api.onrender.com'
 
 function ChainAnalytics() {
   const [overview, setOverview] = useState<NetworkOverview | null>(null)
