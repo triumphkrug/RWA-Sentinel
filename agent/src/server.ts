@@ -324,7 +324,58 @@ async function runAlliumQuery(queryId: string): Promise<unknown> {
   return result;
 }
 
-// Single endpoint that returns all 3 datasets at once (saves rate-limit budget)
+// Compute RWA-Sentinel-specific metrics from raw Allium chain data
+function computeSentinelMetrics(activityData: unknown): Record<string, unknown> {
+  const days = Array.isArray(activityData) ? activityData as Array<{
+    tx_count: number; success_count: number; fail_count: number; unique_senders: number; day: string;
+  }> : [];
+  if (days.length === 0) return { chainHealthScore: null, attestationReadiness: 'unknown' };
+
+  // Network reliability = average success rate over recent days
+  const recent7 = days.slice(0, 7);
+  const recent30 = days.slice(0, 30);
+  const successRate7d = recent7.reduce((s, d) => s + (d.success_count / Math.max(d.tx_count, 1)), 0) / recent7.length;
+  const successRate30d = recent30.reduce((s, d) => s + (d.success_count / Math.max(d.tx_count, 1)), 0) / recent30.length;
+
+  // Avg daily tx volume (activity indicator)
+  const avgTx7d = recent7.reduce((s, d) => s + d.tx_count, 0) / recent7.length;
+  const avgTx30d = recent30.reduce((s, d) => s + d.tx_count, 0) / recent30.length;
+
+  // Congestion: is 7d avg significantly above 30d avg?
+  const congestionRatio = avgTx30d > 0 ? avgTx7d / avgTx30d : 1;
+
+  // Fail rate trend: compare last 3 days vs previous 7
+  const failRate3d = days.slice(0, 3).reduce((s, d) => s + d.fail_count / Math.max(d.tx_count, 1), 0) / 3;
+  const failRate7d = recent7.reduce((s, d) => s + d.fail_count / Math.max(d.tx_count, 1), 0) / recent7.length;
+  const failTrend = failRate3d > failRate7d * 1.5 ? 'rising' : failRate3d < failRate7d * 0.5 ? 'falling' : 'stable';
+
+  // Chain Health Score (0-100): composite
+  // 50% reliability, 20% congestion normalcy, 15% fail trend, 15% activity consistency
+  const reliabilityScore = successRate7d * 100;
+  const congestionScore = congestionRatio > 2 ? 40 : congestionRatio > 1.5 ? 60 : congestionRatio < 0.3 ? 50 : 90;
+  const failTrendScore = failTrend === 'rising' ? 40 : failTrend === 'stable' ? 80 : 95;
+  const activityScore = avgTx7d > 100 ? 90 : avgTx7d > 10 ? 70 : 40;
+  const chainHealthScore = Math.round(
+    reliabilityScore * 0.50 + congestionScore * 0.20 + failTrendScore * 0.15 + activityScore * 0.15
+  );
+
+  // Attestation readiness
+  let attestationReadiness: 'optimal' | 'acceptable' | 'degraded' | 'risky';
+  if (chainHealthScore >= 85 && failTrend !== 'rising') attestationReadiness = 'optimal';
+  else if (chainHealthScore >= 70) attestationReadiness = 'acceptable';
+  else if (chainHealthScore >= 50) attestationReadiness = 'degraded';
+  else attestationReadiness = 'risky';
+
+  return {
+    chainHealthScore,
+    attestationReadiness,
+    networkReliability: { rate7d: Math.round(successRate7d * 1000) / 10, rate30d: Math.round(successRate30d * 1000) / 10 },
+    congestion: { ratio: Math.round(congestionRatio * 100) / 100, avgTx7d: Math.round(avgTx7d), avgTx30d: Math.round(avgTx30d) },
+    failTrend: { direction: failTrend, rate3d: Math.round(failRate3d * 1000) / 10, rate7d: Math.round(failRate7d * 1000) / 10 },
+  };
+}
+
+// Single endpoint that returns all 3 datasets + Sentinel metrics
 app.get('/api/v1/chain/all', async () => {
   // Run queries SEQUENTIALLY with delays to avoid rate limits
   const overview = await runAlliumQuery(ALLIUM_QUERIES.network);
@@ -332,11 +383,18 @@ app.get('/api/v1/chain/all', async () => {
   const activity = await runAlliumQuery(ALLIUM_QUERIES.activity);
   await delay(2000);
   const transactions = await runAlliumQuery(ALLIUM_QUERIES.large_tx);
+
+  // Compute Sentinel-specific derived metrics from the activity data
+  const activityArr = (activity && typeof activity === 'object' && 'data' in activity)
+    ? (activity as Record<string, unknown>).data : activity;
+  const sentinel = computeSentinelMetrics(activityArr);
+
   return {
     source: 'allium',
     overview,
     activity,
     transactions,
+    sentinel,
   };
 });
 
