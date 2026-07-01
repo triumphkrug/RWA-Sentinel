@@ -698,32 +698,63 @@ interface LargeTx {
   native_transfer_count: number
 }
 
-const API_BASE = 'https://rwa-sentinel-api.onrender.com'
+const CHAIN_API = 'https://rwa-sentinel-api.onrender.com/api/v1/chain/all'
+
+// Module-level cache so tab switches don't re-fetch
+let chainDataCache: {
+  overview: NetworkOverview | null
+  activity: DailyActivity[]
+  largeTxs: LargeTx[]
+  fetchedAt: number
+} | null = null
+const CHAIN_CACHE_TTL = 10 * 60 * 1000 // 10 min client-side cache
+
+function extractData(obj: unknown): unknown[] | null {
+  if (!obj || typeof obj !== 'object') return null
+  const o = obj as Record<string, unknown>
+  if (o.error) return null
+  if (Array.isArray(o.data)) return o.data
+  return null
+}
 
 function ChainAnalytics() {
-  const [overview, setOverview] = useState<NetworkOverview | null>(null)
-  const [activity, setActivity] = useState<DailyActivity[]>([])
-  const [largeTxs, setLargeTxs] = useState<LargeTx[]>([])
-  const [loading, setLoading] = useState(true)
+  const [overview, setOverview] = useState<NetworkOverview | null>(chainDataCache?.overview ?? null)
+  const [activity, setActivity] = useState<DailyActivity[]>(chainDataCache?.activity ?? [])
+  const [largeTxs, setLargeTxs] = useState<LargeTx[]>(chainDataCache?.largeTxs ?? [])
+  const [loading, setLoading] = useState(!chainDataCache)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Skip fetch if cache is fresh
+    if (chainDataCache && Date.now() - chainDataCache.fetchedAt < CHAIN_CACHE_TTL) return
+
     let mounted = true
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [ov, act, tx] = await Promise.allSettled([
-          fetch(`${API_BASE}/api/v1/chain/overview`).then(r => r.json()),
-          fetch(`${API_BASE}/api/v1/chain/activity`).then(r => r.json()),
-          fetch(`${API_BASE}/api/v1/chain/transactions`).then(r => r.json()),
-        ])
+        const resp = await fetch(CHAIN_API)
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        const json = await resp.json()
         if (!mounted) return
-        if (ov.status === 'fulfilled' && ov.value?.data?.data?.[0]) setOverview(ov.value.data.data[0])
-        if (act.status === 'fulfilled' && act.value?.data?.data) setActivity(act.value.data.data)
-        if (tx.status === 'fulfilled' && tx.value?.data?.data) setLargeTxs(tx.value.data.data)
-      } catch (e) {
-        if (mounted) setError('Failed to load chain analytics')
+
+        // json = { source, overview: {sql, data:[...]}, activity: {sql, data:[...]}, transactions: {sql, data:[...]} }
+        const ovData = extractData(json.overview)
+        const actData = extractData(json.activity)
+        const txData = extractData(json.transactions)
+
+        const ov = ovData?.[0] as NetworkOverview | undefined ?? null
+        const act = (actData ?? []) as DailyActivity[]
+        const txs = (txData ?? []) as LargeTx[]
+
+        setOverview(ov)
+        setActivity(act)
+        setLargeTxs(txs)
+
+        // Update module cache
+        chainDataCache = { overview: ov, activity: act, largeTxs: txs, fetchedAt: Date.now() }
+      } catch {
+        if (mounted) setError('Failed to load chain analytics. The backend may still be warming up — try again in 30 seconds.')
       } finally {
         if (mounted) setLoading(false)
       }
@@ -740,16 +771,17 @@ function ChainAnalytics() {
   const shortHash = (h: string) => h ? `${h.slice(0, 8)}…${h.slice(-6)}` : '—'
   const shortAddr = (a: string) => a ? `${a.slice(0, 10)}…${a.slice(-6)}` : '—'
 
-  if (loading) {
+  if (loading && !overview && activity.length === 0) {
     return (
       <div id="section-chain" className="flex flex-col items-center justify-center py-20">
         <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
         <p className="text-gray-500 text-sm">Loading on-chain analytics from Allium…</p>
+        <p className="text-gray-400 text-xs mt-1">First load may take up to 30 seconds while queries execute.</p>
       </div>
     )
   }
 
-  if (error) {
+  if (error && !overview && activity.length === 0) {
     return (
       <div id="section-chain" className="text-center py-20">
         <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
@@ -759,7 +791,7 @@ function ChainAnalytics() {
   }
 
   // Compute max tx for bar chart scale
-  const maxTx = Math.max(...activity.map(a => a.tx_count), 1)
+  const maxTx = Math.max(...(activity.length ? activity.map(a => a.tx_count) : [1]), 1)
 
   return (
     <div id="section-chain" className="space-y-6">
@@ -929,12 +961,12 @@ function ChainAnalytics() {
         </div>
       )}
 
-      {/* Empty state when no data */}
-      {!overview && activity.length === 0 && largeTxs.length === 0 && (
+      {/* Empty state when nothing loaded */}
+      {!overview && activity.length === 0 && largeTxs.length === 0 && !loading && (
         <div className="text-center py-16">
           <Globe className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Chain analytics data is loading. Please try again in a moment.</p>
-          <p className="text-gray-400 text-xs mt-1">Allium queries run asynchronously and may take up to 30 seconds.</p>
+          <p className="text-gray-500 text-sm">No chain data available yet.</p>
+          <p className="text-gray-400 text-xs mt-1">The backend queries Allium sequentially to respect rate limits. Refresh the page in 30–60 seconds.</p>
         </div>
       )}
     </div>
