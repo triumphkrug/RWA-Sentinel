@@ -142,7 +142,7 @@ export default function Dashboard() {
     { id: 'attestations' as const, label: 'Attestations', requiresWallet: true },
     { id: 'inspect' as const, label: 'Inspect', requiresWallet: true },
     { id: 'operations' as const, label: 'Operations', requiresWallet: true },
-    { id: 'chain' as const, label: 'Chain Analytics' },
+    { id: 'chain' as const, label: 'Network Health' },
   ]
 
   return (
@@ -700,11 +700,20 @@ interface LargeTx {
 
 const CHAIN_API = 'https://rwa-sentinel-api.onrender.com/api/v1/chain/all'
 
+interface SentinelMetrics {
+  chainHealthScore: number | null
+  attestationReadiness: 'optimal' | 'acceptable' | 'degraded' | 'risky' | 'unknown'
+  networkReliability: { rate7d: number; rate30d: number } | null
+  congestion: { ratio: number; avgTx7d: number; avgTx30d: number } | null
+  failTrend: { direction: 'rising' | 'stable' | 'falling'; rate3d: number; rate7d: number } | null
+}
+
 // Module-level cache so tab switches don't re-fetch
 let chainDataCache: {
   overview: NetworkOverview | null
   activity: DailyActivity[]
   largeTxs: LargeTx[]
+  sentinel: SentinelMetrics | null
   fetchedAt: number
 } | null = null
 const CHAIN_CACHE_TTL = 10 * 60 * 1000 // 10 min client-side cache
@@ -717,15 +726,23 @@ function extractData(obj: unknown): unknown[] | null {
   return null
 }
 
+const readinessConfig: Record<string, { color: string; bg: string; border: string; label: string; desc: string }> = {
+  optimal:    { color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', label: 'Optimal',    desc: 'Network conditions are ideal for publishing attestation NFTs.' },
+  acceptable: { color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200',  label: 'Acceptable', desc: 'Minor congestion detected. Attestations can proceed normally.' },
+  degraded:   { color: 'text-amber-700',  bg: 'bg-amber-50',  border: 'border-amber-200', label: 'Degraded',   desc: 'Elevated fail rates — consider delaying non-urgent attestations.' },
+  risky:      { color: 'text-red-700',    bg: 'bg-red-50',    border: 'border-red-200',   label: 'Risky',      desc: 'High failure rates detected. Defer attestation publishing.' },
+  unknown:    { color: 'text-gray-700',   bg: 'bg-gray-50',   border: 'border-gray-200',  label: 'Unknown',    desc: 'Insufficient data to assess network conditions.' },
+}
+
 function ChainAnalytics() {
   const [overview, setOverview] = useState<NetworkOverview | null>(chainDataCache?.overview ?? null)
   const [activity, setActivity] = useState<DailyActivity[]>(chainDataCache?.activity ?? [])
   const [largeTxs, setLargeTxs] = useState<LargeTx[]>(chainDataCache?.largeTxs ?? [])
+  const [sentinel, setSentinel] = useState<SentinelMetrics | null>(chainDataCache?.sentinel ?? null)
   const [loading, setLoading] = useState(!chainDataCache)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Skip fetch if cache is fresh
     if (chainDataCache && Date.now() - chainDataCache.fetchedAt < CHAIN_CACHE_TTL) return
 
     let mounted = true
@@ -738,10 +755,10 @@ function ChainAnalytics() {
         const json = await resp.json()
         if (!mounted) return
 
-        // json = { source, overview: {sql, data:[...]}, activity: {sql, data:[...]}, transactions: {sql, data:[...]} }
         const ovData = extractData(json.overview)
         const actData = extractData(json.activity)
         const txData = extractData(json.transactions)
+        const sentinelData = json.sentinel as SentinelMetrics | undefined ?? null
 
         const ov = ovData?.[0] as NetworkOverview | undefined ?? null
         const act = (actData ?? []) as DailyActivity[]
@@ -750,11 +767,11 @@ function ChainAnalytics() {
         setOverview(ov)
         setActivity(act)
         setLargeTxs(txs)
+        setSentinel(sentinelData)
 
-        // Update module cache
-        chainDataCache = { overview: ov, activity: act, largeTxs: txs, fetchedAt: Date.now() }
+        chainDataCache = { overview: ov, activity: act, largeTxs: txs, sentinel: sentinelData, fetchedAt: Date.now() }
       } catch {
-        if (mounted) setError('Failed to load chain analytics. The backend may still be warming up — try again in 30 seconds.')
+        if (mounted) setError('Failed to load network health data. The backend may still be warming up — try again in 30 seconds.')
       } finally {
         if (mounted) setLoading(false)
       }
@@ -775,8 +792,8 @@ function ChainAnalytics() {
     return (
       <div id="section-chain" className="flex flex-col items-center justify-center py-20">
         <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
-        <p className="text-gray-500 text-sm">Loading on-chain analytics from Allium…</p>
-        <p className="text-gray-400 text-xs mt-1">First load may take up to 30 seconds while queries execute.</p>
+        <p className="text-gray-500 text-sm">Querying Casper network health via Allium…</p>
+        <p className="text-gray-400 text-xs mt-1">First load may take up to 30 seconds.</p>
       </div>
     )
   }
@@ -790,100 +807,150 @@ function ChainAnalytics() {
     )
   }
 
-  // Compute max tx for bar chart scale
   const maxTx = Math.max(...(activity.length ? activity.map(a => a.tx_count) : [1]), 1)
+  const readiness = readinessConfig[sentinel?.attestationReadiness || 'unknown']
 
   return (
     <div id="section-chain" className="space-y-6">
-      {/* Powered by badge */}
-      <div className="flex items-center gap-2 text-xs text-gray-400">
-        <Globe className="w-3.5 h-3.5" />
-        <span>On-chain data powered by <a href="https://allium.so" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline font-medium">Allium</a> — Casper Network historical analytics</span>
+      {/* Header context */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <Globe className="w-3.5 h-3.5" />
+          <span>Casper network health via <a href="https://allium.so" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline font-medium">Allium</a> — used by Sentinel to assess attestation publishing conditions</span>
+        </div>
       </div>
 
-      {/* Network Overview Cards */}
-      {overview && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                <Hash className="w-4 h-4 text-blue-600" />
+      {/* ── Attestation Readiness Banner ── */}
+      {sentinel && sentinel.chainHealthScore !== null && (
+        <div className={`rounded-2xl border ${readiness.border} ${readiness.bg} p-6`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h3 className={`font-bold text-lg ${readiness.color}`}>
+                  Attestation Readiness: {readiness.label}
+                </h3>
               </div>
-              <span className="text-xs text-gray-500 font-medium">Latest Block</span>
+              <p className="text-sm text-gray-600">{readiness.desc}</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{fmtNum(overview.latest_block)}</p>
-            <p className="text-[11px] text-gray-400 mt-1">Era {fmtNum(overview.current_era)}</p>
+            <div className="flex items-center gap-6">
+              {/* Health Score Ring */}
+              <div className="relative w-20 h-20">
+                <svg viewBox="0 0 36 36" className="w-20 h-20 -rotate-90">
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke={sentinel.chainHealthScore >= 85 ? '#22c55e' : sentinel.chainHealthScore >= 70 ? '#3b82f6' : sentinel.chainHealthScore >= 50 ? '#f59e0b' : '#ef4444'}
+                    strokeWidth="3" strokeLinecap="round"
+                    strokeDasharray={`${sentinel.chainHealthScore}, 100`} />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-bold text-gray-900">{sentinel.chainHealthScore}</span>
+                  <span className="text-[9px] text-gray-400 -mt-0.5">/ 100</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-green-600" />
+
+          {/* Sentinel sub-metrics */}
+          <div className="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-gray-200/50">
+            {sentinel.networkReliability && (
+              <div>
+                <p className="text-xs text-gray-500 font-medium mb-0.5">Network Reliability</p>
+                <p className="text-lg font-bold text-gray-900">{sentinel.networkReliability.rate7d}%</p>
+                <p className="text-[11px] text-gray-400">7d success rate (30d: {sentinel.networkReliability.rate30d}%)</p>
               </div>
-              <span className="text-xs text-gray-500 font-medium">Total TXs</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{fmtNum(overview.total_transactions)}</p>
-            <p className="text-[11px] text-gray-400 mt-1">All-time on-chain</p>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-purple-600" />
+            )}
+            {sentinel.congestion && (
+              <div>
+                <p className="text-xs text-gray-500 font-medium mb-0.5">Congestion Level</p>
+                <p className="text-lg font-bold text-gray-900">{sentinel.congestion.ratio}x</p>
+                <p className="text-[11px] text-gray-400">{sentinel.congestion.avgTx7d} avg tx/day vs {sentinel.congestion.avgTx30d} (30d)</p>
               </div>
-              <span className="text-xs text-gray-500 font-medium">Validators</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{fmtNum(overview.unique_validators)}</p>
-            <p className="text-[11px] text-gray-400 mt-1">Unique block proposers</p>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-amber-600" />
+            )}
+            {sentinel.failTrend && (
+              <div>
+                <p className="text-xs text-gray-500 font-medium mb-0.5">Fail Rate Trend</p>
+                <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
+                  {sentinel.failTrend.direction === 'rising' ? (
+                    <><ArrowUpRight className="w-4 h-4 text-red-500" /> Rising</>
+                  ) : sentinel.failTrend.direction === 'falling' ? (
+                    <><ArrowDownRight className="w-4 h-4 text-green-500" /> Falling</>
+                  ) : (
+                    <>— Stable</>
+                  )}
+                </p>
+                <p className="text-[11px] text-gray-400">{sentinel.failTrend.rate3d}% (3d) vs {sentinel.failTrend.rate7d}% (7d)</p>
               </div>
-              <span className="text-xs text-gray-500 font-medium">Last Block</span>
-            </div>
-            <p className="text-lg font-bold text-gray-900">
-              {overview.latest_block_time
-                ? new Date(overview.latest_block_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                : '—'}
-            </p>
-            <p className="text-[11px] text-gray-400 mt-1">
-              {overview.latest_block_time
-                ? new Date(overview.latest_block_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                : '—'}
-            </p>
+            )}
           </div>
         </div>
       )}
 
-      {/* Daily Activity Chart (CSS bar chart) */}
+      {/* ── Network Vitals ── */}
+      {overview && (
+        <div>
+          <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3 text-sm">
+            <Shield className="w-4 h-4 text-blue-600" /> Network Vitals
+            <span className="text-xs text-gray-400 font-normal ml-1">— infrastructure that Sentinel publishes attestations to</span>
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><Hash className="w-4 h-4 text-blue-600" /></div>
+                <span className="text-xs text-gray-500 font-medium">Latest Block</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{fmtNum(overview.latest_block)}</p>
+              <p className="text-[11px] text-gray-400 mt-1">Era {fmtNum(overview.current_era)}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center"><TrendingUp className="w-4 h-4 text-green-600" /></div>
+                <span className="text-xs text-gray-500 font-medium">Total Transactions</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{fmtNum(overview.total_transactions)}</p>
+              <p className="text-[11px] text-gray-400 mt-1">All-time on Casper mainnet</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center"><Shield className="w-4 h-4 text-purple-600" /></div>
+                <span className="text-xs text-gray-500 font-medium">Validators</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{fmtNum(overview.unique_validators)}</p>
+              <p className="text-[11px] text-gray-400 mt-1">Unique block proposers</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center"><Clock className="w-4 h-4 text-amber-600" /></div>
+                <span className="text-xs text-gray-500 font-medium">Last Block Time</span>
+              </div>
+              <p className="text-lg font-bold text-gray-900">
+                {overview.latest_block_time ? new Date(overview.latest_block_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+              </p>
+              <p className="text-[11px] text-gray-400 mt-1">
+                {overview.latest_block_time ? new Date(overview.latest_block_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Transaction Throughput ── */}
       {activity.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
-            <BarChart3 className="w-4 h-4 text-blue-600" /> Daily Transaction Activity
+            <BarChart3 className="w-4 h-4 text-blue-600" /> Transaction Throughput
           </h3>
-          <p className="text-xs text-gray-400 mb-4">Last 30 days — Casper mainnet</p>
+          <p className="text-xs text-gray-400 mb-4">30-day mainnet activity — Sentinel monitors throughput to schedule attestation batches during low-congestion windows</p>
           <div className="flex items-end gap-1 h-40">
             {activity.slice(0, 30).reverse().map((d, i) => {
               const pct = (d.tx_count / maxTx) * 100
               const failPct = d.fail_count > 0 ? (d.fail_count / d.tx_count) * 100 : 0
               return (
-                <div
-                  key={i}
-                  className="flex-1 group relative cursor-pointer"
-                  style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}
-                >
-                  <div
-                    className="w-full rounded-t bg-blue-500 hover:bg-blue-600 transition-colors relative"
-                    style={{ height: `${Math.max(pct, 2)}%` }}
-                  >
-                    {failPct > 0 && (
-                      <div
-                        className="absolute bottom-0 left-0 w-full rounded-t bg-red-400"
-                        style={{ height: `${failPct}%` }}
-                      />
-                    )}
+                <div key={i} className="flex-1 group relative cursor-pointer" style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                  <div className="w-full rounded-t bg-blue-500 hover:bg-blue-600 transition-colors relative" style={{ height: `${Math.max(pct, 2)}%` }}>
+                    {failPct > 0 && <div className="absolute bottom-0 left-0 w-full rounded-t bg-red-400" style={{ height: `${failPct}%` }} />}
                   </div>
-                  {/* Tooltip */}
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none">
                     <div className="bg-gray-900 text-white text-[10px] px-2 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
                       <div className="font-semibold">{new Date(d.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
@@ -899,16 +966,20 @@ function ChainAnalytics() {
             <span>{activity.length > 0 ? new Date(activity[activity.length - 1].day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
             <span>{activity.length > 0 ? new Date(activity[0].day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
           </div>
+          <div className="flex items-center gap-4 mt-3 text-[10px] text-gray-400">
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" /> Successful</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Failed</span>
+          </div>
         </div>
       )}
 
-      {/* Large Transactions */}
+      {/* ── High-Gas Transactions (anomaly watch) ── */}
       {largeTxs.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
-            <TrendingUp className="w-4 h-4 text-green-600" /> High-Value Transactions
+            <AlertTriangle className="w-4 h-4 text-amber-600" /> High-Gas Transactions
           </h3>
-          <p className="text-xs text-gray-400 mb-4">Largest by gas cost — last 7 days</p>
+          <p className="text-xs text-gray-400 mb-4">Anomalous gas spend — Sentinel flags these as potential smart-contract exploits or unusual on-chain behavior</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -925,31 +996,16 @@ function ChainAnalytics() {
                 {largeTxs.slice(0, 10).map((tx, i) => (
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-2">
-                      <a
-                        href={`https://cspr.live/deploy/${tx.hash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 hover:underline font-mono text-xs"
-                      >
-                        {shortHash(tx.hash)}
-                      </a>
+                      <a href={`https://cspr.live/deploy/${tx.hash}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-mono text-xs">{shortHash(tx.hash)}</a>
                     </td>
                     <td className="py-2 font-mono text-xs text-gray-600">{shortAddr(tx.initiator)}</td>
-                    <td className="py-2">
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-medium">
-                        {tx.entry_point || 'native'}
-                      </span>
-                    </td>
+                    <td className="py-2"><span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-medium">{tx.entry_point || 'native'}</span></td>
                     <td className="py-2 text-right font-mono text-xs font-semibold">{fmtCost(tx.cost)}</td>
                     <td className="py-2">
                       {tx.transaction_result === 'Success' ? (
-                        <span className="flex items-center gap-1 text-green-600 text-xs">
-                          <ArrowUpRight className="w-3 h-3" /> Success
-                        </span>
+                        <span className="flex items-center gap-1 text-green-600 text-xs"><ArrowUpRight className="w-3 h-3" /> Success</span>
                       ) : (
-                        <span className="flex items-center gap-1 text-red-500 text-xs">
-                          <ArrowDownRight className="w-3 h-3" /> Failed
-                        </span>
+                        <span className="flex items-center gap-1 text-red-500 text-xs"><ArrowDownRight className="w-3 h-3" /> Failed</span>
                       )}
                     </td>
                     <td className="py-2 text-right text-xs text-gray-500">{fmtNum(tx.block_height)}</td>
@@ -961,12 +1017,12 @@ function ChainAnalytics() {
         </div>
       )}
 
-      {/* Empty state when nothing loaded */}
+      {/* Empty state */}
       {!overview && activity.length === 0 && largeTxs.length === 0 && !loading && (
         <div className="text-center py-16">
           <Globe className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">No chain data available yet.</p>
-          <p className="text-gray-400 text-xs mt-1">The backend queries Allium sequentially to respect rate limits. Refresh the page in 30–60 seconds.</p>
+          <p className="text-gray-500 text-sm">No network health data available yet.</p>
+          <p className="text-gray-400 text-xs mt-1">Allium queries run sequentially to respect rate limits. Refresh in 30–60 seconds.</p>
         </div>
       )}
     </div>
