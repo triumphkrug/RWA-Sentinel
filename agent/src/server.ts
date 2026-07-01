@@ -68,6 +68,9 @@ app.get('/', async () => ({
     '/api/v1/attestations',
     '/api/v1/attestations/:id',
     '/api/v1/cache/stats',
+    '/api/v1/chain/overview',
+    '/api/v1/chain/activity',
+    '/api/v1/chain/transactions',
   ],
 }));
 
@@ -216,6 +219,69 @@ app.get('/api/v1/cache/stats', async () => ({
   size: cache.size,
   staleKeys: staleness.staleKeys(),
 }));
+
+/* ── Allium on-chain analytics ─────────────────────────────── */
+
+const ALLIUM_KEY = process.env.ALLIUM_API_KEY || '';
+const ALLIUM_BASE = 'https://api.allium.so/api/v1/explorer';
+const ALLIUM_QUERIES: Record<string, string> = {
+  network:  'Tvk9wuy3J7ut9EgXjd3a',  // Network Overview
+  activity: '3TX7r6MVRCIUB9NpVzMx',  // Daily TX Activity
+  large_tx: 'VIEIH4vq8dwoVve1TTrb',  // Large Transactions
+};
+
+// In-memory cache for Allium results (avoid rate limits)
+const alliumCache = new Map<string, { data: unknown; ts: number }>();
+const ALLIUM_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function runAlliumQuery(queryId: string): Promise<unknown> {
+  const cached = alliumCache.get(queryId);
+  if (cached && Date.now() - cached.ts < ALLIUM_TTL_MS) return cached.data;
+
+  if (!ALLIUM_KEY) return { error: 'ALLIUM_API_KEY not configured' };
+
+  const runResp = await fetch(`${ALLIUM_BASE}/queries/${queryId}/run-async`, {
+    method: 'POST',
+    headers: { 'X-API-KEY': ALLIUM_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parameters: {} }),
+  });
+  const { run_id } = (await runResp.json()) as { run_id: string };
+  if (!run_id) return { error: 'Failed to create query run' };
+
+  // Poll for results (max 30s)
+  for (let i = 0; i < 15; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const statusResp = await fetch(`${ALLIUM_BASE}/query-runs/${run_id}/status`, {
+      headers: { 'X-API-KEY': ALLIUM_KEY },
+    });
+    const status = await statusResp.json();
+    if (status === 'success') {
+      const resultResp = await fetch(`${ALLIUM_BASE}/query-runs/${run_id}/results?f=json`, {
+        headers: { 'X-API-KEY': ALLIUM_KEY },
+      });
+      const data = await resultResp.json();
+      alliumCache.set(queryId, { data, ts: Date.now() });
+      return data;
+    }
+    if (status === 'failed') return { error: 'Query execution failed' };
+  }
+  return { error: 'Query timeout' };
+}
+
+app.get('/api/v1/chain/overview', async () => {
+  const data = await runAlliumQuery(ALLIUM_QUERIES.network);
+  return { source: 'allium', query: 'network_overview', data };
+});
+
+app.get('/api/v1/chain/activity', async () => {
+  const data = await runAlliumQuery(ALLIUM_QUERIES.activity);
+  return { source: 'allium', query: 'daily_activity', data };
+});
+
+app.get('/api/v1/chain/transactions', async () => {
+  const data = await runAlliumQuery(ALLIUM_QUERIES.large_tx);
+  return { source: 'allium', query: 'large_transactions', data };
+});
 
 async function bootstrap(): Promise<void> {
   if (dbUrl) {

@@ -20,3 +20,4 @@ landing/
 *.secret
 Cargo.lock
 *.bak
+.vercel

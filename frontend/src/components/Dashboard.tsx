@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   FileSearch, BarChart3, Clock, Shield, Activity, Search,
   Wallet, LogOut, Database, Loader2, ExternalLink, Eye,
-  AlertTriangle, CheckCircle, XCircle, RefreshCw
+  AlertTriangle, CheckCircle, XCircle, RefreshCw, Globe, TrendingUp, ArrowUpRight, ArrowDownRight, Hash
 } from 'lucide-react'
 import { runPipeline, getScores, getCacheStats, getHealth } from '../lib/api'
 import type { ScoreResult, PipelineResult } from '../lib/api'
@@ -31,7 +31,7 @@ const contractLinks = {
 
 
 export default function Dashboard() {
-  const [tab, setTab] = useState<'overview' | 'pipeline' | 'attestations' | 'inspect' | 'operations'>('overview')
+  const [tab, setTab] = useState<'overview' | 'pipeline' | 'attestations' | 'inspect' | 'operations' | 'chain'>('overview')
   const [scores, setScores] = useState<ScoreResult[]>([])
   const [running, setRunning] = useState(false)
   const [log, setLog] = useState<LogLine[]>([])
@@ -142,6 +142,7 @@ export default function Dashboard() {
     { id: 'attestations' as const, label: 'Attestations', requiresWallet: true },
     { id: 'inspect' as const, label: 'Inspect', requiresWallet: true },
     { id: 'operations' as const, label: 'Operations', requiresWallet: true },
+    { id: 'chain' as const, label: 'Chain Analytics' },
   ]
 
   return (
@@ -658,7 +659,284 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+
+        {/* === CHAIN ANALYTICS TAB (Allium) === */}
+        {tab === 'chain' && (
+          <ChainAnalytics />
+        )}
       </div>
+    </div>
+  )
+}
+
+/* ── Chain Analytics Component (powered by Allium) ───────── */
+
+interface NetworkOverview {
+  latest_block: number
+  current_era: number
+  total_transactions: number
+  unique_validators: number
+  latest_block_time: string
+}
+
+interface DailyActivity {
+  day: string
+  tx_count: number
+  unique_senders: number
+  success_count: number
+  fail_count: number
+}
+
+interface LargeTx {
+  hash: string
+  initiator: string
+  transaction_result: string
+  cost: string
+  block_timestamp: string
+  block_height: number
+  entry_point: string | null
+  native_transfer_count: number
+}
+
+const API_BASE = import.meta.env.VITE_API_URL || 'https://rwa-sentinel-api.onrender.com'
+
+function ChainAnalytics() {
+  const [overview, setOverview] = useState<NetworkOverview | null>(null)
+  const [activity, setActivity] = useState<DailyActivity[]>([])
+  const [largeTxs, setLargeTxs] = useState<LargeTx[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const [ov, act, tx] = await Promise.allSettled([
+          fetch(`${API_BASE}/api/v1/chain/overview`).then(r => r.json()),
+          fetch(`${API_BASE}/api/v1/chain/activity`).then(r => r.json()),
+          fetch(`${API_BASE}/api/v1/chain/transactions`).then(r => r.json()),
+        ])
+        if (!mounted) return
+        if (ov.status === 'fulfilled' && ov.value?.data?.data?.[0]) setOverview(ov.value.data.data[0])
+        if (act.status === 'fulfilled' && act.value?.data?.data) setActivity(act.value.data.data)
+        if (tx.status === 'fulfilled' && tx.value?.data?.data) setLargeTxs(tx.value.data.data)
+      } catch (e) {
+        if (mounted) setError('Failed to load chain analytics')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
+
+  const fmtNum = (n: number) => n?.toLocaleString() ?? '—'
+  const fmtCost = (c: string) => {
+    const cspr = parseFloat(c) / 1e9
+    return cspr >= 1000 ? `${(cspr / 1000).toFixed(1)}K` : cspr.toFixed(1)
+  }
+  const shortHash = (h: string) => h ? `${h.slice(0, 8)}…${h.slice(-6)}` : '—'
+  const shortAddr = (a: string) => a ? `${a.slice(0, 10)}…${a.slice(-6)}` : '—'
+
+  if (loading) {
+    return (
+      <div id="section-chain" className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
+        <p className="text-gray-500 text-sm">Loading on-chain analytics from Allium…</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div id="section-chain" className="text-center py-20">
+        <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+        <p className="text-gray-600">{error}</p>
+      </div>
+    )
+  }
+
+  // Compute max tx for bar chart scale
+  const maxTx = Math.max(...activity.map(a => a.tx_count), 1)
+
+  return (
+    <div id="section-chain" className="space-y-6">
+      {/* Powered by badge */}
+      <div className="flex items-center gap-2 text-xs text-gray-400">
+        <Globe className="w-3.5 h-3.5" />
+        <span>On-chain data powered by <a href="https://allium.so" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline font-medium">Allium</a> — Casper Network historical analytics</span>
+      </div>
+
+      {/* Network Overview Cards */}
+      {overview && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Hash className="w-4 h-4 text-blue-600" />
+              </div>
+              <span className="text-xs text-gray-500 font-medium">Latest Block</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{fmtNum(overview.latest_block)}</p>
+            <p className="text-[11px] text-gray-400 mt-1">Era {fmtNum(overview.current_era)}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-green-600" />
+              </div>
+              <span className="text-xs text-gray-500 font-medium">Total TXs</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{fmtNum(overview.total_transactions)}</p>
+            <p className="text-[11px] text-gray-400 mt-1">All-time on-chain</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-purple-600" />
+              </div>
+              <span className="text-xs text-gray-500 font-medium">Validators</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{fmtNum(overview.unique_validators)}</p>
+            <p className="text-[11px] text-gray-400 mt-1">Unique block proposers</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                <Clock className="w-4 h-4 text-amber-600" />
+              </div>
+              <span className="text-xs text-gray-500 font-medium">Last Block</span>
+            </div>
+            <p className="text-lg font-bold text-gray-900">
+              {overview.latest_block_time
+                ? new Date(overview.latest_block_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : '—'}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-1">
+              {overview.latest_block_time
+                ? new Date(overview.latest_block_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                : '—'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Daily Activity Chart (CSS bar chart) */}
+      {activity.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+            <BarChart3 className="w-4 h-4 text-blue-600" /> Daily Transaction Activity
+          </h3>
+          <p className="text-xs text-gray-400 mb-4">Last 30 days — Casper mainnet</p>
+          <div className="flex items-end gap-1 h-40">
+            {activity.slice(0, 30).reverse().map((d, i) => {
+              const pct = (d.tx_count / maxTx) * 100
+              const failPct = d.fail_count > 0 ? (d.fail_count / d.tx_count) * 100 : 0
+              return (
+                <div
+                  key={i}
+                  className="flex-1 group relative cursor-pointer"
+                  style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}
+                >
+                  <div
+                    className="w-full rounded-t bg-blue-500 hover:bg-blue-600 transition-colors relative"
+                    style={{ height: `${Math.max(pct, 2)}%` }}
+                  >
+                    {failPct > 0 && (
+                      <div
+                        className="absolute bottom-0 left-0 w-full rounded-t bg-red-400"
+                        style={{ height: `${failPct}%` }}
+                      />
+                    )}
+                  </div>
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none">
+                    <div className="bg-gray-900 text-white text-[10px] px-2 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
+                      <div className="font-semibold">{new Date(d.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                      <div>{fmtNum(d.tx_count)} txs · {fmtNum(d.unique_senders)} senders</div>
+                      {d.fail_count > 0 && <div className="text-red-300">{d.fail_count} failed</div>}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex justify-between text-[10px] text-gray-400 mt-2">
+            <span>{activity.length > 0 ? new Date(activity[activity.length - 1].day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
+            <span>{activity.length > 0 ? new Date(activity[0].day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Large Transactions */}
+      {largeTxs.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+            <TrendingUp className="w-4 h-4 text-green-600" /> High-Value Transactions
+          </h3>
+          <p className="text-xs text-gray-400 mb-4">Largest by gas cost — last 7 days</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
+                  <th className="pb-2 font-medium">Hash</th>
+                  <th className="pb-2 font-medium">Initiator</th>
+                  <th className="pb-2 font-medium">Entry Point</th>
+                  <th className="pb-2 font-medium text-right">Cost (CSPR)</th>
+                  <th className="pb-2 font-medium">Result</th>
+                  <th className="pb-2 font-medium text-right">Block</th>
+                </tr>
+              </thead>
+              <tbody>
+                {largeTxs.slice(0, 10).map((tx, i) => (
+                  <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="py-2">
+                      <a
+                        href={`https://cspr.live/deploy/${tx.hash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 hover:underline font-mono text-xs"
+                      >
+                        {shortHash(tx.hash)}
+                      </a>
+                    </td>
+                    <td className="py-2 font-mono text-xs text-gray-600">{shortAddr(tx.initiator)}</td>
+                    <td className="py-2">
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                        {tx.entry_point || 'native'}
+                      </span>
+                    </td>
+                    <td className="py-2 text-right font-mono text-xs font-semibold">{fmtCost(tx.cost)}</td>
+                    <td className="py-2">
+                      {tx.transaction_result === 'Success' ? (
+                        <span className="flex items-center gap-1 text-green-600 text-xs">
+                          <ArrowUpRight className="w-3 h-3" /> Success
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-red-500 text-xs">
+                          <ArrowDownRight className="w-3 h-3" /> Failed
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 text-right text-xs text-gray-500">{fmtNum(tx.block_height)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state when no data */}
+      {!overview && activity.length === 0 && largeTxs.length === 0 && (
+        <div className="text-center py-16">
+          <Globe className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Chain analytics data is loading. Please try again in a moment.</p>
+          <p className="text-gray-400 text-xs mt-1">Allium queries run asynchronously and may take up to 30 seconds.</p>
+        </div>
+      )}
     </div>
   )
 }
