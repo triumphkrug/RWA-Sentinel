@@ -1,0 +1,12 @@
+[package]
+name = "oracle-slashing"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+casper-contract = "4.0.0"
+casper-types = "4.0.1"
+
+[[bin]]
+name = "oracle-slashing"
+path = "src/main.rs"
