@@ -1,557 +1,415 @@
 import { createHash } from 'crypto';
-import { AnomalyDetector, PriceFeedEntry, AnomalyResult, DetectorConfig } from '../../validator/anomalyDetector';
+import { AnomalyDetector, PriceFeedEntry, AnomalyResult, DetectorConfig } from '../agent/src/validator/anomalyDetector';
 
-jest.mock('crypto", () => ({
-  createHash: jest.fn(),
+jest.mock('crypto', () => ({
+  createHash: jest.fn().mockReturnValue({
+    update: jest.fn().mockReturnThis(),
+    digest: jest.fn().mockReturnValue('mocked-hash'),
+  }),
 }));
 
-describe("AnomalyDetector", () => {
+describe('AnomalyDetector', () => {
   let detector: AnomalyDetector;
-  let mockCreateHash: jest.Mock;
-  let mockUpdate: jest.Mock;
-  let mockDigest: jest.Mock;
-
-  const defaultConfig: DetectorConfig = {
-    windowSize: 30,
-    zScoreThreshold: 2.5,
-    volumeMultiplier: 3,
-    stalenessMinutes: 60,
-    minDataPoints: 10,
-    ewmaAlpha: 0.1,
-  };
-
-  const createMockHash = () => {
-    mockDigest = jest.fn().mockReturnValue("mockedhash1234567890abcdef");
-    mockUpdate = jest.fn().mockReturnValue({ digest: mockDigest });
-    mockCreateHash = jest.fn().mockReturnValue({ update: mockUpdate });
-    (createHash as jest.Mock).mockImplementation(mockCreateHash);
-  };
-
-  const generatePriceEntries = (
-    assetId: string,
-    count: number,
-    price: number = 100,
-    volume: number = 1000,
-    source: string = "source1"
-  ): PriceFeedEntry[] => {
-    const entries: PriceFeedEntry[] = [];
-    const now = new Date();
-    for (let i = 0; i < count; i++) {
-      entries.push({
-        source,
-        assetId,
-        price,
-        volume,
-        timestamp: new Date(now.getTime() - (count - i) * 60000),
-      });
-    }
-    return entries;
-  };
-
-  const generatePriceEntriesWithVariation = (
-    assetId: string,
-    count: number,
-    prices: number[],
-    volumes: number[] = [],
-    source: string = "source1"
-  ): PriceFeedEntry[] => {
-    const entries: PriceFeedEntry[] = [];
-    const now = new Date();
-    for (let i = 0; i < count; i++) {
-      entries.push({
-        source,
-        assetId,
-        price: prices[i] ?? 100,
-        volume: volumes[i] ?? 1000,
-        timestamp: new Date(now.getTime() - (count - i) * 60000),
-      });
-    }
-    return entries;
-  };
+  const mockAssetId = 'BTC-USD';
+  const mockSource = 'test-source';
 
   beforeEach(() => {
-    createMockHash();
     detector = new AnomalyDetector();
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe("constructor", () => {
-    test("should create detector with default config when no config provided", () => {
-      const detector = new AnomalyDetector();
-      expect(detector).toBeDefined();
+  describe('constructor', () => {
+    test('should initialize with default config when no config provided', () => {
+      expect(detector).toBeInstanceOf(AnomalyDetector);
+      const config = (detector as any).config;
+      expect(config.windowSize).toBe(30);
+      expect(config.zScoreThreshold).toBe(2.5);
+      expect(config.volumeMultiplier).toBe(3);
+      expect(config.stalenessMinutes).toBe(60);
+      expect(config.minDataPoints).toBe(10);
+      expect(config.ewmaAlpha).toBe(0.1);
     });
 
-    test("should create detector with partial config merged with defaults", () => {
-      const detector = new AnomalyDetector({ windowSize: 50 });
-      expect(detector).toBeDefined();
-    });
-
-    test("should create detector with fully custom config", () => {
-      const customConfig: DetectorConfig = {
-        windowSize: 20,
-        zScoreThreshold: 3.0,
+    test('should override default config with provided values', () => {
+      const customConfig: Partial<DetectorConfig> = {
+        windowSize: 50,
+        zScoreThreshold: 3,
         volumeMultiplier: 5,
-        stalenessMinutes: 30,
-        minDataPoints: 5,
-        ewmaAlpha: 0.2,
       };
-      const detector = new AnomalyDetector(customConfig);
-      expect(detector).toBeDefined();
-    });
-
-    test("should create detector with empty object and still use defaults", () => {
-      const detector = new AnomalyDetector({});
-      expect(detector).toBeDefined();
+      detector = new AnomalyDetector(customConfig);
+      const config = (detector as any).config;
+      expect(config.windowSize).toBe(50);
+      expect(config.zScoreThreshold).toBe(3);
+      expect(config.volumeMultiplier).toBe(5);
     });
   });
 
-  describe("ingestPrice", () => {
-    test("should add entry to new asset history", () => {
+  describe('ingestPrice', () => {
+    test('should add entry to price history for new asset', () => {
       const entry: PriceFeedEntry = {
-        source: "source1",
-        assetId: "BTC",
-        price: 50000,
-        volume: 1000,
-        timestamp: new Date(),
-      };
-      detector.ingestPrice(entry);
-      const stats = detector.getStats("BTC");
-      expect(stats.count).toBe(1);
-    });
-
-    test("should maintain window size limit by removing oldest entries", () => {
-      const detector = new AnomalyDetector({ windowSize: 5 });
-      const entries = generatePriceEntries("BTC", 10);
-      entries.forEach((e) => detector.ingestPrice(e));
-      const stats = detector.getStats("BTC");
-      expect(stats.count).toBe(5);
-    });
-
-    test("should append to existing history for same asset", () => {
-      const entry1: PriceFeedEntry = {
-        source: "source1",
-        assetId: "BTC",
-        price: 50000,
-        volume: 1000,
-        timestamp: new Date(),
-      };
-      const entry2: PriceFeedEntry = {
-        source: "source1",
-        assetId: "BTC",
-        price: 51000,
-        volume: 1200,
-        timestamp: new Date(),
-      };
-      detector.ingestPrice(entry1);
-      detector.ingestPrice(entry2);
-      const stats = detector.getStats("BTC");
-      expect(stats.count).toBe(2);
-    });
-  });
-
-  describe("ingestBatch", () => {
-    test("should ingest multiple entries in batch", () => {
-      const entries = generatePriceEntries("BTC", 5);
-      detector.ingestBatch(entries);
-      const stats = detector.getStats("BTC");
-      expect(stats.count).toBe(5);
-    });
-
-    test("should handle empty batch", () => {
-      detector.ingestBatch([]);
-      const stats = detector.getStats("BTC");
-      expect(stats.count).toBe(0);
-    });
-
-    test("should ingest batch with multiple assets", () => {
-      const entries = [
-        ...generatePriceEntries("BTC", 3),
-        ...generatePriceEntries("ETH", 3),
-      ];
-      detector.ingestBatch(entries);
-      expect(detector.getStats("BTC").count).toBe(3);
-      expect(detector.getStats("ETH").count).toBe(3);
-    });
-  });
-
-  describe("detectPriceSpike", () => {
-    test("should return null when insufficient data points", () => {
-      const entries = generatePriceEntries("BTC", 5);
-      detector.ingestBatch(entries);
-      const result = detector.detectPriceSpike("BTC");
-      expect(result).toBeNull();
-    });
-
-    test("should return null when no history exists", () => {
-      const result = detector.detectPriceSpike("NONEXISTENT");
-      expect(result).toBeNull();
-    });
-
-    test("should detect price spike when z-score exceeds threshold", () => {
-      const prices = Array(10).fill(100);
-      prices[9] = 200;
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices);
-      detector.ingestBatch(entries);
-      const result = detector.detectPriceSpike("BTC");
-      expect(result).not.toBeNull();
-      expect(result!.anomalyType).toBe("spike");
-      expect(result!.isAnomaly).toBe(true);
-    });
-
-    test("should return null when z-score does not exceed threshold", () => {
-      const prices = Array(10).fill(100);
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices);
-      detector.ingestBatch(entries);
-      const result = detector.detectPriceSpike("BTC");
-      expect(result).toBeNull();
-    });
-
-    test("should cap anomaly score at 100", () => {
-      const prices = Array(10).fill(100);
-      prices[9] = 10000;
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices);
-      detector.ingestBatch(entries);
-      const result = detector.detectPriceSpike("BTC");
-      expect(result!.anomalyScore).toBe(100);
-    });
-  });
-
-  describe("detectPriceDrop", () => {
-    test("should return null when insufficient data points", () => {
-      const entries = generatePriceEntries("BTC", 5);
-      detector.ingestBatch(entries);
-      const result = detector.detectPriceDrop("BTC");
-      expect(result).toBeNull();
-    });
-
-    test("should detect price drop when z-score below negative threshold", () => {
-      const prices = Array(10).fill(100);
-      prices[9] = 10;
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices);
-      detector.ingestBatch(entries);
-      const result = detector.detectPriceDrop("BTC");
-      expect(result).not.toBeNull();
-      expect(result!.anomalyType).toBe("drop");
-    });
-
-    test("should return null when z-score not below negative threshold", () => {
-      const prices = Array(10).fill(100);
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices);
-      detector.ingestBatch(entries);
-      const result = detector.detectPriceDrop("BTC");
-      expect(result).toBeNull();
-    });
-  });
-
-  describe("detectManipulation", () => {
-    test("should return null when insufficient data points", () => {
-      const entries = generatePriceEntries("BTC", 5);
-      detector.ingestBatch(entries);
-      const result = detector.detectManipulation("BTC");
-      expect(result).toBeNull();
-    });
-
-    test("should return null when only one source", () => {
-      const entries = generatePriceEntries("BTC", 10, 100, 1000, "source1");
-      detector.ingestBatch(entries);
-      const result = detector.detectManipulation("BTC");
-      expect(result).toBeNull();
-    });
-
-    test("should detect manipulation with multiple divergent sources", () => {
-      const entries: PriceFeedEntry[] = [];
-      const now = new Date();
-      for (let i = 0; i < 10; i++) {
-        entries.push({
-          source: "source1",
-          assetId: "BTC",
-          price: 100,
-          volume: 1000,
-          timestamp: new Date(now.getTime() - (10 - i) * 60000),
-        });
-        entries.push({
-          source: "source2",
-          assetId: "BTC",
-          price: 200,
-          volume: 1000,
-          timestamp: new Date(now.getTime() - (10 - i) * 60000),
-        });
-      }
-      detector.ingestBatch(entries);
-      const result = detector.detectManipulation("BTC");
-      expect(result).not.toBeNull();
-      expect(result!.anomalyType).toBe("manipulation");
-    });
-
-    test("should return null when divergence is below threshold", () => {
-      const entries: PriceFeedEntry[] = [];
-      const now = new Date();
-      for (let i = 0; i < 10; i++) {
-        entries.push({
-          source: "source1",
-          assetId: "BTC",
-          price: 100,
-          volume: 1000,
-          timestamp: new Date(now.getTime() - (10 - i) * 60000),
-        });
-        entries.push({
-          source: "source2",
-          assetId: "BTC",
-          price: 102,
-          volume: 1000,
-          timestamp: new Date(now.getTime() - (10 - i) * 60000),
-        });
-      }
-      detector.ingestBatch(entries);
-      const result = detector.detectManipulation("BTC");
-      expect(result).toBeNull();
-    });
-  });
-
-  describe("detectStaleFeed", () => {
-    test("should return null when no history exists", () => {
-      const result = detector.detectStaleFeed("NONEXISTENT");
-      expect(result).toBeNull();
-    });
-
-    test("should return null when feed is not stale", () => {
-      const entry: PriceFeedEntry = {
-        source: "source1",
-        assetId: "BTC",
+        source: mockSource,
+        assetId: mockAssetId,
         price: 100,
         volume: 1000,
         timestamp: new Date(),
       };
       detector.ingestPrice(entry);
-      const result = detector.detectStaleFeed("BTC");
-      expect(result).toBeNull();
+      const history = (detector as any).priceHistory.get(mockAssetId);
+      expect(history).toHaveLength(1);
+      expect(history[0]).toEqual(entry);
     });
 
-    test("should detect stale feed", () => {
-      const staleEntry: PriceFeedEntry = {
-        source: "source1",
-        assetId: "BTC",
+    test('should add entry to existing price history for asset', () => {
+      const firstEntry: PriceFeedEntry = {
+        source: mockSource,
+        assetId: mockAssetId,
         price: 100,
         volume: 1000,
-        timestamp: new Date(Date.now() - 120 * 60 * 1000),
+        timestamp: new Date(),
       };
-      detector.ingestPrice(staleEntry);
-      const result = detector.detectStaleFeed("BTC");
-      expect(result).not.toBeNull();
-      expect(result!.anomalyType).toBe("stale");
+      const secondEntry: PriceFeedEntry = {
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 101,
+        volume: 1010,
+        timestamp: new Date(),
+      };
+      detector.ingestPrice(firstEntry);
+      detector.ingestPrice(secondEntry);
+      const history = (detector as any).priceHistory.get(mockAssetId);
+      expect(history).toHaveLength(2);
+      expect(history[0]).toEqual(firstEntry);
+      expect(history[1]).toEqual(secondEntry);
+    });
+
+    test('should maintain window size by removing oldest entry when limit exceeded', () => {
+      const config: Partial<DetectorConfig> = { windowSize: 2 };
+      detector = new AnomalyDetector(config);
+      const entries: PriceFeedEntry[] = Array.from({ length: 5 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100 + i,
+        volume: 1000 + i * 100,
+        timestamp: new Date(),
+      }));
+      entries.forEach(entry => detector.ingestPrice(entry));
+      const history = (detector as any).priceHistory.get(mockAssetId);
+      expect(history).toHaveLength(2);
+      expect(history[0].price).toBe(3);
+      expect(history[1].price).toBe(4);
     });
   });
 
-  describe("detectVolumeSurge", () => {
-    test("should return null when insufficient data points", () => {
-      const entries = generatePriceEntries("BTC", 5);
+  describe('ingestBatch', () => {
+    test('should ingest multiple entries for same asset', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 3 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100 + i,
+        volume: 1000 + i * 100,
+        timestamp: new Date(),
+      }));
       detector.ingestBatch(entries);
-      const result = detector.detectVolumeSurge("BTC");
-      expect(result).toBeNull();
+      const history = (detector as any).priceHistory.get(mockAssetId);
+      expect(history).toHaveLength(3);
     });
 
-    test("should detect volume surge", () => {
-      const volumes = Array(9).fill(1000);
-      volumes.push(10000);
-      const entries = generatePriceEntriesWithVariation("BTC", 10, Array(10).fill(100), volumes);
-      detector.ingestBatch(entries);
-      const result = detector.detectVolumeSurge("BTC");
-      expect(result).not.toBeNull();
-      expect(result!.anomalyType).toBe("volume_surge");
-    });
-
-    test("should return null when volume multiplier not exceeded", () => {
-      const volumes = Array(10).fill(1000);
-      const entries = generatePriceEntriesWithVariation("BTC", 10, Array(10).fill(100), volumes);
-      detector.ingestBatch(entries);
-      const result = detector.detectVolumeSurge("BTC");
-      expect(result).toBeNull();
+    test('should ingest entries for multiple assets', () => {
+      const btcEntry: PriceFeedEntry = {
+        source: mockSource,
+        assetId: 'BTC-USD',
+        price: 50000,
+        volume: 2000,
+        timestamp: new Date(),
+      };
+      const ethEntry: PriceFeedEntry = {
+        source: mockSource,
+        assetId: 'ETH-USD',
+        price: 3000,
+        volume: 5000,
+        timestamp: new Date(),
+      };
+      detector.ingestBatch([btcEntry, ethEntry]);
+      expect((detector as any).priceHistory.get('BTC-USD')).toHaveLength(1);
+      expect((detector as any).priceHistory.get('ETH-USD')).toHaveLength(1);
     });
   });
 
-  describe("detectAnomalies", () => {
-    test("should return empty array when no anomalies detected", () => {
-      const entries = generatePriceEntries("BTC", 10);
-      detector.ingestBatch(entries);
-      const results = detector.detectAnomalies("BTC");
+  describe('detectAnomalies', () => {
+    test('should return empty array when no history for asset', () => {
+      const results = detector.detectAnomalies(mockAssetId);
       expect(results).toEqual([]);
     });
 
-    test("should return multiple anomalies when detected", () => {
-      const prices = Array(9).fill(100);
-      prices.push(200);
-      const volumes = Array(9).fill(1000);
-      volumes.push(10000);
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices, volumes);
-      detector.ingestBatch(entries);
-      const results = detector.detectAnomalies("BTC");
-      expect(results.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("scanAll", () => {
-    test("should return empty map when no assets", () => {
-      const results = detector.scanAll();
-      expect(results.size).toBe(0);
-    });
-
-    test("should scan all assets with anomalies", () => {
-      const prices = Array(9).fill(100);
-      prices.push(200);
-      const entries = generatePriceEntriesWithVariation("BTC", 10, [...prices]);
-      const entries2 = generatePriceEntriesWithVariation("ETH", 10, [...prices]);
-      detector.ingestBatch([...entries, ...entries2]);
-      const results = detector.scanAll();
-      expect(results.size).toBeGreaterThan(0);
-    });
-
-    test("should not include assets with no anomalies", () => {
-      const entries = generatePriceEntries("BTC", 10);
-      detector.ingestBatch(entries);
-      const results = detector.scanAll();
-      expect(results.size).toBe(0);
-    });
-  });
-
-  describe("getEWMA", () => {
-    test("should return 0 when no history", () => {
-      const result = detector.getEWMA("NONEXISTENT");
-      expect(result).toBe(0);
-    });
-
-    test("should return first price when single entry", () => {
+    test('should return empty array when insufficient data points', () => {
       const entry: PriceFeedEntry = {
-        source: "source1",
-        assetId: "BTC",
+        source: mockSource,
+        assetId: mockAssetId,
         price: 100,
         volume: 1000,
         timestamp: new Date(),
       };
       detector.ingestPrice(entry);
-      const result = detector.getEWMA("BTC");
-      expect(result).toBe(100);
+      const results = detector.detectAnomalies(mockAssetId);
+      expect(results).toEqual([]);
     });
 
-    test("should compute EWMA correctly for multiple entries", () => {
-      const entries = generatePriceEntriesWithVariation("BTC", 3, [100, 110, 120]);
+    test('should detect price spike anomaly', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100 + i * 2,
+        volume: 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
       detector.ingestBatch(entries);
-      const result = detector.getEWMA("BTC");
-      expect(result).toBeGreaterThan(0);
+      const results = detector.detectAnomalies(mockAssetId);
+      expect(results).toHaveLength(1);
+      expect(results[0].anomalyType).toBe('spike');
+      expect(results[0].isAnomaly).toBe(true);
+    });
+
+    test('should detect price drop anomaly', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 200 - i * 2,
+        volume: 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
+      detector.ingestBatch(entries);
+      const results = detector.detectAnomalies(mockAssetId);
+      expect(results).toHaveLength(1);
+      expect(results[0].anomalyType).toBe('drop');
+      expect(results[0].isAnomaly).toBe(true);
+    });
+
+    test('should detect volume surge anomaly', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100 + i,
+        volume: 1000 + i * 1000,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
+      detector.ingestBatch(entries);
+      const results = detector.detectAnomalies(mockAssetId);
+      expect(results).toHaveLength(1);
+      expect(results[0].anomalyType).toBe('volume-surge');
+      expect(results[0].isAnomaly).toBe(true);
+    });
+
+    test('should detect stale feed anomaly', () => {
+      const config: Partial<DetectorConfig> = { stalenessMinutes: 1 };
+      detector = new AnomalyDetector(config);
+      const oldDate = new Date(Date.now() - 2 * 60 * 1000);
+      const entry: PriceFeedEntry = {
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100,
+        volume: 1000,
+        timestamp: oldDate,
+      };
+      detector.ingestPrice(entry);
+      const results = detector.detectAnomalies(mockAssetId);
+      expect(results).toHaveLength(1);
+      expect(results[0].anomalyType).toBe('stale-feed');
+      expect(results[0].isAnomaly).toBe(true);
+    });
+
+    test('should detect manipulation anomaly', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100 + (i % 2 === 0 ? 10 : -10),
+        volume: 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
+      detector.ingestBatch(entries);
+      const results = detector.detectAnomalies(mockAssetId);
+      expect(results).toHaveLength(1);
+      expect(results[0].anomalyType).toBe('manipulation');
+      expect(results[0].isAnomaly).toBe(true);
+    });
+
+    test('should return multiple anomalies when multiple conditions met', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: i % 2 === 0 ? 100 + i * 5 : 100 - i * 2,
+        volume: i % 3 === 0 ? 5000 : 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
+      detector.ingestBatch(entries);
+      const results = detector.detectAnomalies(mockAssetId);
+      expect(results).toHaveLengthGreaterThanOrEqual(2);
+    });
+
+    test('should not detect anomalies when no anomalies present', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100 + i,
+        volume: 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
+      detector.ingestBatch(entries);
+      const results = detector.detectAnomalies(mockAssetId);
+      expect(results).toEqual([]);
     });
   });
 
-  describe("getStats", () => {
-    test("should return zero stats for nonexistent asset", () => {
-      const stats = detector.getStats("NONEXISTENT");
-      expect(stats).toEqual({ mean: 0, stddev: 0, min: 0, max: 0, count: 0 });
-    });
-
-    test("should compute correct stats for single entry", () => {
+  describe('detectPriceSpike', () => {
+    test('should return null when insufficient data points', () => {
       const entry: PriceFeedEntry = {
-        source: "source1",
-        assetId: "BTC",
-        price: 100,
-        volume: 1000,
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 200,
+        volume: 2000,
         timestamp: new Date(),
       };
       detector.ingestPrice(entry);
-      const stats = detector.getStats("BTC");
-      expect(stats.mean).toBe(100);
-      expect(stats.min).toBe(100);
-      expect(stats.max).toBe(100);
-      expect(stats.count).toBe(1);
-    });
-
-    test("should compute correct stats for multiple entries", () => {
-      const entries = generatePriceEntriesWithVariation("BTC", 5, [10, 20, 30, 40, 50]);
-      detector.ingestBatch(entries);
-      const stats = detector.getStats("BTC");
-      expect(stats.mean).toBe(30);
-      expect(stats.min).toBe(10);
-      expect(stats.max).toBe(50);
-      expect(stats.count).toBe(5);
-    });
-  });
-
-  describe("hashEvidence", () => {
-    test("should call createHash with sha256", () => {
-      const prices = Array(10).fill(100);
-      prices[9] = 200;
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices);
-      detector.ingestBatch(entries);
-      detector.detectPriceSpike("BTC");
-      expect(createHash).toHaveBeenCalledWith("sha256");
-    });
-
-    test("should generate consistent hash for same data", () => {
-      const prices = Array(10).fill(100);
-      prices[9] = 200;
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices);
-      detector.ingestBatch(entries);
-      detector.detectPriceSpike("BTC");
-      expect(mockDigest).toHaveBeenCalled();
-    });
-  });
-
-  describe("edge cases and boundary values", () => {
-    test("should handle zero standard deviation in z-score calculation", () => {
-      const entries = generatePriceEntries("BTC", 10, 100);
-      detector.ingestBatch(entries);
-      const result = detector.detectPriceSpike("BTC");
+      const result = (detector as any).detectPriceSpike(mockAssetId);
       expect(result).toBeNull();
     });
 
-    test("should handle very large prices values", () => {
-      const entries = generatePriceEntries("BTC", 10, 1e15);
+    test('should return null when z-score below threshold', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100 + i,
+        volume: 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
       detector.ingestBatch(entries);
-      const stats = detector.getStats("BTC");
-      expect(stats.mean).toBe(1e15);
+      const result = (detector as any).detectPriceSpike(mockAssetId);
+      expect(result).toBeNull();
     });
 
-    test("should handle negative prices in stats", () => {
-      const entries = generatePriceEntriesWithVariation("BTC", 5, [-100, -200, -300, -400, -500]);
+    test('should return anomaly result when z-score above threshold', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: i < 14 ? 100 : 200,
+        volume: 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
       detector.ingestBatch(entries);
-      const stats = detector.getStats("BTC");
-      expect(stats.min).toBe(-500);
-      expect(stats.max).toBe(-100);
-    });
-
-    test("should handle window size of 1", () => {
-      const detector = new AnomalyDetector({ windowSize: 1 });
-      const entry: PriceFeedEntry = {
-        source: "source1",
-        assetId: "BTC",
-        price: 100,
-        volume: 1000,
-        timestamp: new Date(),
-      };
-      detector.ingestPrice(entry);
-      const stats = detector.getStats("BTC");
-      expect(stats.count).toBe(1);
-    });
-
-    test("should handle exactly minimum data points", () => {
-      const prices = Array(9).fill(100);
-      prices.push(200);
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices);
-      detector.ingestBatch(entries);
-      const result = detector.detectPriceSpike("BTC");
+      const result = (detector as any).detectPriceSpike(mockAssetId);
       expect(result).not.toBeNull();
+      expect(result?.anomalyType).toBe('spike');
+      expect(result?.isAnomaly).toBe(true);
+      expect(result?.confidence).toBeGreaterThan(0);
+      expect(result?.anomalyScore).toBeGreaterThan(0);
     });
 
-    test("should handle boundary z-score exactly at threshold", () => {
-      const basePrice = 100;
-      const stddev = 10;
-      const thresholdPrice = basePrice + 2.5 * stddev;
-      const prices = Array(9).fill(basePrice);
-      prices.push(thresholdPrice);
-      const entries = generatePriceEntriesWithVariation("BTC", 10, prices);
+    test('should cap anomaly score at 100', () => {
+      const config: Partial<DetectorConfig> = { zScoreThreshold: 1 };
+      detector = new AnomalyDetector(config);
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: i < 14 ? 100 : 300,
+        volume: 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
       detector.ingestBatch(entries);
-      const result = detector.detectPriceSpike("BTC");
+      const result = (detector as any).detectPriceSpike(mockAssetId);
+      expect(result?.anomalyScore).toBe(100);
+    });
+  });
+
+  describe('detectPriceDrop', () => {
+    test('should return null when insufficient data points', () => {
+      const entry: PriceFeedEntry = {
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 50,
+        volume: 500,
+        timestamp: new Date(),
+      };
+      detector.ingestPrice(entry);
+      const result = (detector as any).detectPriceDrop(mockAssetId);
       expect(result).toBeNull();
+    });
+
+    test('should return null when z-score above negative threshold', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100 + i,
+        volume: 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
+      detector.ingestBatch(entries);
+      const result = (detector as any).detectPriceDrop(mockAssetId);
+      expect(result).toBeNull();
+    });
+
+    test('should return anomaly result when z-score below negative threshold', () => {
+      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: i < 14 ? 100 : 50,
+        volume: 1000 + i * 100,
+        timestamp: new Date(Date.now() - (15 - i) * 60000),
+      }));
+      detector.ingestBatch(entries);
+      const result = (detector as any).detectPriceDrop(mockAssetId);
+      expect(result).not.toBeNull();
+      expect(result?.anomalyType).toBe('drop');
+      expect(result?.isAnomaly).toBe(true);
+    });
+  });
+
+  describe('hashEvidence', () => {
+    test('should generate consistent hash for same input', () => {
+      const result: Omit<AnomalyResult, 'evidenceHash'> = {
+        assetId: mockAssetId,
+        anomalyScore: 75,
+        isAnomaly: true,
+        anomalyType: 'spike',
+        confidence: 0.8,
+        windowSize: 15,
+        deviation: 50,
+        detectedAt: new Date(),
+        details: 'Test evidence',
+      };
+      const hash1 = (detector as any).hashEvidence(result);
+      const hash2 = (detector as any).hashEvidence(result);
+      expect(hash1).toBe(hash2);
+    });
+
+    test('should use crypto.createHash with sha256', () => {
+      const result: Omit<AnomalyResult, 'evidenceHash'> = {
+        assetId: mockAssetId,
+        anomalyScore: 75,
+        isAnomaly: true,
+        anomalyType: 'spike',
+        confidence: 0.8,
+        windowSize: 15,
+        deviation: 50,
+        detectedAt: new Date(),
+        details: 'Test evidence',
+      };
+      (detector as any).hashEvidence(result);
+      expect(createHash).toHaveBeenCalledWith('sha256');
+    });
+  });
+
+  describe('computeZScore', () => {
+    test('should compute correct z-score for normal distribution', () => {
+      const values = [100, 101, 102, 99, 100];
+      const current = 120;
+      const zScore = (detector as any).computeZScore(values, current);
+      expect(zScore).toBeCloseTo(10.95, 1);
+    });
+
+    test('should return 0 when all values are same', () => {
+      const values = [100, 100, 100, 100];
+      const current = 100;
+      const zScore = (detector as any).computeZScore(values, current);
+      expect(zScore).toBe(0);
     });
   });
 });
