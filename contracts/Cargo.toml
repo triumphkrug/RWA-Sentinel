@@ -2,6 +2,8 @@
 members = [
     "asset-registry",
     "attestation-store",
+    "governance-dao",
+    "oracle-slashing",
     "tests",
 ]
 resolver = "2"
