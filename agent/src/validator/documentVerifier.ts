@@ -72,6 +72,10 @@ class DocumentVerifier {
   }
 
   verify(doc: DocumentMetadata): VerificationResult {
+    // Validate issuedAt to prevent crashes from invalid Date
+    if (!(doc.issuedAt instanceof Date) || isNaN(doc.issuedAt.getTime())) {
+      throw new Error('invalid issuedAt: must be a valid Date');
+    }
     const checks: VerificationCheck[] = [];
     const warnings: string[] = [];
 
@@ -115,6 +119,10 @@ class DocumentVerifier {
   }
 
   verifyBatch(docs: DocumentMetadata[]): VerificationResult[] {
+    const MAX_BATCH = 1000;
+    if (docs.length > MAX_BATCH) {
+      throw new Error(`batch size ${docs.length} exceeds maximum ${MAX_BATCH}`);
+    }
     return docs.map(doc => this.verify(doc));
   }
 
@@ -198,7 +206,14 @@ class DocumentVerifier {
   }
 
   #hashResult(result: Omit<VerificationResult, 'evidenceHash'>): string {
-    const data = `${result.docId}:${result.verified}:${result.score}:${result.verifiedAt.toISOString()}:${result.verifierVersion}`;
+    // Use structured JSON to prevent delimiter-based hash collisions
+    const data = JSON.stringify({
+      docId: result.docId,
+      verified: result.verified,
+      score: result.score,
+      verifiedAt: result.verifiedAt.toISOString(),
+      verifierVersion: result.verifierVersion,
+    });
     return createHash('sha256').update(data).digest('hex');
   }
 }

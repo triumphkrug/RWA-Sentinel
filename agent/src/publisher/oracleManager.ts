@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 
 interface OracleInfo {
   oracleId: string;
@@ -49,6 +49,10 @@ interface OracleConfig {
   suspensionThreshold: number;
 }
 
+const MAX_REPORTS_PER_ASSET = 10_000;
+const MAX_SLASH_HISTORY = 50_000;
+const MAX_CONSENSUS_HISTORY = 1_000;
+
 class OracleManager {
   private oracles: Map<string, OracleInfo>;
   private reports: Map<string, PriceReport[]>;
@@ -76,10 +80,10 @@ class OracleManager {
 
   registerOracle(id: string, name: string, endpoint: string, stake: number): OracleInfo {
     if (this.oracles.has(id)) {
-      throw new Error(`Oracle ${id} already registered`);
+      throw new Error('oracle already registered');
     }
     if (stake < this.config.minStake) {
-      throw new Error(`Stake ${stake} below minimum ${this.config.minStake}`);
+      throw new Error('stake below minimum');
     }
 
     const oracle: OracleInfo = {
@@ -101,16 +105,35 @@ class OracleManager {
   }
 
   submitReport(report: PriceReport): void {
+    // Validate report fields
+    if (typeof report.price !== 'number' || !Number.isFinite(report.price) || report.price < 0) {
+      throw new Error('invalid price: must be a non-negative finite number');
+    }
+    if (typeof report.confidence !== 'number' || report.confidence < 0 || report.confidence > 100) {
+      throw new Error('invalid confidence: must be 0-100');
+    }
+    if (!(report.timestamp instanceof Date) || isNaN(report.timestamp.getTime())) {
+      throw new Error('invalid timestamp');
+    }
+    // Reject future timestamps (allow 5 min tolerance)
+    if (report.timestamp.getTime() > Date.now() + 5 * 60 * 1000) {
+      throw new Error('future timestamps are not allowed');
+    }
+
     const oracle = this.oracles.get(report.oracleId);
     if (!oracle) {
-      throw new Error(`Oracle ${report.oracleId} not found`);
+      throw new Error('oracle not found');
     }
     if (oracle.status !== 'active') {
-      throw new Error(`Oracle ${report.oracleId} is ${oracle.status}`);
+      throw new Error('oracle is not active');
     }
 
     const assetReports = this.reports.get(report.assetId) || [];
     assetReports.push(report);
+    // Prune oldest reports if exceeding limit
+    while (assetReports.length > MAX_REPORTS_PER_ASSET) {
+      assetReports.shift();
+    }
     this.reports.set(report.assetId, assetReports);
 
     oracle.totalReports++;
@@ -133,7 +156,10 @@ class OracleManager {
     const median = this.computeMedian(prices);
     const mad = this.computeMAD(prices, median);
 
-    const threshold = (this.config.maxDeviation / 100) * median;
+    // Use absolute deviation when median is 0 to avoid threshold=0 edge case
+    const threshold = median !== 0
+      ? (this.config.maxDeviation / 100) * median
+      : this.config.maxDeviation;
     const outliers: string[] = [];
 
     for (const report of activeReports) {
@@ -157,6 +183,10 @@ class OracleManager {
 
     const history = this.consensusHistory.get(assetId) || [];
     history.push(result);
+    // Prune old consensus history
+    while (history.length > MAX_CONSENSUS_HISTORY) {
+      history.shift();
+    }
     this.consensusHistory.set(assetId, history);
 
     return result;
@@ -190,6 +220,10 @@ class OracleManager {
     };
 
     this.slashHistory.push(slashEvent);
+    // Prune slash history
+    while (this.slashHistory.length > MAX_SLASH_HISTORY) {
+      this.slashHistory.shift();
+    }
     this.oracles.set(oracleId, oracle);
 
     return slashEvent;
@@ -204,7 +238,7 @@ class OracleManager {
         oracleId,
         `Outlier deviation from consensus on ${assetId}`,
         `Consensus: ${result.consensusPrice}, deviation exceeded ${this.config.maxDeviation}%`,
-        `${assetId}-${Date.now()}`
+        randomUUID()
       );
       slashEvents.push(event);
     }

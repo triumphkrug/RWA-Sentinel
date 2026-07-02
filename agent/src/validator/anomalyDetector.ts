@@ -48,6 +48,22 @@ class AnomalyDetector {
   }
 
   ingestPrice(entry: PriceFeedEntry): void {
+    // Validate input fields
+    if (typeof entry.price !== 'number' || !Number.isFinite(entry.price) || entry.price < 0) {
+      throw new Error('invalid price: must be a non-negative finite number');
+    }
+    if (typeof entry.volume !== 'number' || !Number.isFinite(entry.volume) || entry.volume < 0) {
+      throw new Error('invalid volume: must be a non-negative finite number');
+    }
+    if (!(entry.timestamp instanceof Date) || isNaN(entry.timestamp.getTime())) {
+      throw new Error('invalid timestamp: must be a valid Date');
+    }
+    if (typeof entry.assetId !== 'string' || entry.assetId.length === 0 || entry.assetId.length > 128) {
+      throw new Error('invalid assetId: must be 1-128 chars');
+    }
+    if (typeof entry.source !== 'string' || entry.source.length === 0 || entry.source.length > 128) {
+      throw new Error('invalid source: must be 1-128 chars');
+    }
     const history = this.priceHistory.get(entry.assetId) ?? [];
     history.push(entry);
     while (history.length > this.config.windowSize) {
@@ -142,6 +158,8 @@ class AnomalyDetector {
       sourceMeans.push(mean);
     }
     const overallMean = sourceMeans.reduce((a, b) => a + b, 0) / sourceMeans.length;
+    // Guard against division by zero when all prices are 0
+    if (overallMean === 0) return null;
     let maxDivergence = 0;
     for (const mean of sourceMeans) {
       const divergence = Math.abs(mean - overallMean) / overallMean;
@@ -251,6 +269,7 @@ class AnomalyDetector {
   }
 
   private computeStdDev(values: number[]): number {
+    if (values.length === 0) return 0;
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
     const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
     return Math.sqrt(variance);
