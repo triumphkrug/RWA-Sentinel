@@ -9,16 +9,17 @@ import type { ScoreResult, PipelineResult } from '../lib/api'
 import { connectWallet, disconnectWallet, shortKey } from '../lib/wallet'
 import type { WalletState } from '../lib/wallet'
 import DemoNotice from './DemoNotice'
+import DataModeToggle, { useDataMode } from './DataModeToggle'
 
 interface LogLine { time: string; text: string; type: 'info' | 'success' | 'warn' | 'error' | 'hash' }
 
 /* ── demo scored assets (shown publicly without wallet) ── */
 const demoAssets = [
-  { id: 'INV-A7F1001', issuer: 'Acme Logistics', debtor: 'Metro Corp', amount: 84250, score: 87, status: 'active', type: 'Invoice', expires: '23h 14m', txHash: '3a7f9e2b5c8d1a4f7e0b3d6a9c2f5e8b1d4a7c0e3f6b9d2a5c8e1b4f7a0d3c6' },
-  { id: 'INV-B3E2045', issuer: 'Nordic Shipping', debtor: 'Baltic Trade', amount: 215000, score: 72, status: 'active', type: 'Trade Receivable', expires: '18h 02m', txHash: 'b2e5a8d1c4f7a0b3e6d9c2f5a8b1e4d7a0c3f6b9e2d5a8c1b4f7e0a3d6c9b2e5' },
-  { id: 'RE-CF4R001', issuer: 'Urban Realty', debtor: 'N/A', amount: 490000, score: 93, status: 'active', type: 'Real Estate', expires: '11h 45m', txHash: 'c5f8a1d4b7e0c3f6a9d2e5b8c1f4a7d0b3e6c9a2f5d8b1e4c7a0d3f6b9e2c5a8' },
-  { id: 'INV-D9A3087', issuer: 'Fast Freight', debtor: 'Global Mills', amount: 56300, score: 41, status: 'expired', type: 'Invoice', expires: 'expired', txHash: 'd1e4a7c0b3f6d9a2e5c8b1f4a7d0c3e6b9a2f5d8c1e4b7a0d3f6c9b2e5a8d1c4' },
-  { id: 'SC-E2B7012', issuer: 'AgriSource', debtor: 'FoodChain Inc', amount: 128700, score: 78, status: 'active', type: 'Supply Chain', expires: '6h 33m', txHash: 'e4a7b0c3f6d9a2e5c8b1f4a7d0c3e6b9a2f5d8c1e4b7a0d3f6c9b2e5a8d1e4b7' },
+  { id: 'INV-A7F1001', issuer: 'Acme Logistics', debtor: 'Metro Corp', amount: 84250, score: 87, status: 'active', type: 'Invoice', expires: '23h 14m' },
+  { id: 'INV-B3E2045', issuer: 'Nordic Shipping', debtor: 'Baltic Trade', amount: 215000, score: 72, status: 'active', type: 'Trade Receivable', expires: '18h 02m' },
+  { id: 'RE-CF4R001', issuer: 'Urban Realty', debtor: 'N/A', amount: 490000, score: 93, status: 'active', type: 'Real Estate', expires: '11h 45m' },
+  { id: 'INV-D9A3087', issuer: 'Fast Freight', debtor: 'Global Mills', amount: 56300, score: 41, status: 'expired', type: 'Invoice', expires: 'expired' },
+  { id: 'SC-E2B7012', issuer: 'AgriSource', debtor: 'FoodChain Inc', amount: 128700, score: 78, status: 'active', type: 'Supply Chain', expires: '6h 33m' },
 ]
 
 const demoStats = { total: 147, active: 89, avgScore: 76, expired: 58 }
@@ -159,6 +160,7 @@ export default function Dashboard() {
             <p className="text-gray-500 text-sm mt-1">RWA verification pipeline &amp; asset attestation manager</p>
           </div>
           <div className="flex items-center gap-3">
+            <DataModeToggle />
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-xs">
               <span className={`w-2 h-2 rounded-full ${chainStatus === 'casper-test' ? 'bg-green-500' : 'bg-red-500'}`} />
               <span className="text-gray-600 font-medium">{chainStatus}</span>
@@ -296,14 +298,7 @@ export default function Dashboard() {
                         </td>
                         <td className="py-3 px-3 text-xs text-right text-gray-500 font-mono">{a.expires}</td>
                         <td className="py-3 px-3 text-center">
-                          <a
-                            href={`https://testnet.cspr.live/deploy/${a.txHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 text-xs hover:text-blue-600 underline inline-flex items-center gap-1"
-                          >
-                            View ↗
-                          </a>
+                          <span className="text-amber-500 text-xs font-medium px-2 py-0.5 bg-amber-50 rounded">Demo</span>
                         </td>
                       </tr>
                     ))}
@@ -425,8 +420,8 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {scores.map((s, i) => {
-                  // Mock txHash for each attestation (in production, this would come from the backend)
-                  const mockTxHash = s.factorsHash.slice(0, 64)
+                  // Deploy hash from backend when available
+                  const deployHash = "deployHash" in s ? (s as Record<string, unknown>).deployHash as string : null
                   return (
                   <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                     <div className="flex-1 min-w-0">
@@ -445,15 +440,19 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-2xl font-bold text-gray-900">{s.trustScore}</span>
-                      <a
-                        href={`https://testnet.cspr.live/deploy/${mockTxHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 text-sm hover:text-blue-600 underline inline-flex items-center gap-1"
-                        title="View attestation on Casper Explorer"
-                      >
-                        View on Casper ↗
-                      </a>
+                      {deployHash ? (
+                        <a
+                          href={`https://testnet.cspr.live/deploy/${deployHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 text-sm hover:text-blue-600 underline inline-flex items-center gap-1"
+                          title="View attestation on Casper Explorer"
+                        >
+                          View on Casper ↗
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-xs px-2 py-0.5 bg-gray-100 rounded">Local</span>
+                      )}
                     </div>
                   </div>
                 )})
@@ -600,7 +599,7 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-500 mb-4">Cast a governance vote on pending oracle proposals. Attestation parameters and scoring weights are DAO-governed.</p>
                 <div className="space-y-2 mb-4">
                   {voteMsg && <p className="text-xs text-green-600 mb-1">{voteMsg}</p>}
-                  {[{ id: 'RSP-014', label: 'RSP-014: Raise min score to 65', author: '0x83a5...d2f1', txHash: '7a3e9b2c5f8d1e4a6b9c2f5e8a1d4b7c3e6a9f2b5d8e1a4c7b0f3d6e9a2c5b8' }, { id: 'RSP-015', label: 'RSP-015: Add supply-chain factor', author: '0x1a56...9b3e', txHash: '2b5e8a1d4c7f0b3e6a9d2f5c8b1e4a7d0c3f6b9e2a5d8c1b4e7a0f3d6c9b2e5' }].map(p => (
+                  {[{ id: 'RSP-014', label: 'RSP-014: Raise min score to 65', author: '0x83a5...d2f1' }, { id: 'RSP-015', label: 'RSP-015: Add supply-chain factor', author: '0x1a56...9b3e' }].map(p => (
                   <div key={p.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="text-xs font-semibold text-gray-700">{p.label}</p>
@@ -615,15 +614,12 @@ export default function Dashboard() {
                         onClick={() => handleVote(p.id, 'against')}
                         className={`px-2.5 py-1 text-[10px] font-bold rounded transition-colors ${ votes[p.id] === 'against' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }`}
                       >AGAINST</button>
-                      <a
-                        href={`https://testnet.cspr.live/deploy/${p.txHash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2.5 py-1 text-[10px] rounded bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center gap-0.5"
-                        title="View on Casper"
+                      <span
+                        className="px-2.5 py-1 text-[10px] rounded bg-amber-50 text-amber-600 font-medium"
+                        title="DAO proposal — awaiting on-chain execution"
                       >
-                        <ExternalLink size={10} />
-                      </a>
+                        Pending
+                      </span>
                     </div>
                   </div>
                   ))}
@@ -638,25 +634,19 @@ export default function Dashboard() {
               </h3>
               <div className="space-y-2 text-xs">
                 {[
-                  { time: '14:32 UTC', op: 'Score Override', detail: 'INV-B3E2045 score: 72 → 81 (manual evidence)', status: 'confirmed', hash: 'f3e7d9a2c5b8e1a4d7c0f3b6e9a2c5d8b1e4a7c0f3d6e9b2a5c8d1b4e7a0f3c6' },
-                  { time: '13:15 UTC', op: 'DAO Vote', detail: 'RSP-013: Passed (67% FOR)', status: 'executed', hash: '9b2e5a8d1c4f7a0b3e6d9c2f5a8b1e4d7a0c3f6b9e2d5a8c1b4f7e0a3d6c9b2' },
-                  { time: '11:47 UTC', op: 'Revoke', detail: 'INV-D9A3087 attestation revoked (expired issuer)', status: 'confirmed', hash: 'c5a8d1b4e7a0f3c6b9d2e5a8c1f4b7d0a3e6c9b2f5d8a1e4c7b0f3d6a9c2e5b8' },
-                  { time: '09:22 UTC', op: 'Pipeline Run', detail: 'Batch #47: 12 scored, 9 passing, 3 minted', status: 'confirmed', hash: 'e1a4c7b0d3f6a9c2e5b8d1a4f7c0b3e6d9a2c5f8b1e4d7a0c3f6b9e2d5a8c1b4' },
+                  { time: '14:32 UTC', op: 'Score Override', detail: 'INV-B3E2045 score: 72 → 81 (manual evidence)', status: 'confirmed' },
+                  { time: '13:15 UTC', op: 'DAO Vote', detail: 'RSP-013: Passed (67% FOR)', status: 'executed' },
+                  { time: '11:47 UTC', op: 'Revoke', detail: 'INV-D9A3087 attestation revoked (expired issuer)', status: 'confirmed' },
+                  { time: '09:22 UTC', op: 'Pipeline Run', detail: 'Batch #47: 12 scored, 9 passing, 3 minted', status: 'confirmed' },
                 ].map((e, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
                     <span className="text-gray-400 font-mono shrink-0">{e.time}</span>
                     <span className="font-semibold text-gray-700 shrink-0 w-28">{e.op}</span>
                     <span className="text-gray-600 flex-1">{e.detail}</span>
                     <span className="px-2 py-0.5 rounded bg-green-50 text-green-700 font-semibold">{e.status}</span>
-                    <a
-                      href={`https://testnet.cspr.live/deploy/${e.hash}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-500 hover:text-blue-700"
-                      title="View on Casper"
-                    >
-                      <ExternalLink size={12} />
-                    </a>
+                    <span className="text-gray-400">
+                      <Activity size={12} />
+                    </span>
                   </div>
                 ))}
               </div>
