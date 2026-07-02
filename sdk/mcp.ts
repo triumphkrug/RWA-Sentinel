@@ -283,6 +283,27 @@ const TOOLS = [
   },
 ];
 
+const MAX_LIMIT = 100;
+const MAX_LOOKBACK = 168; // 7 days in hours
+
+function clampLimit(v: unknown, def = 20): number {
+  const n = Number(v) || def;
+  return Math.max(1, Math.min(n, MAX_LIMIT));
+}
+
+function validateId(v: unknown, name = 'id'): string {
+  const s = String(v ?? '').trim();
+  if (s.length === 0 || s.length > 128) throw new Error(`invalid ${name}`);
+  if (!/^[a-zA-Z0-9_\-.:]+$/.test(s)) throw new Error(`invalid ${name} characters`);
+  return s;
+}
+
+function validateHash(v: unknown, name = 'hash'): string {
+  const s = String(v ?? '').trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(s)) throw new Error(`invalid ${name}: must be 64 hex chars`);
+  return s;
+}
+
 async function handleTool(name: string, args: Record<string, unknown>): Promise<string> {
   const client = new SentinelClient(API_URL);
 
@@ -366,7 +387,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     case 'list_attestations':
       return JSON.stringify(
-        await fetch(`${API_URL}/api/v1/attestations?limit=${args.limit ?? 20}`).then(r => r.json()),
+        await fetch(`${API_URL}/api/v1/attestations?limit=${clampLimit(args.limit)}`).then(r => r.json()),
         null, 2,
       );
 
@@ -395,15 +416,18 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       );
 
     // --- Anomaly Detector ---
-    case 'detect_anomalies':
+    case 'detect_anomalies': {
+      const lookback = Math.max(1, Math.min(Number(args.lookback) || 24, MAX_LOOKBACK));
+      const sensitivity = Math.max(0, Math.min(Number(args.sensitivity) || 0.7, 1.0));
       return JSON.stringify(
         await fetch(`${API_URL}/api/v1/anomalies/detect`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ assetId: args.assetId, lookback: args.lookback ?? 24, sensitivity: args.sensitivity ?? 0.7 }),
+          body: JSON.stringify({ assetId: args.assetId, lookback, sensitivity }),
         }).then(r => r.json()),
         null, 2,
       );
+    }
 
     case 'get_anomaly_report':
       return JSON.stringify(
@@ -444,7 +468,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     case 'get_document_status':
       return JSON.stringify(
-        await fetch(`${API_URL}/api/v1/documents/${args.documentHash}/status`).then(r => r.json()),
+        await fetch(`${API_URL}/api/v1/documents/${encodeURIComponent(validateHash(args.documentHash, 'documentHash'))}/status`).then(r => r.json()),
         null, 2,
       );
 
@@ -467,7 +491,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     case 'slash_oracle':
       return JSON.stringify(
-        await fetch(`${API_URL}/api/v1/oracles/${args.oracleId}/slash`, {
+        await fetch(`${API_URL}/api/v1/oracles/${encodeURIComponent(validateId(args.oracleId, 'oracleId'))}/slash`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ evidence: args.evidence, severity: args.severity ?? 'minor' }),
@@ -517,7 +541,8 @@ async function main(): Promise<void> {
         console.log(JSON.stringify(resp));
       }
     } catch (err) {
-      console.error('parse error:', err);
+      // Sanitize error output — avoid leaking internals
+      console.error('request processing error');
     }
   }
 }
