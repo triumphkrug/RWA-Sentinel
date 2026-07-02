@@ -5,6 +5,47 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.0] — 2026-07-02
+
+*Major feature expansion — pre-submission hardening*
+
+### Added
+
+#### Smart Contracts (Rust/Odra)
+- **OracleSlashing** (487 LOC) — manages oracle stake deposits and slashing for malicious price reporting
+- **GovernanceDAO** (469 LOC) — on-chain voting for protocol parameter changes, oracle admission, and fund allocation
+
+#### Backend Modules (TypeScript)
+- **Anomaly Detector** (`agent/src/validator/anomalyDetector.ts`, 270 LOC) — statistical anomaly detection on price feeds with z-score analysis, outlier filtering, and configurable sensitivity
+- **Document Verifier** (`agent/src/validator/documentVerifier.ts`, 207 LOC) — document hash anchoring and multi-check verification (issuer, expiry, format, chain)
+- **Oracle Manager** (`agent/src/publisher/oracleManager.ts`, 344 LOC) — decentralized oracle network with stake-weighted consensus, reputation, and slashing
+
+#### MCP Server
+- Expanded from 15 to 24 tools — new tools for anomaly detection, document verification, and oracle management
+
+#### Dashboard
+- 4 new tabs: Anomalies, Documents, Oracles, Contracts
+- Price feed anomaly scanner with severity levels and confidence scores
+- Document verification status tracker (verified/pending/expired)
+- Oracle network monitor with stake, uptime, and feed counts
+
+#### Tests
+- 90 new business logic tests (3 files, 876 LOC)
+- `anomalyDetector.test.ts`: 27 tests — price feed analysis, outlier detection, sensitivity tuning
+- `documentVerifier.test.ts`: 31 tests — hash verification, expiry checks, multi-check validation
+- `oracleManager.test.ts`: 32 tests — consensus, slashing, price reports, reputation
+
+### Security
+- SSL configuration enforcement
+- Path traversal validation on all file operations
+- CORS origin whitelist
+- Query parameter sanitization
+- Deterministic JSON ordering for reproducible hashes
+- Checked arithmetic (checked_mul) to prevent overflow
+- Zod schema refinement for input validation
+
+---
+
 ## [1.0.0] — 2026-06-30
 
 ### Added
