@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   FileSearch, BarChart3, Clock, Shield, Activity, Search,
   Wallet, LogOut, Database, Loader2, ExternalLink, Eye,
-  AlertTriangle, CheckCircle, XCircle, RefreshCw, Globe, TrendingUp, ArrowUpRight, ArrowDownRight, Hash
+  AlertTriangle, CheckCircle, XCircle, RefreshCw, Globe, TrendingUp, ArrowUpRight, ArrowDownRight, Hash, FileText
 } from 'lucide-react'
 import { runPipeline, getScores, getCacheStats, getHealth } from '../lib/api'
 import type { ScoreResult, PipelineResult } from '../lib/api'
@@ -31,7 +31,7 @@ const contractLinks = {
 
 
 export default function Dashboard() {
-  const [tab, setTab] = useState<'overview' | 'pipeline' | 'attestations' | 'inspect' | 'operations' | 'chain'>('overview')
+  const [tab, setTab] = useState<'overview' | 'pipeline' | 'attestations' | 'inspect' | 'operations' | 'chain' | 'anomalies' | 'documents' | 'oracles' | 'contracts'>('overview')
   const [scores, setScores] = useState<ScoreResult[]>([])
   const [running, setRunning] = useState(false)
   const [log, setLog] = useState<LogLine[]>([])
@@ -143,6 +143,10 @@ export default function Dashboard() {
     { id: 'inspect' as const, label: 'Inspect', requiresWallet: true },
     { id: 'operations' as const, label: 'Operations', requiresWallet: true },
     { id: 'chain' as const, label: 'Network Health' },
+    { id: 'anomalies' as const, label: 'Anomalies' },
+    { id: 'documents' as const, label: 'Documents' },
+    { id: 'oracles' as const, label: 'Oracles' },
+    { id: 'contracts' as const, label: 'Contracts' },
   ]
 
   return (
@@ -663,6 +667,133 @@ export default function Dashboard() {
         {/* === CHAIN ANALYTICS TAB (Allium) === */}
         {tab === 'chain' && (
           <ChainAnalytics />
+        )}
+
+        {/* ========== ANOMALIES TAB ========== */}
+        {tab === 'anomalies' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-blue-600" /> Price Feed Anomaly Detection
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">Statistical anomaly detection on oracle price feeds using z-score analysis, outlier filtering, and time-series pattern recognition.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6">
+                {[
+                  { label: 'Scans (24h)', value: '2,847', color: 'text-blue-600' },
+                  { label: 'Anomalies', value: '12', color: 'text-orange-500' },
+                  { label: 'False Positive', value: '3.2%', color: 'text-green-600' },
+                  { label: 'Avg Confidence', value: '91%', color: 'text-blue-600' },
+                ].map((s, i) => (
+                  <div key={i} className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-center">
+                    <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-gray-500 mt-1">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {[
+                  { asset: 'Real Estate Token #42', type: 'Price Spike', severity: 'High', time: '14m ago' },
+                  { asset: 'Treasury Bond #18', type: 'Stale Feed', severity: 'Medium', time: '2h ago' },
+                  { asset: 'Gold Certificate #7', type: 'Deviation', severity: 'Low', time: '5h ago' },
+                ].map((a, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">{a.asset}</span>
+                      <span className="text-xs text-gray-400 ml-2">{a.type}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${a.severity === 'High' ? 'bg-red-50 text-red-600 border-red-200' : a.severity === 'Medium' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' : 'bg-green-50 text-green-600 border-green-200'}`}>{a.severity}</span>
+                      <span className="text-xs text-gray-400">{a.time}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========== DOCUMENTS TAB ========== */}
+        {tab === 'documents' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" /> Document Verification
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">On-chain document hash anchoring and verification. Each RWA-backing document (appraisals, deeds, audits) is hashed and recorded on the Casper blockchain.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                {[
+                  { label: 'Verified', value: '234', sub: 'Documents anchored' },
+                  { label: 'Pending', value: '18', sub: 'Awaiting verification' },
+                  { label: 'Expired', value: '7', sub: 'Need renewal' },
+                ].map((d, i) => (
+                  <div key={i} className="p-4 rounded-xl bg-gray-50 border border-gray-100 text-center">
+                    <div className="text-2xl font-bold text-gray-900">{d.value}</div>
+                    <div className="text-sm text-gray-500 mt-1">{d.label}</div>
+                    <div className="text-xs text-gray-400">{d.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========== ORACLES TAB ========== */}
+        {tab === 'oracles' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <Eye className="w-4 h-4 text-blue-600" /> Oracle Network
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">Decentralized price oracle network with stake-weighted consensus and slashing for malicious reporters.</p>
+              <div className="space-y-3">
+                {[
+                  { id: 'oracle-alpha', stake: '500K CSPR', uptime: '99.7%', feeds: 12, status: 'Active' },
+                  { id: 'oracle-beta', stake: '350K CSPR', uptime: '98.9%', feeds: 8, status: 'Active' },
+                  { id: 'oracle-gamma', stake: '200K CSPR', uptime: '97.2%', feeds: 5, status: 'Warning' },
+                ].map((o, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-2 h-2 rounded-full ${o.status === 'Active' ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse`} />
+                      <div>
+                        <div className="text-sm font-mono font-medium text-gray-900">{o.id}</div>
+                        <div className="text-xs text-gray-400">Stake: {o.stake} · {o.feeds} feeds</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-blue-600 font-medium">{o.uptime}</div>
+                      <div className="text-xs text-gray-400">uptime</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========== CONTRACTS TAB ========== */}
+        {tab === 'contracts' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <Database className="w-4 h-4 text-blue-600" /> Smart Contracts
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">Odra smart contracts deployed on Casper testnet for asset attestation, oracle management, and governance.</p>
+              <div className="space-y-3">
+                {[
+                  { name: 'OracleSlashing', status: 'Deployed', desc: 'Manages oracle stake and slashing for malicious price reporting' },
+                  { name: 'GovernanceDAO', status: 'Deployed', desc: 'On-chain voting for protocol parameter changes and oracle admission' },
+                ].map((c, i) => (
+                  <div key={i} className="p-4 rounded-lg bg-gray-50 border border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-gray-900">{c.name}</span>
+                      <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">{c.status}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">{c.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

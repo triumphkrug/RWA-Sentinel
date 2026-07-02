@@ -163,6 +163,124 @@ const TOOLS = [
       required: ['tokenId'],
     },
   },
+  // --- Anomaly Detector tools ---
+  {
+    name: 'detect_anomalies',
+    description: 'Run anomaly detection on price feeds for a given asset. Returns flagged entries with confidence scores.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        assetId: { type: 'number', description: 'Asset ID to scan' },
+        lookback: { type: 'number', description: 'Hours of data to analyze (default 24)' },
+        sensitivity: { type: 'number', description: 'Detection sensitivity 0.0-1.0 (default 0.7)' },
+      },
+      required: ['assetId'],
+    },
+  },
+  {
+    name: 'get_anomaly_report',
+    description: 'Get the full anomaly detection report for an asset, including historical patterns.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        assetId: { type: 'number' },
+        period: { type: 'string', description: 'Report period: 1d, 7d, 30d', enum: ['1d', '7d', '30d'] },
+      },
+      required: ['assetId'],
+    },
+  },
+  {
+    name: 'configure_detector',
+    description: 'Update anomaly detector configuration for an asset class.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        assetType: { type: 'string', description: 'Asset type (real_estate, commodity, bond)' },
+        zScoreThreshold: { type: 'number', description: 'Z-score threshold for flagging' },
+        minDataPoints: { type: 'number', description: 'Minimum data points before detection activates' },
+      },
+      required: ['assetType', 'zScoreThreshold'],
+    },
+  },
+  // --- Document Verifier tools ---
+  {
+    name: 'verify_document',
+    description: 'Submit a document hash for verification against on-chain records.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        documentHash: { type: 'string', description: 'SHA-256 hash of the document' },
+        assetId: { type: 'number', description: 'Associated asset ID' },
+        docType: { type: 'string', description: 'Document type (appraisal, deed, audit, insurance)', enum: ['appraisal', 'deed', 'audit', 'insurance'] },
+      },
+      required: ['documentHash', 'assetId'],
+    },
+  },
+  {
+    name: 'submit_document',
+    description: 'Submit a new document record for an asset, anchoring its hash on-chain.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        assetId: { type: 'number' },
+        documentHash: { type: 'string' },
+        docType: { type: 'string', enum: ['appraisal', 'deed', 'audit', 'insurance'] },
+        issuer: { type: 'string', description: 'Document issuer identifier' },
+        expiresAt: { type: 'string', description: 'ISO 8601 expiration date' },
+      },
+      required: ['assetId', 'documentHash', 'docType', 'issuer'],
+    },
+  },
+  {
+    name: 'get_document_status',
+    description: 'Check verification status and validity of a submitted document.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        documentHash: { type: 'string' },
+      },
+      required: ['documentHash'],
+    },
+  },
+  // --- Oracle Manager tools ---
+  {
+    name: 'register_oracle',
+    description: 'Register a new oracle node for price feed submissions.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        oracleId: { type: 'string', description: 'Unique oracle identifier' },
+        publicKey: { type: 'string', description: 'Ed25519 public key hex' },
+        assetTypes: { type: 'array', items: { type: 'string' }, description: 'Supported asset types' },
+        stakeAmount: { type: 'number', description: 'Stake in CSPR motes' },
+      },
+      required: ['oracleId', 'publicKey', 'stakeAmount'],
+    },
+  },
+  {
+    name: 'get_oracle_consensus',
+    description: 'Get current price consensus from all active oracles for an asset.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        assetId: { type: 'number' },
+      },
+      required: ['assetId'],
+    },
+  },
+  {
+    name: 'slash_oracle',
+    description: 'Report a malicious oracle for slashing review.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        oracleId: { type: 'string' },
+        evidence: { type: 'string', description: 'Evidence hash of malicious behavior' },
+        severity: { type: 'string', enum: ['minor', 'major', 'critical'] },
+      },
+      required: ['oracleId', 'evidence'],
+    },
+  },
 ];
 
 async function handleTool(name: string, args: Record<string, unknown>): Promise<string> {
@@ -273,6 +391,87 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'verify_attestation':
       return JSON.stringify(
         await fetch(`${API_URL}/api/v1/attestations/${args.tokenId}/verify`).then(r => r.json()),
+        null, 2,
+      );
+
+    // --- Anomaly Detector ---
+    case 'detect_anomalies':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/anomalies/detect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assetId: args.assetId, lookback: args.lookback ?? 24, sensitivity: args.sensitivity ?? 0.7 }),
+        }).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'get_anomaly_report':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/anomalies/${args.assetId}/report?period=${args.period ?? '7d'}`).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'configure_detector':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/anomalies/config`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assetType: args.assetType, zScoreThreshold: args.zScoreThreshold, minDataPoints: args.minDataPoints }),
+        }).then(r => r.json()),
+        null, 2,
+      );
+
+    // --- Document Verifier ---
+    case 'verify_document':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/documents/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documentHash: args.documentHash, assetId: args.assetId, docType: args.docType }),
+        }).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'submit_document':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/documents`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assetId: args.assetId, documentHash: args.documentHash, docType: args.docType, issuer: args.issuer, expiresAt: args.expiresAt }),
+        }).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'get_document_status':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/documents/${args.documentHash}/status`).then(r => r.json()),
+        null, 2,
+      );
+
+    // --- Oracle Manager ---
+    case 'register_oracle':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/oracles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ oracleId: args.oracleId, publicKey: args.publicKey, assetTypes: args.assetTypes, stakeAmount: args.stakeAmount }),
+        }).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'get_oracle_consensus':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/oracles/consensus/${args.assetId}`).then(r => r.json()),
+        null, 2,
+      );
+
+    case 'slash_oracle':
+      return JSON.stringify(
+        await fetch(`${API_URL}/api/v1/oracles/${args.oracleId}/slash`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ evidence: args.evidence, severity: args.severity ?? 'minor' }),
+        }).then(r => r.json()),
         null, 2,
       );
 
