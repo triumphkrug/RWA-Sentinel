@@ -1,0 +1,350 @@
+yml
+openapi: 3.1.0
+info:
+  title: RWA-Sentinel API
+  description: AI oracle for real-world asset verification on Casper blockchain
+  version: v1.0
+servers:
+  - url: https://rwa-sentinel-api.onrender.com
+paths:
+  /api/v1/pipeline:
+    post:
+      summary: Submit attestation pipeline
+      requestBody:
+        $ref: '#/components/requestBodies/PipelineRequest'
+      responses:
+        '201':
+          description: Pipeline submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PipelineResponse'
+        '400':
+          description: Invalid request
+  /api/v1/attestations:
+    get:
+      summary: List attestations
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: status
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: min_score
+          schema:
+            type: number
+          required: false
+      responses:
+        '200':
+          description: Attestations list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Attestation'
+        '400':
+          description: Invalid request
+  /api/v1/attestations/{id}:
+    get:
+      summary: Get attestation by ID
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Attestation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attestation'
+        '404':
+          description: Attestation not found
+  /api/v1/scores/{assetId}:
+    get:
+      summary: Get oracle score for asset
+      parameters:
+        - in: path
+          name: assetId
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Oracle score
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Score'
+        '404':
+          description: Asset not found
+  /api/v1/stats:
+    get:
+      summary: Get system statistics
+      responses:
+        '200':
+          description: System statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'
+  /api/v1/governance/proposals:
+    post:
+      summary: Create governance proposal
+      requestBody:
+        $ref: '#/components/requestBodies/ProposalRequest'
+      responses:
+        '201':
+          description: Proposal created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proposal'
+        '400':
+          description: Invalid request
+  /api/v1/governance/proposals/{id}/vote:
+    post:
+      summary: Vote on proposal
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      requestBody:
+        $ref: '#/components/requestBodies/VoteRequest'
+      responses:
+        '200':
+          description: Vote cast
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoteResponse'
+        '404':
+          description: Proposal not found
+  /api/v1/slashing/reports:
+    post:
+      summary: Submit slashing report
+      requestBody:
+        $ref: '#/components/requestBodies/SlashingReportRequest'
+      responses:
+        '201':
+          description: Slashing report submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlashingReport'
+        '400':
+          description: Invalid request
+  /api/v1/slashing/reports/{id}/challenge:
+    post:
+      summary: Challenge slashing report
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      requestBody:
+        $ref: '#/components/requestBodies/ChallengeRequest'
+      responses:
+        '200':
+          description: Challenge submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeResponse'
+        '404':
+          description: Slashing report not found
+  /api/v1/consensus/state:
+    get:
+      summary: Get consensus state
+      responses:
+        '200':
+          description: Consensus state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsensusState'
+  /api/v1/data/lei/{lei}:
+    get:
+      summary: Lookup LEI data
+      parameters:
+        - in: path
+          name: lei
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: LEI data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LEIData'
+        '404':
+          description: LEI not found
+  /api/v1/data/price/{symbol}:
+    get:
+      summary: Get price data
+      parameters:
+        - in: path
+          name: symbol
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Price data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceData'
+        '404':
+          description: Symbol not found
+
+components:
+  schemas:
+    Attestation:
+      type: object
+      properties:
+        id:
+          type: string
+        assetId:
+          type: string
+        status:
+          type: string
+        score:
+          type: number
+    PipelineRequest:
+      type: object
+      properties:
+        assetId:
+          type: string
+        data:
+          type: object
+    PipelineResponse:
+      type: object
+      properties:
+        id:
+          type: string
+    Score:
+      type: object
+      properties:
+        score:
+          type: number
+    Stats:
+      type: object
+      properties:
+        numAttestations:
+          type: integer
+        numAssets:
+          type: integer
+    Proposal:
+      type: object
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+    ProposalRequest:
+      type: object
+      properties:
+        description:
+          type: string
+    VoteRequest:
+      type: object
+      properties:
+        vote:
+          type: string
+    VoteResponse:
+      type: object
+      properties:
+        id:
+          type: string
+    SlashingReport:
+      type: object
+      properties:
+        id:
+          type: string
+        report:
+          type: object
+    SlashingReportRequest:
+      type: object
+      properties:
+        report:
+          type: object
+    ChallengeRequest:
+      type: object
+      properties:
+        challenge:
+          type: object
+    ChallengeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+    ConsensusState:
+      type: object
+      properties:
+        state:
+          type: string
+    LEIData:
+      type: object
+      properties:
+        lei:
+          type: string
+        data:
+          type: object
+    PriceData:
+      type: object
+      properties:
+        symbol:
+          type: string
+        price:
+          type: number
+  requestBodies:
+    PipelineRequest:
+      description: Attestation pipeline request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PipelineRequest'
+    ProposalRequest:
+      description: Governance proposal request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProposalRequest'
+    VoteRequest:
+      description: Vote request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VoteRequest'
+    SlashingReportRequest:
+      description: Slashing report request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SlashingReportRequest'
+    ChallengeRequest:
+      description: Challenge request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ChallengeRequest'
