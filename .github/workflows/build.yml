@@ -12,7 +12,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: cd agent && npm ci
-      - run: cd agent && npx tsc --noEmit
-      - run: cd agent && npm test -- --passWithNoTests
-      - run: cd frontend && npm ci && npm run build
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test -- --passWithNoTests
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd frontend && npm ci
+      - run: cd frontend && npm run build
