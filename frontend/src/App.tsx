@@ -76,6 +76,7 @@ export default function App() {
             <Route path="oracles" element={<Oracles />} />
             <Route path="governance" element={<Governance />} />
             <Route path="sbt" element={<SBT />} />
+            <Route path="sbts" element={<SBT />} />
             <Route path="contracts" element={<Contracts />} />
             <Route path="anomalies" element={<Anomalies />} />
             <Route path="agent-demo" element={<AgentDemo />} />

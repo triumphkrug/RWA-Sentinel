@@ -21,6 +21,10 @@ import governanceRoutes from './governance/dao.js';
 import slashingRoutes from './slashing/oracleSlashing.js';
 import dataAdaptersRoutes from './data/realDataAdapters.js';
 import blsThresholdRoutes from './crypto/blsThreshold.js';
+import { GovernanceService } from './governance/dao.js';
+import { OracleSlashingService } from './slashing/oracleSlashing.js';
+import { DataAdapterService } from './data/realDataAdapters.js';
+import { BlsThresholdService } from './crypto/blsThreshold.js';
 
 const config = loadConfig();
 const collector = new InvoiceCollector({ batchSize: config.batchSize });
@@ -40,13 +44,38 @@ const publisher = new CasperPublisher({
 const dbUrl = process.env.DATABASE_URL;
 let store: PgStore | null = null;
 
+// Instantiate modular services
+const governanceService = new GovernanceService({
+  votingPeriodHours: 168, // 7 days
+  quorumThresholdPercent: 51,
+  minProposalStake: 1000,
+}, publisher);
+
+const slashingService = new OracleSlashingService({
+  challengePeriodHours: 72,
+  slashingPenaltyPercent: 10,
+  reporterRewardPercent: 60,
+  challengerRewardPercent: 20,
+  minChallengeStake: 100,
+}, publisher);
+
+const dataAdapterService = new DataAdapterService({
+  cacheTtlMinutes: 15,
+});
+
+const blsThresholdService = new BlsThresholdService({
+  threshold: 2,
+  totalOracles: 3,
+  oraclePublicKeys: ['oracle-1', 'oracle-2', 'oracle-3'],
+});
+
 const app = Fastify({ logger: true });
 
 // Register modular route plugins
-app.register(governanceRoutes, { prefix: '/api/v1' });
-app.register(slashingRoutes, { prefix: '/api/v1' });
-app.register(dataAdaptersRoutes, { prefix: '/api/v1' });
-app.register(blsThresholdRoutes, { prefix: '/api/v1' });
+app.register(governanceRoutes, { prefix: '/api/v1', governanceService });
+app.register(slashingRoutes, { prefix: '/api/v1', slashingService });
+app.register(dataAdaptersRoutes, { prefix: '/api/v1', dataAdapterService });
+app.register(blsThresholdRoutes, { prefix: '/api/v1', blsThresholdService });
 
 const ALLOWED_ORIGINS = process.env.CORS_ORIGINS?.split(',') ?? ['*'];
 

@@ -237,7 +237,7 @@ const dataAdaptersRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { lei } = request.params;
+      const { lei } = request.params as { lei: string };
       const data = await dataAdapterService.getLei(lei);
       return reply.status(200).send(data);
     } catch (error) {
@@ -262,7 +262,7 @@ const dataAdaptersRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { symbol } = request.params;
+      const { symbol } = request.params as { symbol: string };
       const data = await dataAdapterService.getPrice(symbol);
       return reply.status(200).send({ ...data, lastUpdated: data.lastUpdated.toISOString() });
     } catch (error) {
@@ -291,7 +291,7 @@ const dataAdaptersRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { jurisdiction, id } = request.params;
+      const { jurisdiction, id } = request.params as { jurisdiction: string; id: string };
       const data = await dataAdapterService.getCompany(jurisdiction, id);
       return reply.status(200).send({ ...data, incorporationDate: data.incorporationDate.toISOString() });
     } catch (error) {

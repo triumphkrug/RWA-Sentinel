@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ErrorBoundary from './ErrorBoundary';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
   Menu,
@@ -26,7 +27,7 @@ const navItems: NavItem[] = [
   { name: 'Assets', path: '/portal/assets', icon: Building },
   { name: 'Oracles', path: '/portal/oracles', icon: GitFork },
   { name: 'Governance', path: '/portal/governance', icon: Gavel },
-  { name: 'SBTs', path: '/portal/sbts', icon: ScrollText },
+  { name: 'SBTs', path: '/portal/sbt', icon: ScrollText },
   { name: 'Contracts', path: '/portal/contracts', icon: FileText },
   { name: 'Anomalies', path: '/portal/anomalies', icon: AlertTriangle },
   { name: 'Agent Demo', path: '/portal/agent-demo', icon: FlaskConical },
@@ -55,8 +56,8 @@ const PortalLayout: React.FC = () => {
         } md:translate-x-0 transition-transform duration-200 ease-in-out flex flex-col`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-center h-16 mb-6">
-          <span className="text-2xl font-bold text-blue-600">RWA-Sentinel</span>
+        <div className="flex items-center h-12 mb-4 px-2">
+          <span className="text-lg font-bold text-blue-600 truncate">RWA-Sentinel</span>
         </div>
 
         {/* Navigation */}
@@ -94,13 +95,19 @@ const PortalLayout: React.FC = () => {
       {/* Main content */}
       <div className="flex-1 flex flex-col md:ml-64">
         {/* Header (optional, can be used for page title or global actions) */}
-        <header className="bg-white border-b border-gray-200 p-4 md:p-6 shadow-sm hidden md:block">
-          <h1 className="text-2xl font-semibold text-gray-900">RWA-Sentinel Portal</h1>
+        <header className="bg-white border-b border-gray-200 p-4 md:p-6 shadow-sm hidden md:flex items-center justify-between">
+          <div className="flex items-center">
+            <button className="md:hidden text-gray-600 mr-4" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </header>
 
         {/* Content Area */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
 
         {/* Footer */}
