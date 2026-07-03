@@ -4,6 +4,7 @@ import {
   postPipeline,
   getScores,
   getAttestationById,
+  getAttestations,
   LEIData,
   PipelineRunResponse,
   AssetScore,
@@ -111,11 +112,11 @@ const AgentDemo: React.FC = () => {
       // Step 4: View attestation (assuming an attestation is created from the score)
       const attestations = await runStep(4, async () => {
         const allAttestations = await getAttestations({ limit: 1, status: 'attested', min_score: scores.score - 1 }); // Try to find a recent attestation for this score
-        const attestation = allAttestations.attestations.find(a => a.identifier === lei);
+        const attestation = allAttestations.attestations.find((a: Attestation) => a.identifier === lei);
         if (!attestation) throw new Error('Attestation not found for this LEI.');
         return attestation;
       });
-      setStepResults((prev) => ({ ...prev, attestation }));
+      setStepResults((prev) => ({ ...prev, attestation: attestations }));
       addLog(`Attestation found: ${attestations.id}`, 'info');
 
       addLog('Full pipeline demo completed successfully!', 'success');

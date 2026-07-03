@@ -67,7 +67,7 @@ const Governance: React.FC = () => {
       // Assuming parameters might be JSON string
       const payload = {
         ...newProposal,
-        parameters: newProposal.parameters ? JSON.parse(newProposal.parameters as string) : {},
+        parameters: typeof newProposal.parameters === 'string' ? JSON.parse(newProposal.parameters) : (newProposal.parameters || {}),
         duration_days: Number(newProposal.duration_days) || 7,
       };
       await postGovernancePropose(payload);
@@ -247,7 +247,7 @@ const Governance: React.FC = () => {
                 id="parameters"
                 rows={3}
                 value={typeof newProposal.parameters === 'string' ? newProposal.parameters : JSON.stringify(newProposal.parameters, null, 2)}
-                onChange={(e) => setNewProposal(prev => ({ ...prev, parameters: e.target.value }))}
+                onChange={(e) => setNewProposal(prev => ({ ...prev, parameters: e.target.value as any }))}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder='{"key": "value"}'
               ></textarea>

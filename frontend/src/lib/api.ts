@@ -325,5 +325,4 @@ export const getChainTransactions = (params?: { page?: number; limit?: number })
   if (params?.limit) q.set('limit', String(params.limit));
   const qs = q.toString();
   return fetcher<Transaction[]>(`/api/v1/chain/transactions${qs ? '?' + qs : ''}`);
-}; limit?: number }) =>
-  fetcher<ChainTransactionsResponse>('/api/v1/chain/transactions', 'GET', { params });
+};
