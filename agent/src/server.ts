@@ -62,6 +62,24 @@ app.addHook('onRequest', async (request, reply) => {
   reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Public-Key');
   if (request.method === 'OPTIONS') {
     reply.status(204).send();
+    return;
+  }
+});
+
+// Simple rate limiter (per IP, 60 req/min)
+const _rateLimits = new Map<string, { count: number; reset: number }>();
+app.addHook('onRequest', async (request, reply) => {
+  const ip = request.ip;
+  const now = Date.now();
+  const entry = _rateLimits.get(ip);
+  if (!entry || now > entry.reset) {
+    _rateLimits.set(ip, { count: 1, reset: now + 60_000 });
+  } else {
+    entry.count++;
+    if (entry.count > 60) {
+      reply.status(429).send({ error: 'Too many requests' });
+      return;
+    }
   }
 });
 

@@ -205,6 +205,9 @@ export class CasperPublisher {
     if (data.result?.deploy_hash) {
       return data.result.deploy_hash;
     }
-    return this.hashPayload(payload);
+    // Fallback: generate local hash but mark as unconfirmed
+    const localHash = this.hashPayload(payload);
+    console.warn(`Deploy submitted but no deploy_hash returned; using local hash ${localHash.slice(0, 16)}… (unconfirmed)`);
+    return `unconfirmed-${localHash}`;
   }
 }
