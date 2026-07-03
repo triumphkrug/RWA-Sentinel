@@ -23,7 +23,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 #### MCP Server
 - Expanded from 15 to 24 tools — new tools for anomaly detection, document verification, and oracle management
 
-#### Dashboard
+#### Portal
 - 4 new tabs: Anomalies, Documents, Oracles, Contracts
 - Price feed anomaly scanner with severity levels and confidence scores
 - Document verification status tracker (verified/pending/expired)
@@ -50,8 +50,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - **6-factor scoring engine** — fully live: issuer history (25%), document integrity (20%), cross-reference (15%), amount plausibility (15%), temporal consistency (15%), network reputation (10%)
-- **DAO vote on-chain** — `dao_invalidate` entry point active; FOR/AGAINST vote panel in Oracle Panel dashboard with toast notifications
-- **Oracle Panel dashboard** — live at rwa-sentinel.xyz/dashboard; overview cards (total scored, active attestations, avg trust score, expired), trust score table, DAO vote section
+- **DAO vote on-chain** — `dao_invalidate` entry point active; FOR/AGAINST vote panel in Oracle Panel portal with toast notifications
+- **Oracle Panel portal** — live at rwa-sentinel.xyz/portal; overview cards (total scored, active attestations, avg trust score, expired), trust score table, DAO vote section
 - **Trust attestation contract deployed** — `attestation-store.wasm` on Casper testnet ([`53c9e877...`](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8))
 - **Asset registry contract deployed** — `asset-registry.wasm` on Casper testnet ([`eac01f54...`](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3))
 - Full content package: VIDEO_SCRIPT.md, BUIDL_SUBMISSION.md, BLOG_POST.md, SOCIAL_POSTS.md
@@ -83,7 +83,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Smart contracts deployed to Casper testnet (asset-registry, attestation-store)
 - TypeScript agent pipeline: collector, validator, publisher, fallback cache
-- Dashboard scaffold (UI shell)
+- Portal scaffold (UI shell)
 - Architecture documentation and landing page
 
 ---

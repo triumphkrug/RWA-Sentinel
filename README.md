@@ -140,11 +140,11 @@ Full diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## 📸 Screenshots
 
-| Homepage — scoring overview | Oracle dashboard | DAO vote panel | Attestation detail |
+| Homepage — scoring overview | Oracle portal | DAO vote panel | Attestation detail |
 |---|---|---|---|
-| ![Homepage](docs/screenshots/01-homepage.png) | ![Oracle dashboard](docs/screenshots/02-oracle-dashboard.png) | ![DAO vote](docs/screenshots/03-dao-vote.png) | ![Attestation detail](docs/screenshots/04-attestation-detail.png) |
+| ![Homepage](docs/screenshots/01-homepage.png) | ![Oracle portal](docs/screenshots/02-oracle-portal.png) | ![DAO vote](docs/screenshots/03-dao-vote.png) | ![Attestation detail](docs/screenshots/04-attestation-detail.png) |
 
-> Live at [rwa-sentinel.xyz](https://rwa-sentinel.xyz) · [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard)
+> Live at [rwa-sentinel.xyz](https://rwa-sentinel.xyz) · [rwa-sentinel.xyz/portal](https://rwa-sentinel.xyz/portal)
 
 <div align="right">
 
@@ -186,7 +186,7 @@ Challenged attestations enter a transparent on-chain governance flow:
 3. If **AGAINST** wins: `dao_invalidate` is called → NFT revoked → oracle CSPR slashed → challenger rewarded
 4. If **FOR** wins: attestation remains valid, challenger loses stake
 
-The Oracle Panel dashboard exposes the live DAO vote panel with one-click FOR/AGAINST voting and real-time toast notifications.
+The Oracle Panel portal exposes the live DAO vote panel with one-click FOR/AGAINST voting and real-time toast notifications.
 
 <div align="right">
 
@@ -224,7 +224,7 @@ npm start
 
 ```bash
 docker-compose up
-# Dashboard at http://localhost:3000
+# Portal at http://localhost:3000
 ```
 
 > [!TIP]
@@ -246,9 +246,9 @@ docker-compose up
 
 | Feature | URL |
 |---|---|
-| Oracle Panel Dashboard | [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard) |
-| DAO Vote Panel | [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard) (scroll to DAO section) |
-| Trust Score Table | [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard) |
+| Oracle Panel Portal | [rwa-sentinel.xyz/portal](https://rwa-sentinel.xyz/portal) |
+| DAO Vote Panel | [rwa-sentinel.xyz/portal](https://rwa-sentinel.xyz/portal) (scroll to DAO section) |
+| Trust Score Table | [rwa-sentinel.xyz/portal](https://rwa-sentinel.xyz/portal) |
 | Backend API | [rwa-sentinel-api.onrender.com](https://rwa-sentinel-api.onrender.com) |
 
 <div align="right">
@@ -287,7 +287,7 @@ Security: 18 findings addressed (risk score reduced from 4/10 to 2/10). See [doc
 | **Smart Contracts** | Rust → WASM, Casper 2.x (Zug) |
 | **Agent Pipeline** | TypeScript, Node.js 20+ |
 | **Configuration** | Zod schema validation |
-| **Frontend Dashboard** | React (Next.js), Tailwind CSS |
+| **Frontend Portal** | React (Next.js), Tailwind CSS |
 | **Frontend Hosting** | Vercel |
 | **Backend API** | Node.js / Express on Render |
 | **SDK** | TypeScript SDK + MCP server (5 tools) |
@@ -369,20 +369,12 @@ RWA-Sentinel/
 ├── contracts/
 │   ├── asset-registry/     # RWA registration (Rust/WASM)
 │   └── attestation-store/  # Attestation, staking, DAO (Rust/WASM)
-├── frontend/               # Oracle Panel dashboard (Next.js)
+├── frontend/               # Oracle Panel portal (Next.js)
 ├── sdk/                    # TypeScript SDK + MCP server
 ├── tests/                  # Unit + integration tests
 ├── docs/                   # Architecture, SDK, limitations
 └── docker-compose.yaml
 ```
-
----
-
-## Team
-
-**triumphkrug** — systems architect and smart contract engineer focused on DeFi trust infrastructure. Designed and built RWA Sentinel end-to-end: two Casper WASM contracts (asset-registry, attestation-store), the TypeScript 6-factor scoring pipeline, DAO governance engine with CSPR staking and slashing, Oracle Panel dashboard in Next.js, and the TypeScript SDK with MCP server. Deeply interested in programmable trust and accountable oracle design for real-world asset markets. ([GitHub](https://github.com/triumphkrug) · [Issues](https://github.com/triumphkrug/RWA-Sentinel/issues))
-
-*Built for the Casper Agentic Buildathon 2026.*
 
 ---
 

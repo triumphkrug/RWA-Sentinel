@@ -14,8 +14,8 @@ import CtaFooter from './components/CtaFooter'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 import NotFound from './components/NotFound'
-import Dashboard from './components/Dashboard'
-import { DataModeProvider } from './components/DataModeToggle'
+import Portal from './components/Portal'
+
 
 function Landing() {
   return (
@@ -43,19 +43,19 @@ export default function App() {
   }, [mobileOpen])
 
   return (
-    <DataModeProvider>
+    
     <div className="min-h-screen flex flex-col">
       <ScrollToTop />
       <Navbar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
       <main className="flex-1" onClick={mobileOpen ? closeMobile : undefined}>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/portal" element={<Portal />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
       <Footer />
     </div>
-    </DataModeProvider>
+    
   )
 }

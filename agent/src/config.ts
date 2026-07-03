@@ -15,7 +15,7 @@ const ConfigSchema = z.object({
   challengeRateLimit: z.coerce.number().min(1).default(3),
   nftValidityHours: z.coerce.number().min(1).default(24),
   staleThresholdMinutes: z.coerce.number().min(1).default(30),
-  dashboardPort: z.coerce.number().min(1024).max(65535).default(3000),
+  portalPort: z.coerce.number().min(1024).max(65535).default(3000),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -30,7 +30,7 @@ export function loadConfig(): AppConfig {
     challengeRateLimit: process.env.CHALLENGE_RATE_LIMIT,
     nftValidityHours: process.env.NFT_VALIDITY_HOURS,
     staleThresholdMinutes: process.env.STALE_THRESHOLD_MINUTES,
-    dashboardPort: process.env.DASHBOARD_PORT,
+    portalPort: process.env.PORTAL_PORT,
   };
 
   // Step 2: Parse and validate

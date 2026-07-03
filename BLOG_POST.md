@@ -55,7 +55,7 @@ This isn't a black box. The composite trust score `S = Σ(wᵢ × sᵢ) / Σ(w�
 
 ## Demo Walkthrough
 
-The Oracle Panel is live at [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard).
+The Oracle Panel is live at [rwa-sentinel.xyz/portal](https://rwa-sentinel.xyz/portal).
 
 Here's what you'll see:
 
@@ -63,9 +63,9 @@ Here's what you'll see:
 
 **Trust score table** — every scored asset with its composite score, per-factor breakdown, and attestation status (active / expired / challenged). Click any row for the full on-chain evidence hash.
 
-**DAO vote panel** — challenged attestations surface here as pending votes. One click submits your FOR or AGAINST vote on-chain via the dashboard. A toast notification confirms the transaction.
+**DAO vote panel** — challenged attestations surface here as pending votes. One click submits your FOR or AGAINST vote on-chain via the portal. A toast notification confirms the transaction.
 
-**Telegram alerts** — the bot notifies you when a new attestation is issued, when one expires, and when a challenge is submitted. No dashboards to babysit.
+**Telegram alerts** — the bot notifies you when a new attestation is issued, when one expires, and when a challenge is submitted. No portals to babysit.
 
 ---
 
@@ -89,7 +89,7 @@ This creates accountability that centralized custodians structurally cannot prov
 **Live on testnet (June 2026):**
 - 6-factor scoring engine
 - asset-registry and attestation-store contracts deployed
-- Oracle Panel dashboard at rwa-sentinel.xyz
+- Oracle Panel portal at rwa-sentinel.xyz
 - DAO vote panel with on-chain FOR/AGAINST
 - Telegram alert integration
 - TypeScript SDK + MCP server (5 tools)
@@ -98,7 +98,7 @@ This creates accountability that centralized custodians structurally cannot prov
 - Multi-asset-class support (currently invoices; expanding to bonds, real estate records)
 - Mainnet deployment (pending independent security audit)
 - Real-time external data feeds (current scoring uses deterministic factor analysis)
-- Grafana/Prometheus metrics dashboard
+- Grafana/Prometheus metrics portal
 
 ---
 

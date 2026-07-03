@@ -1,3 +1,3 @@
 /**
- * Invoice REST routes for the dashboard API.
+ * Invoice REST routes for the portal API.
  */

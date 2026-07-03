@@ -16,7 +16,7 @@ const navLinks = [
   { href: '/#faq', label: 'FAQ' },
 ]
 
-const dashLinks = [
+const portalLinks = [
   { href: '/#home', label: 'Home' },
   { href: '/#pipeline', label: 'Pipeline' },
   { href: '/#factors', label: 'Trust Score' },
@@ -45,7 +45,7 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
   const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
-  const isDashboard = location.pathname === '/dashboard'
+  const isPortal = location.pathname === '/portal'
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault()
@@ -70,7 +70,7 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
     return () => window.removeEventListener('scroll', handler)
   }, [])
 
-  const activeLinks = isDashboard ? dashLinks : navLinks
+  const activeLinks = isPortal ? portalLinks : navLinks
 
   return (
     <>
@@ -93,8 +93,8 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
                 {l.label}
               </a>
             ))}
-            {!isDashboard && (
-              <a href="/dashboard" className="ml-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+            {!isPortal && (
+              <a href="/portal" className="ml-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
                 Launch Oracle
               </a>
             )}
@@ -160,7 +160,7 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
             {/* Launch App button at bottom */}
             <div className="px-5 py-4 border-t border-gray-100">
               <a
-                href="/dashboard"
+                href="/portal"
                 onClick={() => setMobileOpen(false)}
                 className="block w-full text-center px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors shadow-sm"
               >
