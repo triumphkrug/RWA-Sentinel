@@ -211,17 +211,7 @@ const blsThresholdRoutes: FastifyPluginAsync<{
     attestationId: z.string().min(1),
   });
 
-  fastify.post('/consensus/init', {
-    schema: {
-      body: initConsensusSchema,
-      response: {
-        200: z.object({
-          attestationId: z.string(),
-          status: z.string(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/consensus/init', async (request, reply) => {
     try {
       const { attestationId, messageHash } = request.body as { attestationId: string; messageHash: string };
       const state = await blsThresholdService.initializeConsensus(attestationId, messageHash);
@@ -232,18 +222,7 @@ const blsThresholdRoutes: FastifyPluginAsync<{
     }
   });
 
-  fastify.post('/consensus/submit', {
-    schema: {
-      body: submitPartialSchema,
-      response: {
-        200: z.object({
-          attestationId: z.string(),
-          status: z.string(),
-          signaturesCollected: z.number(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/consensus/submit', async (request, reply) => {
     try {
       const { attestationId, oracleId, partialSignature } = request.body as { attestationId: string; oracleId: string; partialSignature: string };
       const state = await blsThresholdService.submitPartialSignature(attestationId, oracleId, partialSignature);
@@ -258,18 +237,7 @@ const blsThresholdRoutes: FastifyPluginAsync<{
     }
   });
 
-  fastify.post('/consensus/finalize', {
-    schema: {
-      body: finalizeSchema,
-      response: {
-        200: z.object({
-          attestationId: z.string(),
-          status: z.string(),
-          finalSignature: z.string().nullable(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/consensus/finalize', async (request, reply) => {
     try {
       const { attestationId } = (request.body as { attestationId: string });
       const finalSignature = await blsThresholdService.finalizeConsensus(attestationId);

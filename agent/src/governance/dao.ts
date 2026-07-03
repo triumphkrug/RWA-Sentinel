@@ -286,17 +286,7 @@ const governanceRoutes: FastifyPluginAsync<{
     proposalId: z.string().regex(/^PROP-[0-9a-fA-F]{8}$/),
   });
 
-  fastify.post('/governance/propose', {
-    schema: {
-      body: proposeSchema,
-      response: {
-        200: z.object({
-          proposalId: z.string(),
-          status: z.string(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/governance/propose', async (request, reply) => {
     try {
       const { type, description, proposerPublicKey, executionData } = request.body as { type: ProposalType; description: string; proposerPublicKey: string; executionData?: Record<string, unknown> };
       const proposal = await governanceService.createProposal(type, description, proposerPublicKey, executionData ?? {});
@@ -307,19 +297,7 @@ const governanceRoutes: FastifyPluginAsync<{
     }
   });
 
-  fastify.post('/governance/vote', {
-    schema: {
-      body: voteSchema,
-      response: {
-        200: z.object({
-          proposalId: z.string(),
-          status: z.string(),
-          votesFor: z.number(),
-          votesAgainst: z.number(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/governance/vote', async (request, reply) => {
     try {
       const { proposalId, voterPublicKey, choice } = request.body as { proposalId: string; voterPublicKey: string; choice: 'for' | 'against' };
       const proposal = await governanceService.voteOnProposal(proposalId, voterPublicKey, choice);
@@ -335,26 +313,7 @@ const governanceRoutes: FastifyPluginAsync<{
     }
   });
 
-  fastify.get('/governance/proposals', {
-    schema: {
-      response: {
-        200: z.array(z.object({
-          id: z.string(),
-          type: z.string(),
-          description: z.string(),
-          proposerPublicKey: z.string(),
-          status: z.string(),
-          createdAt: z.string().datetime(),
-          votingEndsAt: z.string().datetime(),
-          votesFor: z.number(),
-          votesAgainst: z.number(),
-          totalStakeAtCreation: z.number(),
-          quorumRequired: z.number(),
-          executionData: z.record(z.string(), z.any()),
-        })),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.get('/governance/proposals', async (request, reply) => {
     const proposals = governanceService.getAllProposals();
     return reply.status(200).send(proposals.map(p => ({
       ...p,
@@ -365,29 +324,7 @@ const governanceRoutes: FastifyPluginAsync<{
     })));
   });
 
-  fastify.get('/governance/proposals/:id', {
-    schema: {
-      params: z.object({
-        id: z.string().regex(/^PROP-[0-9a-fA-F]{8}$/),
-      }),
-      response: {
-        200: z.object({
-          id: z.string(),
-          type: z.string(),
-          description: z.string(),
-          proposerPublicKey: z.string(),
-          status: z.string(),
-          createdAt: z.string().datetime(),
-          votingEndsAt: z.string().datetime(),
-          votesFor: z.number(),
-          votesAgainst: z.number(),
-          totalStakeAtCreation: z.number(),
-          quorumRequired: z.number(),
-          executionData: z.record(z.string(), z.any()),
-        }).nullable(),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.get('/governance/proposals/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const proposal = governanceService.getProposal(id);
     if (!proposal) {
@@ -401,18 +338,7 @@ const governanceRoutes: FastifyPluginAsync<{
     });
   });
 
-  fastify.post('/governance/execute', {
-    schema: {
-      body: executeSchema,
-      response: {
-        200: z.object({
-          proposalId: z.string(),
-          status: z.string(),
-          transactionHash: z.string().optional(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/governance/execute', async (request, reply) => {
     try {
       const { proposalId } = request.body as { proposalId: string };
       const proposal = await governanceService.executeProposal(proposalId);

@@ -219,23 +219,7 @@ const dataAdaptersRoutes: FastifyPluginAsync<{
 }> = async (fastify, options) => {
   const { dataAdapterService } = options;
 
-  fastify.get('/data/lei/:lei', {
-    schema: {
-      params: z.object({
-        lei: z.string().regex(/^[0-9A-Z]{20}$/, 'Invalid LEI format'),
-      }),
-      response: {
-        200: z.object({
-          lei: z.string(),
-          legalName: z.string(),
-          legalAddress: z.string(),
-          country: z.string(),
-          entityStatus: z.string(),
-          registrationStatus: z.string(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.get('/data/lei/:lei', async (request, reply) => {
     try {
       const { lei } = request.params as { lei: string };
       const data = await dataAdapterService.getLei(lei);
@@ -246,21 +230,7 @@ const dataAdaptersRoutes: FastifyPluginAsync<{
     }
   });
 
-  fastify.get('/data/price/:symbol', {
-    schema: {
-      params: z.object({
-        symbol: z.string().min(1),
-      }),
-      response: {
-        200: z.object({
-          symbol: z.string(),
-          name: z.string(),
-          currentPriceUsd: z.number(),
-          lastUpdated: z.string().datetime(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.get('/data/price/:symbol', async (request, reply) => {
     try {
       const { symbol } = request.params as { symbol: string };
       const data = await dataAdapterService.getPrice(symbol);
@@ -271,25 +241,7 @@ const dataAdaptersRoutes: FastifyPluginAsync<{
     }
   });
 
-  fastify.get('/data/company/:jurisdiction/:id', {
-    schema: {
-      params: z.object({
-        jurisdiction: z.string().min(1),
-        id: z.string().min(1),
-      }),
-      response: {
-        200: z.object({
-          companyNumber: z.string(),
-          name: z.string(),
-          jurisdiction: z.string(),
-          incorporationDate: z.string().datetime(),
-          companyType: z.string(),
-          status: z.string(),
-          registeredAddress: z.string(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.get('/data/company/:jurisdiction/:id', async (request, reply) => {
     try {
       const { jurisdiction, id } = request.params as { jurisdiction: string; id: string };
       const data = await dataAdapterService.getCompany(jurisdiction, id);

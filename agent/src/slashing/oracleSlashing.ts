@@ -278,17 +278,7 @@ const slashingRoutes: FastifyPluginAsync<{
     reportId: z.string().regex(/^SLASH-[0-9a-fA-F]{8}$/),
   });
 
-  fastify.post('/slashing/report', {
-    schema: {
-      body: reportSchema,
-      response: {
-        200: z.object({
-          reportId: z.string(),
-          status: z.string(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/slashing/report', async (request, reply) => {
     try {
       const { oracleId, attestationId, reporterPublicKey, evidenceHash } = request.body as { oracleId: string; attestationId: string; reporterPublicKey: string; evidenceHash: string };
       const report = await slashingService.reportMisbehavior(oracleId, attestationId, reporterPublicKey, evidenceHash);
@@ -299,18 +289,7 @@ const slashingRoutes: FastifyPluginAsync<{
     }
   });
 
-  fastify.post('/slashing/challenge', {
-    schema: {
-      body: challengeSchema,
-      response: {
-        200: z.object({
-          reportId: z.string(),
-          status: z.string(),
-          challengerPublicKey: z.string(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/slashing/challenge', async (request, reply) => {
     try {
       const { reportId, challengerPublicKey, challengeStakeAmount } = request.body as { reportId: string; challengerPublicKey: string; challengeStakeAmount: number };
       const report = await slashingService.challengeReport(reportId, challengerPublicKey, challengeStakeAmount);
@@ -326,18 +305,7 @@ const slashingRoutes: FastifyPluginAsync<{
   });
 
   // This endpoint would typically be called by an internal validation service or a trusted party
-  fastify.post('/slashing/validate', {
-    schema: {
-      body: validateSchema,
-      response: {
-        200: z.object({
-          reportId: z.string(),
-          status: z.string(),
-          validationResult: z.string(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/slashing/validate', async (request, reply) => {
     try {
       const { reportId, isValid } = request.body as { reportId: string; isValid: boolean };
       const report = await slashingService.validateEvidence(reportId, isValid);
@@ -352,18 +320,7 @@ const slashingRoutes: FastifyPluginAsync<{
     }
   });
 
-  fastify.post('/slashing/execute', {
-    schema: {
-      body: executeSchema,
-      response: {
-        200: z.object({
-          reportId: z.string(),
-          status: z.string(),
-          transactionHash: z.string().optional(),
-        }),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.post('/slashing/execute', async (request, reply) => {
     try {
       const { reportId } = request.body as { reportId: string };
       const report = await slashingService.executeSlash(reportId);
@@ -374,27 +331,7 @@ const slashingRoutes: FastifyPluginAsync<{
     }
   });
 
-  fastify.get('/slashing/reports', {
-    schema: {
-      response: {
-        200: z.array(z.object({
-          id: z.string(),
-          oracleId: z.string(),
-          attestationId: z.string(),
-          reporterPublicKey: z.string(),
-          evidenceHash: z.string(),
-          status: z.string(),
-          createdAt: z.string().datetime(),
-          challengePeriodEndsAt: z.string().datetime(),
-          challengerPublicKey: z.string().nullable(),
-          challengerStakeAmount: z.number(),
-          validationResult: z.string().nullable(),
-          slashingAmount: z.number(),
-          rewardAmount: z.number(),
-        })),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.get('/slashing/reports', async (request, reply) => {
     const reports = slashingService.getAllReports();
     return reply.status(200).send(reports.map(r => ({
       ...r,
@@ -403,30 +340,7 @@ const slashingRoutes: FastifyPluginAsync<{
     })));
   });
 
-  fastify.get('/slashing/reports/:id', {
-    schema: {
-      params: z.object({
-        id: z.string().regex(/^SLASH-[0-9a-fA-F]{8}$/),
-      }),
-      response: {
-        200: z.object({
-          id: z.string(),
-          oracleId: z.string(),
-          attestationId: z.string(),
-          reporterPublicKey: z.string(),
-          evidenceHash: z.string(),
-          status: z.string(),
-          createdAt: z.string().datetime(),
-          challengePeriodEndsAt: z.string().datetime(),
-          challengerPublicKey: z.string().nullable(),
-          challengerStakeAmount: z.number(),
-          validationResult: z.string().nullable(),
-          slashingAmount: z.number(),
-          rewardAmount: z.number(),
-        }).nullable(),
-      },
-    },
-  }, async (request, reply) => {
+  fastify.get('/slashing/reports/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const report = slashingService.getReport(id);
     if (!report) {
