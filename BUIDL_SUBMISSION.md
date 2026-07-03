@@ -14,7 +14,7 @@
 | **Category** | DeFi / RWA / Infrastructure |
 | **GitHub** | https://github.com/triumphkrug/RWA-Sentinel |
 | **Live Demo** | https://rwa-sentinel.xyz |
-| **Dashboard** | https://rwa-sentinel.xyz/dashboard |
+| **Portal** | https://rwa-sentinel.xyz/portal |
 | **Backend API** | https://rwa-sentinel-api.onrender.com |
 
 ---
@@ -61,7 +61,7 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 ## Live Demo
 
-- **Oracle Panel:** [rwa-sentinel.xyz/dashboard](https://rwa-sentinel.xyz/dashboard) — real-time trust scores, active attestations, DAO vote panel
+- **Oracle Panel:** [rwa-sentinel.xyz/portal](https://rwa-sentinel.xyz/portal) — real-time trust scores, active attestations, DAO vote panel
 - **Smart Contracts on Casper testnet:**
   - asset-registry: [`eac01f54...`](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3)
   - attestation-store: [`53c9e877...`](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8)
@@ -103,6 +103,6 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 ## Team
 
-**triumphkrug** — Solo builder architecting trust infrastructure for the RWA space. Designed the 6-factor scoring model, built the autonomous TypeScript agent pipeline, wrote both Casper smart contracts (asset-registry and attestation-store), developed the Next.js Oracle Panel dashboard with one-click DAO voting, and deployed the full system to testnet. Background in decentralized systems and on-chain governance; focus on making RWA verification programmable and accountable.
+**triumphkrug** — Solo builder architecting trust infrastructure for the RWA space. Designed the 6-factor scoring model, built the autonomous TypeScript agent pipeline, wrote both Casper smart contracts (asset-registry and attestation-store), developed the Next.js Oracle Panel portal with one-click DAO voting, and deployed the full system to testnet. Background in decentralized systems and on-chain governance; focus on making RWA verification programmable and accountable.
 
 GitHub: [github.com/triumphkrug](https://github.com/triumphkrug)

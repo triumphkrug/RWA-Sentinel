@@ -28,7 +28,7 @@
 - [ ] Anomaly detection (time-series) — price feed manipulation alerts
 - [ ] MCP server expansion to 15+ tools with push-subscriptions via WebSocket
 - [ ] Attestation leasing — rent attestation NFTs for temporary access
-- [ ] Demo/Real data toggle in dashboard
+- [ ] Demo/Real data toggle in portal
 
 ## Phase 3 — Advanced
 

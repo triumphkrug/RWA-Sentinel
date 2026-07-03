@@ -42,7 +42,7 @@ Composite score gets published on-chain as an attestation NFT. Expires in 24h. A
 ---
 
 **Tweet 4 — Demo**
-Live at rwa-sentinel.xyz/dashboard
+Live at rwa-sentinel.xyz/portal
 
 The Oracle Panel shows:
 • Real-time trust scores for every scored asset
@@ -68,7 +68,7 @@ Economic accountability. On-chain. No committees.
 **Tweet 6 — CTA**
 Built for the Casper Agentic Buildathon 2026.
 
-Full stack: Rust/WASM contracts + TypeScript agent + Next.js dashboard + Telegram alerts + SDK.
+Full stack: Rust/WASM contracts + TypeScript agent + Next.js portal + Telegram alerts + SDK.
 
 Try the demo → https://rwa-sentinel.xyz
 Source → https://github.com/triumphkrug/RWA-Sentinel
@@ -85,7 +85,7 @@ Manual audits gate every invoice, bond, and receivable before it can go on-chain
 
 We built **RWA Sentinel** to fix this — an autonomous AI oracle on Casper Network that replaces manual verification with a transparent 6-factor scoring pipeline. Every asset gets scored across issuer history, document integrity, cross-referencing, amount plausibility, temporal consistency, and network reputation. Scores above 65/100 get published on-chain as time-limited attestation NFTs. Challenged attestations go to DAO governance with economic consequences for misbehaving oracles.
 
-The Oracle Panel is live: **rwa-sentinel.xyz/dashboard**
+The Oracle Panel is live: **rwa-sentinel.xyz/portal**
 Smart contracts deployed on Casper testnet.
 Open source: github.com/triumphkrug/RWA-Sentinel
 

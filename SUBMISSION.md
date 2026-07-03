@@ -10,7 +10,7 @@
 |----------|------|
 | Source Code | https://github.com/triumphkrug/RWA-Sentinel |
 | Website | https://rwa-sentinel.xyz |
-| Oracle Panel | https://rwa-sentinel.xyz/dashboard |
+| Oracle Panel | https://rwa-sentinel.xyz/portal |
 | API Endpoint | https://rwa-sentinel-api.onrender.com |
 | Scoring Registry | [eac01f54...bd48c3](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) |
 | Attestation Store | [53c9e877...dce8](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8) |

@@ -1,14 +1,14 @@
 # RWA Sentinel Video Script — Trustless Trust Oracle
 
 ## HOOK OPTIONS (pick one)
-**Hook A**: [SHOW: dashboard, red/yellow/green trust scores] "How do you trust a trust oracle?"
+**Hook A**: [SHOW: portal, red/yellow/green trust scores] "How do you trust a trust oracle?"
 **Hook B**: [SHOW: Telegram notification firing] "An alert just fired — on-chain, unstoppable."
 **Hook C**: [SHOW: DAO vote panel, voting buttons] "This isn't governance theater. Every vote is on Casper."
 
 ## SCRIPT (120 seconds)
 
 [0:00-0:05] HOOK
-[SHOW: dashboard, Oracle Scoring view, live scores]
+[SHOW: portal, Oracle Scoring view, live scores]
 [NARRATION]: "RWA Sentinel — a trust oracle you can verify."
 
 [0:05-0:20] PROBLEM
@@ -17,7 +17,7 @@
 
 [0:20-0:50] DEMO — ORACLE SCORING
 [SHOW: Oracle Scoring tab, asset list]
-[NARRATION]: "Open the dashboard. Every asset has a drift score — calculated from on-chain activity."
+[NARRATION]: "Open the portal. Every asset has a drift score — calculated from on-chain activity."
 [SHOW: clicking an asset, Casper explorer link appearing]
 [NARRATION]: "Click the explorer link — you're looking at the attestation hash on testnet."
 

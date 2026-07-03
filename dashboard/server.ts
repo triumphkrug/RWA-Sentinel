@@ -1,3 +1,3 @@
 /**
- * Dashboard server — Fastify with static file serving.
+ * Portal server — Fastify with static file serving.
  */

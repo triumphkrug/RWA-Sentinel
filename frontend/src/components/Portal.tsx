@@ -9,7 +9,7 @@ import type { ScoreResult, PipelineResult } from '../lib/api'
 import { connectWallet, disconnectWallet, shortKey } from '../lib/wallet'
 import type { WalletState } from '../lib/wallet'
 import DemoNotice from './DemoNotice'
-import DataModeToggle, { useDataMode } from './DataModeToggle'
+
 
 interface LogLine { time: string; text: string; type: 'info' | 'success' | 'warn' | 'error' | 'hash' }
 
@@ -31,7 +31,7 @@ const contractLinks = {
 
 
 
-export default function Dashboard() {
+export default function Portal() {
   const [tab, setTab] = useState<'overview' | 'pipeline' | 'attestations' | 'inspect' | 'operations' | 'chain' | 'anomalies' | 'documents' | 'oracles' | 'contracts'>('overview')
   const [scores, setScores] = useState<ScoreResult[]>([])
   const [running, setRunning] = useState(false)
@@ -160,7 +160,6 @@ export default function Dashboard() {
             <p className="text-gray-500 text-sm mt-1">RWA verification pipeline &amp; asset attestation manager</p>
           </div>
           <div className="flex items-center gap-3">
-            <DataModeToggle />
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-xs">
               <span className={`w-2 h-2 rounded-full ${chainStatus === 'casper-test' ? 'bg-green-500' : 'bg-red-500'}`} />
               <span className="text-gray-600 font-medium">{chainStatus}</span>
@@ -309,7 +308,7 @@ export default function Dashboard() {
 
             {!wallet.connected && (
               <div className="mt-6 p-6 bg-blue-50 rounded-2xl border border-blue-100 text-center">
-                <p className="text-blue-800 font-medium mb-2">Connect your wallet to unlock full dashboard</p>
+                <p className="text-blue-800 font-medium mb-2">Connect your wallet to unlock the full portal</p>
                 <p className="text-blue-600 text-sm mb-4">Run pipelines, sign deploys, inspect factor breakdowns, and manage attestations.</p>
                 <button onClick={handleConnect} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors">
                   <Wallet className="w-4 h-4 inline mr-2" />Connect Wallet
