@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import * as api from '../../lib/api';
-import { Play, Copy, RefreshCcw, XCircle } from 'lucide-react';
+import { Play, Copy, RefreshCcw, XCircle, Loader2 } from 'lucide-react';
 
 interface Endpoint {
   name: string;

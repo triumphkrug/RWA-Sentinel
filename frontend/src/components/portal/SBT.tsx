@@ -172,7 +172,7 @@ const SBT: React.FC = () => {
       </div>
 
       {/* Custom CSS for gradient borders */}
-      <style jsx>{`
+      <style>{`
         .border-gradient-green {
           border-image: linear-gradient(to right, var(--gradient-green-start), var(--gradient-green-end)) 1;
         }
