@@ -17,6 +17,10 @@ import { StalenessDetector } from './fallback/staleness.js';
 import { CasperPublisher } from './publisher/casperPublisher.js';
 import { BatchNftMinter } from './publisher/batchNftMinter.js';
 import { PgStore } from './store/pg.js';
+import governanceRoutes from './governance/dao.js';
+import slashingRoutes from './slashing/oracleSlashing.js';
+import dataAdaptersRoutes from './data/realDataAdapters.js';
+import blsThresholdRoutes from './crypto/blsThreshold.js';
 
 const config = loadConfig();
 const collector = new InvoiceCollector({ batchSize: config.batchSize });
@@ -37,6 +41,12 @@ const dbUrl = process.env.DATABASE_URL;
 let store: PgStore | null = null;
 
 const app = Fastify({ logger: true });
+
+// Register modular route plugins
+app.register(governanceRoutes, { prefix: '/api/v1' });
+app.register(slashingRoutes, { prefix: '/api/v1' });
+app.register(dataAdaptersRoutes, { prefix: '/api/v1' });
+app.register(blsThresholdRoutes, { prefix: '/api/v1' });
 
 const ALLOWED_ORIGINS = process.env.CORS_ORIGINS?.split(',') ?? ['*'];
 
