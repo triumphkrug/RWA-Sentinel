@@ -185,6 +185,7 @@ export class BlsThresholdService {
     console.log(`[bls-threshold] Consensus finalized for attestation ${attestationId}. Final signature: ${simulatedFinalSignature}`);
     return simulatedFinalSignature;
   }
+
 }
 
 /**
@@ -222,8 +223,88 @@ const blsThresholdRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { attestationId, messageHash } = request.body;
+      const { attestationId, messageHash } = request.body as { attestationId: string; messageHash: string };
       const state = await blsThresholdService.initializeConsensus(attestationId, messageHash);
       return reply.status(200).send({ attestationId: state.attestationId, status: state.status });
     } catch (error) {
-      fast
+      fastify.log.error(error, 'Failed to initialize consensus');
+      return reply.status(500).send({ error: 'Failed to initialize consensus' });
+    }
+  });
+
+  fastify.post('/consensus/submit', {
+    schema: {
+      body: submitPartialSchema,
+      response: {
+        200: z.object({
+          attestationId: z.string(),
+          status: z.string(),
+          signaturesCollected: z.number(),
+        }),
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { attestationId, oracleId, partialSignature } = request.body as { attestationId: string; oracleId: string; partialSignature: string };
+      const state = await blsThresholdService.submitPartialSignature(attestationId, oracleId, partialSignature);
+      return reply.status(200).send({
+        attestationId: state.attestationId,
+        status: state.status,
+        signaturesCollected: state.collectedPartialSignatures.size,
+      });
+    } catch (error) {
+      fastify.log.error(error, 'Failed to submit partial signature');
+      return reply.status(500).send({ error: 'Failed to submit partial signature' });
+    }
+  });
+
+  fastify.post('/consensus/finalize', {
+    schema: {
+      body: finalizeSchema,
+      response: {
+        200: z.object({
+          attestationId: z.string(),
+          status: z.string(),
+          finalSignature: z.string().nullable(),
+        }),
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { attestationId } = (request.body as { attestationId: string });
+      const finalSignature = await blsThresholdService.finalizeConsensus(attestationId);
+      return reply.status(200).send({
+        attestationId,
+        status: 'finalized',
+        finalSignature,
+      });
+    } catch (error) {
+      fastify.log.error(error, 'Failed to finalize signature');
+      return reply.status(500).send({ error: 'Failed to finalize signature' });
+    }
+  });
+
+  fastify.get('/consensus/:attestationId', async (request, reply) => {
+    try {
+      const { attestationId } = request.params as { attestationId: string };
+      const state = await blsThresholdService.getConsensusStatus(attestationId);
+      if (!state) {
+        return reply.status(404).send({ error: 'Consensus state not found' });
+      }
+      return reply.status(200).send({
+        attestationId: state.attestationId,
+        messageHash: state.messageHash,
+        status: state.status,
+        signaturesCollected: state.collectedPartialSignatures.size,
+        requiredSignatures: state.requiredSignatures,
+        totalOracles: state.totalOracles,
+        finalSignature: state.finalSignature,
+      });
+    } catch (error) {
+      fastify.log.error(error, 'Failed to get consensus state');
+      return reply.status(500).send({ error: 'Failed to get consensus state' });
+    }
+  });
+};
+
+export default blsThresholdRoutes;

@@ -204,15 +204,14 @@ export class OracleSlashingService {
       // e.g., calling `slash_oracle` and `distribute_rewards` entry points
       const deployResult = await this.publisher.publishBatch({
         assetIds: [`slashing-report-${reportId}`],
-        attestationData: {
+        trustScores: [0],
+        factorsHashes: [report.evidenceHash],
+        evidenceHashes: [JSON.stringify({
           action: 'slash',
           oracleId: report.oracleId,
           amount: report.slashingAmount,
           reporter: report.reporterPublicKey,
-          challenger: report.challengerPublicKey,
-          rewardReporter: report.slashingAmount * this.config.reporterRewardPercent / 100,
-          rewardChallenger: report.challengerPublicKey ? report.slashingAmount * this.config.challengerRewardPercent / 100 : 0,
-        },
+        })],
       });
       console.log(`[slashing] On-chain slash deploy submitted for ${reportId}: ${deployResult.transactionHash}`);
       report.status = 'slashed';
@@ -291,7 +290,7 @@ const slashingRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { oracleId, attestationId, reporterPublicKey, evidenceHash } = request.body;
+      const { oracleId, attestationId, reporterPublicKey, evidenceHash } = request.body as { oracleId: string; attestationId: string; reporterPublicKey: string; evidenceHash: string };
       const report = await slashingService.reportMisbehavior(oracleId, attestationId, reporterPublicKey, evidenceHash);
       return reply.status(200).send({ reportId: report.id, status: report.status });
     } catch (error) {
@@ -313,7 +312,7 @@ const slashingRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { reportId, challengerPublicKey, challengeStakeAmount } = request.body;
+      const { reportId, challengerPublicKey, challengeStakeAmount } = request.body as { reportId: string; challengerPublicKey: string; challengeStakeAmount: number };
       const report = await slashingService.challengeReport(reportId, challengerPublicKey, challengeStakeAmount);
       return reply.status(200).send({
         reportId: report.id,
@@ -340,7 +339,7 @@ const slashingRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { reportId, isValid } = request.body;
+      const { reportId, isValid } = request.body as { reportId: string; isValid: boolean };
       const report = await slashingService.validateEvidence(reportId, isValid);
       return reply.status(200).send({
         reportId: report.id,
@@ -366,7 +365,7 @@ const slashingRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { reportId } = request.body;
+      const { reportId } = request.body as { reportId: string };
       const report = await slashingService.executeSlash(reportId);
       return reply.status(200).send({ reportId: report.id, status: report.status, transactionHash: 'simulated_tx_hash' });
     } catch (error) {
@@ -428,7 +427,7 @@ const slashingRoutes: FastifyPluginAsync<{
       },
     },
   }, async (request, reply) => {
-    const { id } = request.params;
+    const { id } = request.params as { id: string };
     const report = slashingService.getReport(id);
     if (!report) {
       return reply.status(404).send(null);

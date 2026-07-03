@@ -247,7 +247,9 @@ export class GovernanceService {
       // For example, calling a `set_scoring_weight` entry point
       const deployResult = await this.publisher.publishBatch({
         assetIds: [`governance-proposal-${proposalId}`],
-        attestationData: proposal.executionData,
+        trustScores: [100],
+        factorsHashes: [proposalId],
+        evidenceHashes: [JSON.stringify(proposal.executionData ?? {})],
       });
       console.log(`[governance] On-chain execution deploy submitted for ${proposalId}: ${deployResult.transactionHash}`);
       proposal.status = 'executed';
@@ -296,8 +298,8 @@ const governanceRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { type, description, proposerPublicKey, executionData } = request.body;
-      const proposal = await governanceService.createProposal(type, description, proposerPublicKey, executionData);
+      const { type, description, proposerPublicKey, executionData } = request.body as { type: ProposalType; description: string; proposerPublicKey: string; executionData?: Record<string, unknown> };
+      const proposal = await governanceService.createProposal(type, description, proposerPublicKey, executionData ?? {});
       return reply.status(200).send({ proposalId: proposal.id, status: proposal.status });
     } catch (error) {
       fastify.log.error(error);
@@ -319,7 +321,7 @@ const governanceRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { proposalId, voterPublicKey, choice } = request.body;
+      const { proposalId, voterPublicKey, choice } = request.body as { proposalId: string; voterPublicKey: string; choice: 'for' | 'against' };
       const proposal = await governanceService.voteOnProposal(proposalId, voterPublicKey, choice);
       return reply.status(200).send({
         proposalId: proposal.id,
@@ -386,7 +388,7 @@ const governanceRoutes: FastifyPluginAsync<{
       },
     },
   }, async (request, reply) => {
-    const { id } = request.params;
+    const { id } = request.params as { id: string };
     const proposal = governanceService.getProposal(id);
     if (!proposal) {
       return reply.status(404).send(null);
@@ -412,7 +414,7 @@ const governanceRoutes: FastifyPluginAsync<{
     },
   }, async (request, reply) => {
     try {
-      const { proposalId } = request.body;
+      const { proposalId } = request.body as { proposalId: string };
       const proposal = await governanceService.executeProposal(proposalId);
       // In a real scenario, the publisher might return a transaction hash
       return reply.status(200).send({ proposalId: proposal.id, status: proposal.status, transactionHash: 'simulated_tx_hash' });

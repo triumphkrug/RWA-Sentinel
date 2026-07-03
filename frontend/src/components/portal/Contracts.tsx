@@ -3,7 +3,7 @@ import { FileText, Link, Code, Info } from 'lucide-react';
 
 const CONTRACTS = {
   'asset-registry': 'eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3',
-  'attestation-store': 'bf0ce98af2b24cbae8ce8c13b3dbc4a6b3766a49d0a5f7e3f02746ee77f38c82',
+  'attestation-store': '53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8',
 };
 
 const EXPLORER_BASE_URL = 'https://testnet.cspr.live';
