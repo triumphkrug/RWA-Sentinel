@@ -406,29 +406,21 @@ export class CasperPublisher {
   /** Polls a global-state read until it reflects an increment past `baseline`
    * (handles the brief lag between a transaction's execution_result being
    * reported successful and query_global_state reflecting the new value). */
-  private async pollForIncrement(read: () => Promise<number>, baseline: number, timeoutMs = 90_000): Promise<number> {
+  private async pollForIncrement(read: () => Promise<number>, baseline: number, timeoutMs = 60_000): Promise<number> {
     const start = Date.now();
-    // CSPR.cloud's RPC gateway load-balances across multiple backend nodes
-    // with independent, sometimes-lagging global state views - a *single*
-    // baseline snapshot taken before submitting can itself be stale-low
-    // (observed live), making "wait for exactly baseline+1" wait forever
-    // once the real count has already moved past that target. Instead,
-    // require the read value to stabilize (same value on 2 consecutive
-    // polls) and be above the baseline floor - this tolerates a stale
-    // baseline while still guarding against a single transient bad read
-    // being trusted immediately.
-    let lastSeen: number | null = null;
+    // Require the counter to be exactly baseline+1 (create_proposal/
+    // report_violation always increment by exactly 1 per call). The
+    // previous "stabilizes above baseline" tolerance was a workaround for
+    // reads that always returned 0 - which turned out to be a CLValue
+    // parsing bug (see queryGlobalStateValue), not real inconsistency, so
+    // the stricter exact-match is safe again and avoids ever assigning a
+    // proposal/report id that belongs to a different call.
     while (Date.now() - start < timeoutMs) {
       const value = await read();
-      if (value > baseline) {
-        if (lastSeen === value) return value;
-        lastSeen = value;
-      } else {
-        lastSeen = null;
-      }
+      if (value === baseline + 1) return value;
       await new Promise((resolve) => setTimeout(resolve, 3000));
     }
-    throw new Error(`timed out waiting for on-chain counter to stabilize above ${baseline}`);
+    throw new Error(`timed out waiting for on-chain counter to reach exactly ${baseline + 1}`);
   }
 
   /**
@@ -530,7 +522,20 @@ export class CasperPublisher {
 
   private async queryGlobalStateValue(contractHash: string, path: string[]): Promise<unknown> {
     const result = await this.rpcClient.getStateItem(null, `hash-${contractHash}`, path);
-    return (result as unknown as { storedValue?: { clValue?: { parsed?: unknown } } }).storedValue?.clValue?.parsed;
+    // The response shape for a CLValue differs by RPC backend: the
+    // reference Casper node returns { cl_type, bytes, parsed }, while
+    // CSPR.cloud's gateway (used here since Render can't reach the
+    // reference node directly - see publisher rewrite notes) normalizes it
+    // straight to a bare value on `clValue` with no `.parsed` wrapper.
+    // Reading only `.clValue.parsed` silently returned undefined -> 0 for
+    // every call once the CSPR.cloud gateway became the default, which
+    // looked exactly like gateway state-consistency lag but was actually
+    // this parsing bug. Handle both shapes.
+    const clValue = (result as unknown as { storedValue?: { clValue?: unknown } }).storedValue?.clValue;
+    if (clValue && typeof clValue === 'object' && 'parsed' in (clValue as Record<string, unknown>)) {
+      return (clValue as { parsed?: unknown }).parsed;
+    }
+    return clValue;
   }
 
   private async readProposalCount(): Promise<number> {
