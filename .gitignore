@@ -21,3 +21,4 @@ landing/
 Cargo.lock
 *.bak
 .vercel
+scripts_deploy/
