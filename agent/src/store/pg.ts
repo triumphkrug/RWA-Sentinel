@@ -4,6 +4,7 @@
 
 import pg from 'pg';
 import type { ScoringResult } from '../validator/types.js';
+import { deriveHolderDid } from '../data/didBinding.js';
 
 const { Pool } = pg;
 
@@ -20,6 +21,10 @@ export interface AttestationRecord {
   casper_block_hash: string | null;
   timestamp: string;
   expires_at: string | null;
+  /** Deterministic did:key-shaped holder identifier (B5) - see didBinding.ts
+   * for exactly what this is and isn't (application-layer binding; full
+   * on-chain owner enforcement is blocked, documented there). */
+  holder_did: string;
 }
 
 export class PgStore {
@@ -55,9 +60,11 @@ export class PgStore {
         attestation_expires_at TIMESTAMPTZ,
         deploy_hash TEXT,
         public_key TEXT,
+        holder_did TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+    await this.pool.query(`ALTER TABLE scores ADD COLUMN IF NOT EXISTS holder_did TEXT`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_scores_invoice ON scores(invoice_id)`);
     await this.pool.query(
       `CREATE INDEX IF NOT EXISTS idx_scores_status ON scores(attestation_status)`,
@@ -99,8 +106,8 @@ export class PgStore {
       INSERT INTO scores (invoice_id, trust_score, is_above_threshold, scored_at,
         issuer_id, debtor_id, amount, currency, asset_type,
         factors_hash, evidence_hash, factors,
-        attestation_status, attestation_expires_at, public_key)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+        attestation_status, attestation_expires_at, public_key, holder_did)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
       ON CONFLICT (invoice_id) DO UPDATE SET
         trust_score = EXCLUDED.trust_score,
         is_above_threshold = EXCLUDED.is_above_threshold,
@@ -127,6 +134,7 @@ export class PgStore {
         result.isAboveThreshold ? 'active' : 'below_threshold',
         result.isAboveThreshold ? expiresAt : null,
         meta?.publicKey ?? null,
+        deriveHolderDid(meta?.issuerId ?? result.invoiceId),
       ],
     );
   }
@@ -300,6 +308,7 @@ export class PgStore {
       casper_block_hash: (row.deploy_hash as string | null) ?? null,
       timestamp: (row.scored_at as Date).toISOString(),
       expires_at: row.attestation_expires_at ? (row.attestation_expires_at as Date).toISOString() : null,
+      holder_did: (row.holder_did as string) || deriveHolderDid((row.issuer_id as string) ?? (row.invoice_id as string)),
     };
   }
 
