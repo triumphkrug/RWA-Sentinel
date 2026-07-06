@@ -37,7 +37,21 @@ export interface GovernanceProposal {
   quorumRequired: number; // Percentage of totalStakeAtCreation required for quorum
   executionData: Record<string, any>; // Data needed for execution (e.g., new scoring weights)
   voters: Map<string, 'for' | 'against'>; // Track who voted to prevent double voting
+  /** The real numeric proposal_id assigned by governance-dao's on-chain
+   * create_proposal, once submitted. Off-chain simulated proposals have no
+   * corresponding on-chain record until this is set. */
+  onChainProposalId?: number;
+  onChainCreateTxHash?: string;
+  onChainExecuteTxHash?: string;
 }
+
+// governance-dao's create_proposal only validates action_type <= ACTION_PAUSE (4)
+// and its execute_proposal doesn't yet dispatch differently per action_type
+// (contract-side action handling is a documented no-op beyond status
+// bookkeeping - see MASTER_HANDOFF/A1 audit). All off-chain proposal types
+// map to the same on-chain action_type (0) until the contract implements
+// real per-action execution.
+const ON_CHAIN_ACTION_TYPE = 0;
 
 /**
  * Configuration for the GovernanceService.
@@ -136,6 +150,27 @@ export class GovernanceService {
 
     this.proposals.set(id, proposal);
     console.log(`[governance] New proposal created: ${id} by ${proposerPublicKey}`);
+
+    // Best-effort: also create the proposal on-chain so it has a real
+    // numeric proposal_id to vote/execute against later. Off-chain approval
+    // state remains the source of truth for the demo's simulated stake
+    // voting; the on-chain id lets execute_proposal be a real call instead
+    // of a semantically-unrelated placeholder transaction.
+    try {
+      const onChain = await this.publisher.createGovernanceProposalOnChain(
+        description.slice(0, 64),
+        description,
+        ON_CHAIN_ACTION_TYPE,
+        JSON.stringify(executionData ?? {}),
+        0,
+      );
+      proposal.onChainProposalId = onChain.proposalId;
+      proposal.onChainCreateTxHash = onChain.transactionHash;
+      console.log(`[governance] On-chain proposal id ${onChain.proposalId} created for ${id} (tx ${onChain.transactionHash})`);
+    } catch (error) {
+      console.warn(`[governance] Failed to create on-chain proposal for ${id}, continuing off-chain only:`, error);
+    }
+
     return proposal;
   }
 
@@ -176,6 +211,22 @@ export class GovernanceService {
     proposal.voters.set(voterPublicKey, choice);
 
     console.log(`[governance] Vote cast for proposal ${proposalId} by ${voterPublicKey}: ${choice} with ${stakeWeight} stake.`);
+
+    // Best-effort: relay one real on-chain vote (from the deployer account,
+    // capped at its fixed on-chain voting_power of 100) so the on-chain
+    // proposal has genuine vote records too. This does NOT by itself reach
+    // the on-chain 30% quorum (300) with a single account - full on-chain
+    // execution requires multiple independently-staked real accounts to
+    // vote, same as any real DAO. Off-chain simulated quorum above remains
+    // the basis for the demo's approve/reject outcome.
+    if (proposal.onChainProposalId !== undefined) {
+      try {
+        await this.publisher.voteOnChainProposal(proposal.onChainProposalId, choice === 'for' ? 'for' : 'against');
+      } catch (error) {
+        console.warn(`[governance] On-chain vote relay failed for proposal ${proposalId} (non-fatal):`, error);
+      }
+    }
+
     return proposal;
   }
 
@@ -244,23 +295,27 @@ export class GovernanceService {
       throw new Error(`Proposal ${proposalId} is not in 'approved' state. Current status: ${proposal.status}`);
     }
 
-    // Simulate on-chain execution via CasperPublisher
-    console.log(`[governance] Executing proposal ${proposalId} on-chain...`);
+    if (proposal.onChainProposalId === undefined) {
+      throw new Error(
+        `Proposal ${proposalId} has no on-chain proposal_id (on-chain creation failed or was never attempted) - cannot execute a real on-chain action for it.`,
+      );
+    }
+
+    console.log(`[governance] Executing proposal ${proposalId} on-chain (proposal_id=${proposal.onChainProposalId})...`);
     try {
-      // This would involve building a deploy for the DAO contract
-      // For example, calling a `set_scoring_weight` entry point
-      const deployResult = await this.publisher.publishBatch({
-        assetIds: [`governance-proposal-${proposalId}`],
-        trustScores: [100],
-        factorsHashes: [proposalId],
-        evidenceHashes: [JSON.stringify(proposal.executionData ?? {})],
-      });
-      console.log(`[governance] On-chain execution deploy submitted for ${proposalId}: ${deployResult.transactionHash}`);
+      const txHash = await this.publisher.executeGovernanceProposal(proposal.onChainProposalId);
+      console.log(`[governance] On-chain execute_proposal submitted for ${proposalId}: ${txHash}`);
       proposal.status = 'executed';
+      proposal.onChainExecuteTxHash = txHash;
       return proposal;
     } catch (error) {
+      // Genuine, expected outcome when on-chain quorum (30% of the
+      // placeholder total_staked, i.e. 3 real accounts at 100 each) hasn't
+      // been met by real votes yet - this is not a bug, it's the contract
+      // correctly enforcing its own vote requirements independent of the
+      // off-chain simulated approval above.
       console.error(`[governance] Failed to execute proposal ${proposalId} on-chain:`, error);
-      throw new Error(`Failed to execute proposal ${proposalId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to execute proposal ${proposalId} on-chain: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }
@@ -346,8 +401,7 @@ const governanceRoutes: FastifyPluginAsync<{
     try {
       const { proposalId } = request.body as { proposalId: string };
       const proposal = await governanceService.executeProposal(proposalId);
-      // In a real scenario, the publisher might return a transaction hash
-      return reply.status(200).send({ proposalId: proposal.id, status: proposal.status, transactionHash: 'simulated_tx_hash' });
+      return reply.status(200).send({ proposalId: proposal.id, status: proposal.status, transactionHash: proposal.onChainExecuteTxHash });
     } catch (error) {
       fastify.log.error(error);
       return reply.status(400).send({ error: error instanceof Error ? error.message : 'Failed to execute proposal' });

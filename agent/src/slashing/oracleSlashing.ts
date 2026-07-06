@@ -32,6 +32,11 @@ export interface SlashingReport {
   validationResult: 'pending' | 'valid' | 'invalid' | null; // Result of evidence validation
   slashingAmount: number; // Amount of stake to be slashed from oracle
   rewardAmount: number; // Amount to be rewarded to reporter/challenger
+  /** Real on-chain report_id assigned by oracle-slashing's report_violation,
+   * once submitted. Needed to later call the real execute_slash entry point. */
+  onChainReportId?: string;
+  onChainReportTxHash?: string;
+  onChainExecuteTxHash?: string;
 }
 
 /**
@@ -111,6 +116,23 @@ export class OracleSlashingService {
 
     this.reports.set(id, report);
     console.log(`[slashing] New report created: ${id} against ${oracleId} by ${reporterPublicKey}`);
+
+    // Best-effort: mirror this report on-chain so it has a real report_id to
+    // execute_slash against once the 48h challenge period elapses. Requires
+    // the oracle to already be registered on-chain (auto-registers with a
+    // fixed stake if missing) via the oracle-owner-bot key, since the
+    // contract reverts self-reports (owner === reporter).
+    try {
+      await this.publisher.ensureOracleRegisteredOnChain(oracleId, '10000000000'); // 10 CSPR default stake
+      const severityForChain = Math.min(3, Math.max(0, Math.round(this.config.slashingPenaltyPercent / 25)));
+      const onChain = await this.publisher.reportViolationOnChain(oracleId, severityForChain, evidenceHash);
+      report.onChainReportId = onChain.reportId;
+      report.onChainReportTxHash = onChain.transactionHash;
+      console.log(`[slashing] On-chain report ${onChain.reportId} created for ${id} (tx ${onChain.transactionHash})`);
+    } catch (error) {
+      console.warn(`[slashing] Failed to mirror report ${id} on-chain, continuing off-chain only:`, error);
+    }
+
     return report;
   }
 
@@ -197,24 +219,22 @@ export class OracleSlashingService {
       throw new Error(`Report ${reportId} is not validated as 'valid'. Current result: ${report.validationResult}`);
     }
 
-    // Simulate on-chain slashing and reward distribution
-    console.log(`[slashing] Executing slash for report ${reportId}...`);
+    if (!report.onChainReportId) {
+      throw new Error(
+        `Report ${reportId} has no on-chain report_id (on-chain mirroring failed or was never attempted) - cannot execute a real on-chain slash for it.`,
+      );
+    }
+
+    console.log(`[slashing] Executing slash for report ${reportId} on-chain (report_id=${report.onChainReportId})...`);
     try {
-      // This would involve building a deploy for a slashing contract
-      // e.g., calling `slash_oracle` and `distribute_rewards` entry points
-      const deployResult = await this.publisher.publishBatch({
-        assetIds: [`slashing-report-${reportId}`],
-        trustScores: [0],
-        factorsHashes: [report.evidenceHash],
-        evidenceHashes: [JSON.stringify({
-          action: 'slash',
-          oracleId: report.oracleId,
-          amount: report.slashingAmount,
-          reporter: report.reporterPublicKey,
-        })],
-      });
-      console.log(`[slashing] On-chain slash deploy submitted for ${reportId}: ${deployResult.transactionHash}`);
+      // The contract enforces its own 48h challenge period and unchallenged
+      // state independent of this off-chain validation step - it will
+      // legitimately revert if called too early or if challenged on-chain,
+      // which is the correct, non-bypassable behavior.
+      const txHash = await this.publisher.executeOracleSlash(report.onChainReportId);
+      console.log(`[slashing] On-chain execute_slash submitted for ${reportId}: ${txHash}`);
       report.status = 'slashed';
+      report.onChainExecuteTxHash = txHash;
       return report;
     } catch (error) {
       console.error(`[slashing] Failed to execute slash for report ${reportId} on-chain:`, error);
@@ -324,7 +344,7 @@ const slashingRoutes: FastifyPluginAsync<{
     try {
       const { reportId } = request.body as { reportId: string };
       const report = await slashingService.executeSlash(reportId);
-      return reply.status(200).send({ reportId: report.id, status: report.status, transactionHash: 'simulated_tx_hash' });
+      return reply.status(200).send({ reportId: report.id, status: report.status, transactionHash: report.onChainExecuteTxHash });
     } catch (error) {
       fastify.log.error(error);
       return reply.status(400).send({ error: error instanceof Error ? error.message : 'Failed to execute slash' });
