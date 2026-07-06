@@ -34,13 +34,21 @@ const cache = new FallbackCache(config.staleThresholdMinutes);
 const staleness = new StalenessDetector(config.staleThresholdMinutes);
 const nftMinter = new BatchNftMinter({ validityHours: 24 });
 
+// The public Casper Association RPC node (node.testnet.casper.network) is
+// unreachable from some cloud hosts (confirmed: Render's egress gets a
+// generic network error against it, while it works fine from other
+// environments). node.testnet.cspr.cloud is a CSPR.cloud-hosted RPC gateway
+// pointed at the same real casper-test network, reachable from Render, and
+// used here as the default with an API key for authorization.
 const publisher = new CasperPublisher({
-  nodeUrl: process.env.CASPER_NODE_URL || 'https://node.testnet.casper.network/rpc',
+  nodeUrl: process.env.CASPER_NODE_URL || 'https://node.testnet.cspr.cloud/rpc',
   chainName: process.env.CASPER_CHAIN || 'casper-test',
   contractHash: '53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8',
   governanceContractHash: process.env.GOVERNANCE_DAO_CONTRACT_HASH || '154d32b56aa334a5f454b90292c829f994db24e998cf8a702c88c0b8034ceec4',
   slashingContractHash: process.env.ORACLE_SLASHING_CONTRACT_HASH || 'a6aad9bfe842c32de65d68f35f07301f0a4c7b89ab7e741ea390e5c73ebac87a',
   deployerKeyPath: process.env.DEPLOYER_KEY_PATH || '/etc/secrets/deployer.pem',
+  oracleOwnerBotKeyPath: process.env.ORACLE_OWNER_BOT_KEY_PATH,
+  csprCloudApiKey: process.env.CSPR_CLOUD_API_KEY,
 });
 
 const dbUrl = process.env.DATABASE_URL;
@@ -133,20 +141,6 @@ app.get('/', async () => ({
     '/api/v1/chain/transactions',
   ],
 }));
-
-app.get('/debug/rpc-check', async () => {
-  try {
-    const res = await fetch(config.nodeUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'info_get_status', params: {} }),
-    });
-    const body = await res.text();
-    return { ok: true, status: res.status, bodyPreview: body.slice(0, 200), nodeUrl: config.nodeUrl };
-  } catch (err) {
-    return { ok: false, error: String(err), nodeUrl: config.nodeUrl };
-  }
-});
 
 app.get('/health', async () => ({
   status: 'ok',

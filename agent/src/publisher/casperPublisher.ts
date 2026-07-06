@@ -38,6 +38,11 @@ interface CasperPublisherConfig {
   /** Secondary signer used only as the on-chain "oracle owner" role for
    * register_oracle, since the contract rejects self-reports (owner === reporter). */
   oracleOwnerBotKeyPath?: string;
+  /** Optional CSPR.cloud API key, required when nodeUrl points at a
+   * *.cspr.cloud RPC gateway (returns 401 without it). Some cloud hosts
+   * (e.g. Render) cannot reach the public Casper Association RPC node
+   * directly, so the CSPR.cloud RPC gateway is used as a fallback there. */
+  csprCloudApiKey?: string;
 }
 
 /** Real on-chain governance proposal creation result. */
@@ -61,7 +66,11 @@ export class CasperPublisher {
 
   constructor(config: CasperPublisherConfig) {
     this.config = config;
-    this.rpcClient = new RpcClient(new HttpHandler(config.nodeUrl));
+    const handler = new HttpHandler(config.nodeUrl);
+    if (config.csprCloudApiKey) {
+      handler.setCustomHeaders({ Authorization: config.csprCloudApiKey });
+    }
+    this.rpcClient = new RpcClient(handler);
     this.privateKey = this.loadKey(config.deployerKeyPath, 'deployer');
     if (config.oracleOwnerBotKeyPath) {
       this.oracleOwnerKey = this.loadKey(config.oracleOwnerBotKeyPath, 'oracle-owner-bot');
