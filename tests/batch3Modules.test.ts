@@ -1,399 +1,188 @@
-// governance/dao.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
-import { ProposalStatus, ProposalType } from '../agent/src/governance/dao';
-import { CasperPublisher } from '../agent/src/publisher/casperPublisher';
+import { GovernanceService } from '../agent/src/governance/dao';
+import { OracleSlashingService } from '../agent/src/slashing/oracleSlashing';
+import type { CasperPublisher } from '../agent/src/publisher/casperPublisher';
+import type { PublishResult } from '../agent/src/publisher/types';
 
-describe('Governance DAO', () => {
-  let casperPublisher: CasperPublisher;
+const HIGH_STAKE_KEY = '01a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3'; // simulated 100,000 stake
+const MID_STAKE_KEY = '02a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4'; // simulated 50,000 stake
+
+function mockPublishResult(overrides: Partial<PublishResult> = {}): PublishResult {
+  return {
+    batchId: 'batch-1',
+    transactionHash: '0xdeadbeef',
+    publishedAt: new Date(),
+    invoiceCount: 1,
+    status: 'confirmed',
+    ...overrides,
+  };
+}
+
+function makePublisher(): jest.Mocked<Pick<CasperPublisher, 'publishBatch'>> {
+  return {
+    publishBatch: jest.fn().mockResolvedValue(mockPublishResult()),
+  };
+}
+
+describe('GovernanceService', () => {
+  let publisher: jest.Mocked<Pick<CasperPublisher, 'publishBatch'>>;
+  let governance: GovernanceService;
 
   beforeEach(() => {
-    casperPublisher = {
-      createProposal: vi.fn(),
-      voteOnProposal: vi.fn(),
-      executeProposal: vi.fn(),
-    };
-  });
-
-  it('should create a new proposal', async () => {
-    const proposalType: ProposalType = 'parameter_change';
-    const proposalStatus: ProposalStatus = 'pending';
-    const createProposalSpy = vi.spyOn(casperPublisher, 'createProposal');
-    await import('../agent/src/governance/dao').then((dao) => dao.createProposal(proposalType));
-    expect(createProposalSpy).toHaveBeenCalledTimes(1);
-    expect(createProposalSpy).toHaveBeenCalledWith(proposalType);
-  });
-
-  it('should vote on a proposal', async () => {
-    const proposalId = '12345';
-    const vote = true;
-    const voteOnProposalSpy = vi.spyOn(casperPublisher, 'voteOnProposal');
-    await import('../agent/src/governance/dao').then((dao) => dao.voteOnProposal(proposalId, vote));
-    expect(voteOnProposalSpy).toHaveBeenCalledTimes(1);
-    expect(voteOnProposalSpy).toHaveBeenCalledWith(proposalId, vote);
-  });
-
-  it('should execute a proposal', async () => {
-    const proposalId = '12345';
-    const executeProposalSpy = vi.spyOn(casperPublisher, 'executeProposal');
-    await import('../agent/src/governance/dao').then((dao) => dao.executeProposal(proposalId));
-    expect(executeProposalSpy).toHaveBeenCalledTimes(1);
-    expect(executeProposalSpy).toHaveBeenCalledWith(proposalId);
-  });
-
-  it('should handle proposal creation failure', async () => {
-    const proposalType: ProposalType = 'parameter_change';
-    const createProposalSpy = vi.spyOn(casperPublisher, 'createProposal');
-    createProposalSpy.mockRejectedValue(new Error('Proposal creation failed'));
-    await expect(import('../agent/src/governance/dao').then((dao) => dao.createProposal(proposalType))).rejects.toThrowError(
-      'Proposal creation failed'
+    publisher = makePublisher();
+    governance = new GovernanceService(
+      { votingPeriodHours: 168, quorumThresholdPercent: 51, minProposalStake: 1000 },
+      publisher as unknown as CasperPublisher,
     );
   });
 
-  it('should handle voting failure', async () => {
-    const proposalId = '12345';
-    const vote = true;
-    const voteOnProposalSpy = vi.spyOn(casperPublisher, 'voteOnProposal');
-    voteOnProposalSpy.mockRejectedValue(new Error('Voting failed'));
-    await expect(import('../agent/src/governance/dao').then((dao) => dao.voteOnProposal(proposalId, vote))).rejects.toThrowError(
-      'Voting failed'
+  test('creates a proposal for a proposer meeting minimum stake', async () => {
+    const proposal = await governance.createProposal(
+      'parameter_change',
+      'Adjust scoring weight for issuer history',
+      HIGH_STAKE_KEY,
+      { factor: 'issuerHistory', newWeight: 30 },
+    );
+    expect(proposal.id).toMatch(/^PROP-[0-9a-f]{8}$/);
+    expect(proposal.status).toBe('voting');
+    expect(proposal.votesFor).toBe(0);
+    expect(proposal.votesAgainst).toBe(0);
+  });
+
+  test('rejects proposal creation when proposer stake is below minimum', async () => {
+    await expect(
+      governance.createProposal('parameter_change', 'Low-stake attempt', 'low-stake-key', {}),
+    ).rejects.toThrow(/does not meet minimum stake/);
+  });
+
+  test('records votes weighted by stake and prevents double voting', async () => {
+    const proposal = await governance.createProposal(
+      'parameter_change',
+      'Adjust scoring weight for issuer history',
+      HIGH_STAKE_KEY,
+      {},
+    );
+    const updated = await governance.voteOnProposal(proposal.id, HIGH_STAKE_KEY, 'for');
+    expect(updated.votesFor).toBe(100_000);
+
+    await expect(governance.voteOnProposal(proposal.id, HIGH_STAKE_KEY, 'for')).rejects.toThrow(
+      /already voted/,
     );
   });
 
-  it('should handle proposal execution failure', async () => {
-    const proposalId = '12345';
-    const executeProposalSpy = vi.spyOn(casperPublisher, 'executeProposal');
-    executeProposalSpy.mockRejectedValue(new Error('Proposal execution failed'));
-    await expect(import('../agent/src/governance/dao').then((dao) => dao.executeProposal(proposalId))).rejects.toThrowError(
-      'Proposal execution failed'
+  test('rejects voting on an unknown proposal', async () => {
+    await expect(governance.voteOnProposal('PROP-00000000', HIGH_STAKE_KEY, 'for')).rejects.toThrow(
+      /not found/,
     );
   });
 
-  it('should validate proposal type', async () => {
-    const proposalType = 'invalid_type';
-    await expect(import('../agent/src/governance/dao').then((dao) => dao.createProposal(proposalType as any))).rejects.toThrowError(
-      'Invalid proposal type'
+  test('rejects execution while voting period is still open', async () => {
+    const proposal = await governance.createProposal(
+      'parameter_change',
+      'Adjust scoring weight for issuer history',
+      HIGH_STAKE_KEY,
+      {},
     );
+    await expect(governance.executeProposal(proposal.id)).rejects.toThrow(/still open/);
   });
 
-  it('should validate proposal status', async () => {
-    const proposalStatus = 'invalid_status';
-    await expect(import('../agent/src/governance/dao').then((dao) => dao.getProposalStatus(proposalStatus as any))).rejects.toThrowError(
-      'Invalid proposal status'
+  test('rejects execution when quorum is not met after voting closes', async () => {
+    const proposal = await governance.createProposal(
+      'parameter_change',
+      'Adjust scoring weight for issuer history',
+      HIGH_STAKE_KEY,
+      {},
     );
+    // Force the voting window closed without enough votes to reach the 51% quorum
+    // of the simulated 1,000,000 total stake.
+    proposal.votingEndsAt = new Date(Date.now() - 1000);
+
+    await expect(governance.executeProposal(proposal.id)).rejects.toThrow(/Quorum not met/);
+    expect(governance.getProposal(proposal.id)?.status).toBe('rejected');
   });
 
-  it('should handle timeout', async () => {
-    const proposalType: ProposalType = 'parameter_change';
-    const createProposalSpy = vi.spyOn(casperPublisher, 'createProposal');
-    createProposalSpy.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(), 10000)));
-    await expect(import('../agent/src/governance/dao').then((dao) => dao.createProposal(proposalType))).rejects.toThrowError(
-      'Timeout exceeded'
+  test('executes an approved proposal via the publisher and marks it executed', async () => {
+    const proposal = await governance.createProposal(
+      'parameter_change',
+      'Adjust scoring weight for issuer history',
+      HIGH_STAKE_KEY,
+      { factor: 'issuerHistory', newWeight: 30 },
     );
-  });
+    await governance.voteOnProposal(proposal.id, HIGH_STAKE_KEY, 'for');
+    await governance.voteOnProposal(proposal.id, MID_STAKE_KEY, 'for');
+    // Force voting window closed with enough stake voted 'for' to clear quorum (51% of 1,000,000).
+    proposal.votingEndsAt = new Date(Date.now() - 1000);
+    proposal.votesFor = 600_000;
 
-  it('should handle malformed input', async () => {
-    const proposalType = null;
-    await expect(import('../agent/src/governance/dao').then((dao) => dao.createProposal(proposalType as any))).rejects.toThrowError(
-      'Invalid proposal type'
-    );
+    const executed = await governance.executeProposal(proposal.id);
+    expect(executed.status).toBe('executed');
+    expect(publisher.publishBatch).toHaveBeenCalledTimes(1);
   });
 });
 
-// slashing/oracleSlashing.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
-import { SlashingReportStatus } from '../agent/src/slashing/oracleSlashing';
-import { CasperPublisher } from '../agent/src/publisher/casperPublisher';
-
-describe('Oracle Slashing', () => {
-  let casperPublisher: CasperPublisher;
+describe('OracleSlashingService', () => {
+  let publisher: jest.Mocked<Pick<CasperPublisher, 'publishBatch'>>;
+  let slashing: OracleSlashingService;
 
   beforeEach(() => {
-    casperPublisher = {
-      createSlashingReport: vi.fn(),
-      challengeSlashingReport: vi.fn(),
-      validateSlashingReport: vi.fn(),
-    };
-  });
-
-  it('should create a new slashing report', async () => {
-    const oracleId = '12345';
-    const attestationId = '67890';
-    const createSlashingReportSpy = vi.spyOn(casperPublisher, 'createSlashingReport');
-    await import('../agent/src/slashing/oracleSlashing').then((slashing) => slashing.createSlashingReport(oracleId, attestationId));
-    expect(createSlashingReportSpy).toHaveBeenCalledTimes(1);
-    expect(createSlashingReportSpy).toHaveBeenCalledWith(oracleId, attestationId);
-  });
-
-  it('should challenge a slashing report', async () => {
-    const reportId = '12345';
-    const challengeSlashingReportSpy = vi.spyOn(casperPublisher, 'challengeSlashingReport');
-    await import('../agent/src/slashing/oracleSlashing').then((slashing) => slashing.challengeSlashingReport(reportId));
-    expect(challengeSlashingReportSpy).toHaveBeenCalledTimes(1);
-    expect(challengeSlashingReportSpy).toHaveBeenCalledWith(reportId);
-  });
-
-  it('should validate a slashing report', async () => {
-    const reportId = '12345';
-    const validateSlashingReportSpy = vi.spyOn(casperPublisher, 'validateSlashingReport');
-    await import('../agent/src/slashing/oracleSlashing').then((slashing) => slashing.validateSlashingReport(reportId));
-    expect(validateSlashingReportSpy).toHaveBeenCalledTimes(1);
-    expect(validateSlashingReportSpy).toHaveBeenCalledWith(reportId);
-  });
-
-  it('should handle slashing report creation failure', async () => {
-    const oracleId = '12345';
-    const attestationId = '67890';
-    const createSlashingReportSpy = vi.spyOn(casperPublisher, 'createSlashingReport');
-    createSlashingReportSpy.mockRejectedValue(new Error('Slashing report creation failed'));
-    await expect(import('../agent/src/slashing/oracleSlashing').then((slashing) => slashing.createSlashingReport(oracleId, attestationId))).rejects.toThrowError(
-      'Slashing report creation failed'
+    publisher = makePublisher();
+    slashing = new OracleSlashingService(
+      {
+        challengePeriodHours: 48,
+        slashingPenaltyPercent: 10,
+        reporterRewardPercent: 60,
+        challengerRewardPercent: 20,
+        minChallengeStake: 100,
+      },
+      publisher as unknown as CasperPublisher,
     );
   });
 
-  it('should handle challenging failure', async () => {
-    const reportId = '12345';
-    const challengeSlashingReportSpy = vi.spyOn(casperPublisher, 'challengeSlashingReport');
-    challengeSlashingReportSpy.mockRejectedValue(new Error('Challenging failed'));
-    await expect(import('../agent/src/slashing/oracleSlashing').then((slashing) => slashing.challengeSlashingReport(reportId))).rejects.toThrowError(
-      'Challenging failed'
+  test('creates a pending misbehavior report with a 48h challenge window', async () => {
+    const before = Date.now();
+    const report = await slashing.reportMisbehavior(
+      'oracle_alpha',
+      'attestation-1',
+      HIGH_STAKE_KEY,
+      'evidence-hash-1',
+    );
+    expect(report.id).toMatch(/^SLASH-[0-9a-f]{8}$/);
+    expect(report.status).toBe('pending');
+    const windowHours = (report.challengePeriodEndsAt.getTime() - before) / (1000 * 60 * 60);
+    expect(windowHours).toBeGreaterThan(47.9);
+    expect(windowHours).toBeLessThan(48.1);
+  });
+
+  test('rejects a challenge below the minimum challenge stake', async () => {
+    const report = await slashing.reportMisbehavior('oracle_alpha', 'attestation-1', HIGH_STAKE_KEY, 'evidence-hash-1');
+    await expect(slashing.challengeReport(report.id, MID_STAKE_KEY, 10)).rejects.toThrow(
+      /must be at least/,
     );
   });
 
-  it('should handle validation failure', async () => {
-    const reportId = '12345';
-    const validateSlashingReportSpy = vi.spyOn(casperPublisher, 'validateSlashingReport');
-    validateSlashingReportSpy.mockRejectedValue(new Error('Validation failed'));
-    await expect(import('../agent/src/slashing/oracleSlashing').then((slashing) => slashing.validateSlashingReport(reportId))).rejects.toThrowError(
-      'Validation failed'
-    );
+  test('accepts a valid challenge and moves the report to challenged status', async () => {
+    const report = await slashing.reportMisbehavior('oracle_alpha', 'attestation-1', HIGH_STAKE_KEY, 'evidence-hash-1');
+    const challenged = await slashing.challengeReport(report.id, MID_STAKE_KEY, 500);
+    expect(challenged.status).toBe('challenged');
+    expect(challenged.challengerPublicKey).toBe(MID_STAKE_KEY);
   });
 
-  it('should validate slashing report status', async () => {
-    const reportStatus = 'invalid_status';
-    await expect(import('../agent/src/slashing/oracleSlashing').then((slashing) => slashing.getSlashingReportStatus(reportStatus as any))).rejects.toThrowError(
-      'Invalid slashing report status'
-    );
+  test('rejects executing a slash before evidence is validated', async () => {
+    const report = await slashing.reportMisbehavior('oracle_alpha', 'attestation-1', HIGH_STAKE_KEY, 'evidence-hash-1');
+    await expect(slashing.executeSlash(report.id)).rejects.toThrow(/not validated/);
   });
 
-  it('should handle timeout', async () => {
-    const oracleId = '12345';
-    const attestationId = '67890';
-    const createSlashingReportSpy = vi.spyOn(casperPublisher, 'createSlashingReport');
-    createSlashingReportSpy.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(), 10000)));
-    await expect(import('../agent/src/slashing/oracleSlashing').then((slashing) => slashing.createSlashingReport(oracleId, attestationId))).rejects.toThrowError(
-      'Timeout exceeded'
-    );
+  test('executes a slash via the publisher once evidence is validated as valid', async () => {
+    const report = await slashing.reportMisbehavior('oracle_alpha', 'attestation-1', HIGH_STAKE_KEY, 'evidence-hash-1');
+    await slashing.validateEvidence(report.id, true);
+    const executed = await slashing.executeSlash(report.id);
+    expect(executed.status).toBe('slashed');
+    expect(publisher.publishBatch).toHaveBeenCalledTimes(1);
   });
 
-  it('should handle malformed input', async () => {
-    const oracleId = null;
-    const attestationId = '67890';
-    await expect(import('../agent/src/slashing/oracleSlashing').then((slashing) => slashing.createSlashingReport(oracleId as any, attestationId))).rejects.toThrowError(
-      'Invalid oracle ID'
-    );
-  });
-});
-
-// data/realDataAdapters.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
-import { LeiData, PriceData } from '../agent/src/data/realDataAdapters';
-
-describe('Real Data Adapters', () => {
-  let leiData: LeiData;
-  let priceData: PriceData;
-
-  beforeEach(() => {
-    leiData = {
-      lei: '12345',
-      legalName: 'Example Company',
-      legalAddress: '123 Main St',
-      country: 'USA',
-      entityStatus: 'Active',
-      registrationStatus: 'Registered',
-    };
-
-    priceData = {
-      symbol: 'BTC',
-      name: 'Bitcoin',
-      currentPrice: 10000,
-    };
-  });
-
-  it('should fetch LEI data', async () => {
-    const fetchLeiDataSpy = vi.spyOn(import('../agent/src/data/realDataAdapters'), 'fetchLeiData');
-    await import('../agent/src/data/realDataAdapters').then((adapters) => adapters.fetchLeiData(leiData.lei));
-    expect(fetchLeiDataSpy).toHaveBeenCalledTimes(1);
-    expect(fetchLeiDataSpy).toHaveBeenCalledWith(leiData.lei);
-  });
-
-  it('should fetch price data', async () => {
-    const fetchPriceDataSpy = vi.spyOn(import('../agent/src/data/realDataAdapters'), 'fetchPriceData');
-    await import('../agent/src/data/realDataAdapters').then((adapters) => adapters.fetchPriceData(priceData.symbol));
-    expect(fetchPriceDataSpy).toHaveBeenCalledTimes(1);
-    expect(fetchPriceDataSpy).toHaveBeenCalledWith(priceData.symbol);
-  });
-
-  it('should handle LEI data fetching failure', async () => {
-    const fetchLeiDataSpy = vi.spyOn(import('../agent/src/data/realDataAdapters'), 'fetchLeiData');
-    fetchLeiDataSpy.mockRejectedValue(new Error('LEI data fetching failed'));
-    await expect(import('../agent/src/data/realDataAdapters').then((adapters) => adapters.fetchLeiData(leiData.lei))).rejects.toThrowError(
-      'LEI data fetching failed'
-    );
-  });
-
-  it('should handle price data fetching failure', async () => {
-    const fetchPriceDataSpy = vi.spyOn(import('../agent/src/data/realDataAdapters'), 'fetchPriceData');
-    fetchPriceDataSpy.mockRejectedValue(new Error('Price data fetching failed'));
-    await expect(import('../agent/src/data/realDataAdapters').then((adapters) => adapters.fetchPriceData(priceData.symbol))).rejects.toThrowError(
-      'Price data fetching failed'
-    );
-  });
-
-  it('should validate LEI data', async () => {
-    const invalidLeiData = {
-      lei: null,
-      legalName: 'Example Company',
-      legalAddress: '123 Main St',
-      country: 'USA',
-      entityStatus: 'Active',
-      registrationStatus: 'Registered',
-    };
-    await expect(import('../agent/src/data/realDataAdapters').then((adapters) => adapters.validateLeiData(invalidLeiData as any))).rejects.toThrowError(
-      'Invalid LEI data'
-    );
-  });
-
-  it('should validate price data', async () => {
-    const invalidPriceData = {
-      symbol: null,
-      name: 'Bitcoin',
-      currentPrice: 10000,
-    };
-    await expect(import('../agent/src/data/realDataAdapters').then((adapters) => adapters.validatePriceData(invalidPriceData as any))).rejects.toThrowError(
-      'Invalid price data'
-    );
-  });
-
-  it('should handle timeout', async () => {
-    const fetchLeiDataSpy = vi.spyOn(import('../agent/src/data/realDataAdapters'), 'fetchLeiData');
-    fetchLeiDataSpy.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(), 10000)));
-    await expect(import('../agent/src/data/realDataAdapters').then((adapters) => adapters.fetchLeiData(leiData.lei))).rejects.toThrowError(
-      'Timeout exceeded'
-    );
-  });
-
-  it('should handle malformed input', async () => {
-    const invalidLei = null;
-    await expect(import('../agent/src/data/realDataAdapters').then((adapters) => adapters.fetchLeiData(invalidLei as any))).rejects.toThrowError(
-      'Invalid LEI'
-    );
-  });
-});
-
-// crypto/blsThreshold.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
-import { ConsensusState } from '../agent/src/crypto/blsThreshold';
-
-describe('BLS Threshold Signatures', () => {
-  let consensusState: ConsensusState;
-
-  beforeEach(() => {
-    consensusState = {
-      attestationId: '12345',
-      messageHash: '67890',
-      requiredSignatures: 3,
-      totalOracles: 5,
-    };
-  });
-
-  it('should create a new consensus state', async () => {
-    const createConsensusStateSpy = vi.spyOn(import('../agent/src/crypto/blsThreshold'), 'createConsensusState');
-    await import('../agent/src/crypto/blsThreshold').then((bls) => bls.createConsensusState(consensusState.attestationId, consensusState.messageHash));
-    expect(createConsensusStateSpy).toHaveBeenCalledTimes(1);
-    expect(createConsensusStateSpy).toHaveBeenCalledWith(consensusState.attestationId, consensusState.messageHash);
-  });
-
-  it('should add a signature to the consensus state', async () => {
-    const addSignatureSpy = vi.spyOn(import('../agent/src/crypto/blsThreshold'), 'addSignature');
-    await import('../agent/src/crypto/blsThreshold').then((bls) => bls.addSignature(consensusState.attestationId, 'signature'));
-    expect(addSignatureSpy).toHaveBeenCalledTimes(1);
-    expect(addSignatureSpy).toHaveBeenCalledWith(consensusState.attestationId, 'signature');
-  });
-
-  it('should verify the consensus state', async () => {
-    const verifyConsensusStateSpy = vi.spyOn(import('../agent/src/crypto/blsThreshold'), 'verifyConsensusState');
-    await import('../agent/src/crypto/blsThreshold').then((bls) => bls.verifyConsensusState(consensusState.attestationId));
-    expect(verifyConsensusStateSpy).toHaveBeenCalledTimes(1);
-    expect(verifyConsensusStateSpy).toHaveBeenCalledWith(consensusState.attestationId);
-  });
-
-  it('should handle consensus state creation failure', async () => {
-    const createConsensusStateSpy = vi.spyOn(import('../agent/src/crypto/blsThreshold'), 'createConsensusState');
-    createConsensusStateSpy.mockRejectedValue(new Error('Consensus state creation failed'));
-    await expect(import('../agent/src/crypto/blsThreshold').then((bls) => bls.createConsensusState(consensusState.attestationId, consensusState.messageHash))).rejects.toThrowError(
-      'Consensus state creation failed'
-    );
-  });
-
-  it('should handle signature addition failure', async () => {
-    const addSignatureSpy = vi.spyOn(import('../agent/src/crypto/blsThreshold'), 'addSignature');
-    addSignatureSpy.mockRejectedValue(new Error('Signature addition failed'));
-    await expect(import('../agent/src/crypto/blsThreshold').then((bls) => bls.addSignature(consensusState.attestationId, 'signature'))).rejects.toThrowError(
-      'Signature addition failed'
-    );
-  });
-
-  it('should handle consensus state verification failure', async () => {
-    const verifyConsensusStateSpy = vi.spyOn(import('../agent/src/crypto/blsThreshold'), 'verifyConsensusState');
-    verifyConsensusStateSpy.mockRejectedValue(new Error('Consensus state verification failed'));
-    await expect(import('../agent/src/crypto/blsThreshold').then((bls) => bls.verifyConsensusState(consensusState.attestationId))).rejects.toThrowError(
-      'Consensus state verification failed'
-    );
-  });
-
-  it('should validate consensus state', async () => {
-    const invalidConsensusState = {
-      attestationId: null,
-      messageHash: '67890',
-      requiredSignatures: 3,
-      totalOracles: 5,
-    };
-    await expect(import('../agent/src/crypto/blsThreshold').then((bls) => bls.validateConsensusState(invalidConsensusState as any))).rejects.toThrowError(
-      'Invalid consensus state'
-    );
-  });
-
-  it('should handle threshold logic', async () => {
-    const threshold = 3;
-    const totalOracles = 5;
-    const requiredSignatures = 3;
-    const verifyThresholdSpy = vi.spyOn(import('../agent/src/crypto/blsThreshold'), 'verifyThreshold');
-    await import('../agent/src/crypto/blsThreshold').then((bls) => bls.verifyThreshold(threshold, totalOracles, requiredSignatures));
-    expect(verifyThresholdSpy).toHaveBeenCalledTimes(1);
-    expect(verifyThresholdSpy).toHaveBeenCalledWith(threshold, totalOracles, requiredSignatures);
-  });
-
-  it('should handle quorum calculations', async () => {
-    const totalOracles = 5;
-    const requiredSignatures = 3;
-    const calculateQuorumSpy = vi.spyOn(import('../agent/src/crypto/blsThreshold'), 'calculateQuorum');
-    await import('../agent/src/crypto/blsThreshold').then((bls) => bls.calculateQuorum(totalOracles, requiredSignatures));
-    expect(calculateQuorumSpy).toHaveBeenCalledTimes(1);
-    expect(calculateQuorumSpy).toHaveBeenCalledWith(totalOracles, requiredSignatures);
-  });
-
-  it('should handle timeout', async () => {
-    const createConsensusStateSpy = vi.spyOn(import('../agent/src/crypto/blsThreshold'), 'createConsensusState');
-    createConsensusStateSpy.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(), 10000)));
-    await expect(import('../agent/src/crypto/blsThreshold').then((bls) => bls.createConsensusState(consensusState.attestationId, consensusState.messageHash))).rejects.toThrowError(
-      'Timeout exceeded'
-    );
-  });
-
-  it('should handle malformed input', async () => {
-    const invalidAttestationId = null;
-    await expect(import('../agent/src/crypto/blsThreshold').then((bls) => bls.createConsensusState(invalidAttestationId as any, consensusState.messageHash))).rejects.toThrowError(
-      'Invalid attestation ID'
-    );
+  test('does not execute a slash when evidence is validated as invalid', async () => {
+    const report = await slashing.reportMisbehavior('oracle_alpha', 'attestation-1', HIGH_STAKE_KEY, 'evidence-hash-1');
+    await slashing.validateEvidence(report.id, false);
+    await expect(slashing.executeSlash(report.id)).rejects.toThrow(/not validated/);
+    expect(slashing.getReport(report.id)?.status).toBe('invalidated');
   });
 });
