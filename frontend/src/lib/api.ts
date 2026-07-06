@@ -73,6 +73,11 @@ export interface Attestation {
   timestamp: string;
   expires_at: string;
   metadata?: Record<string, any>;
+  /** Deterministic did:key-shaped holder identifier this attestation is
+   * bound to (application-layer soulbound binding - see backend
+   * didBinding.ts for what this is/isn't and why full on-chain owner
+   * enforcement is a tracked follow-up, not yet claimed as done). */
+  holder_did?: string;
 }
 
 export interface AttestationsResponse {

@@ -124,9 +124,14 @@ const SBT: React.FC = () => {
                 <p className="text-sm text-gray-600 mb-2">
                   Status: <span className="font-medium capitalize">{attestation.status}</span>
                 </p>
-                <p className="text-xs text-gray-500 mb-3">
+                <p className="text-xs text-gray-500 mb-1">
                   Issued: {new Date(attestation.timestamp).toLocaleDateString()} | Expires: {new Date(attestation.expires_at).toLocaleDateString()}
                 </p>
+                {attestation.holder_did && (
+                  <p className="text-xs text-gray-500 mb-3 font-mono truncate" title={attestation.holder_did}>
+                    Soulbound to: {attestation.holder_did}
+                  </p>
+                )}
                 <a
                   href={`${EXPLORER_BASE_URL}/deploy/${attestation.casper_block_hash}`}
                   target="_blank"
