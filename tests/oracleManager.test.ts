@@ -306,8 +306,9 @@ describe('OracleManager', () => {
     test('should compute median absolute deviation', () => {
       const values = [1, 2, 3, 4, 5];
       const median = 3;
+      // Absolute deviations from median 3: [2,1,0,1,2] -> sorted [0,1,1,2,2] -> median of those is 1
       const mad = oracleManager['computeMAD'](values, median);
-      expect(mad).toBe(1.6);
+      expect(mad).toBe(1);
     });
 
     test('should return 0 when all values are same', () => {
@@ -356,9 +357,13 @@ describe('OracleManager', () => {
       }).toThrow('Oracle oracle1 is suspended');
     });
 
-    test('should reset consecutive slashes when oracle is not slashed', () => {
+    test('should reset consecutive slashes on reactivation', () => {
+      // slashOracle() itself always represents a real slash (it always increments the
+      // counter) — the actual reset path is reactivateOracle() (operator/DAO clears an
+      // oracle's slash record after review) and the clean-oracle branch of
+      // autoSlashOutliers(). Exercise the public reactivateOracle() reset here.
       oracleManager['consecutiveSlashes'].set('oracle1', 2);
-      oracleManager['slashOracle']('oracle1', 0, 'test reason', 'evidence'); // Not a slash
+      oracleManager.reactivateOracle('oracle1');
       expect(oracleManager['consecutiveSlashes'].get('oracle1')).toBe(0);
     });
   });

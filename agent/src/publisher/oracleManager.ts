@@ -80,10 +80,10 @@ class OracleManager {
 
   registerOracle(id: string, name: string, endpoint: string, stake: number): OracleInfo {
     if (this.oracles.has(id)) {
-      throw new Error('oracle already registered');
+      throw new Error(`Oracle ${id} already registered`);
     }
     if (stake < this.config.minStake) {
-      throw new Error('stake below minimum');
+      throw new Error(`Stake ${stake} below minimum ${this.config.minStake}`);
     }
 
     const oracle: OracleInfo = {
@@ -122,10 +122,13 @@ class OracleManager {
 
     const oracle = this.oracles.get(report.oracleId);
     if (!oracle) {
-      throw new Error('oracle not found');
+      throw new Error(`Oracle ${report.oracleId} not found`);
+    }
+    if (oracle.status === 'suspended') {
+      throw new Error(`Oracle ${report.oracleId} is suspended`);
     }
     if (oracle.status !== 'active') {
-      throw new Error('oracle is not active');
+      throw new Error(`Oracle ${report.oracleId} is not active (status: ${oracle.status})`);
     }
 
     const assetReports = this.reports.get(report.assetId) || [];
@@ -257,6 +260,21 @@ class OracleManager {
     return this.oracles.get(id);
   }
 
+  /**
+   * Applies passive reputation decay for an oracle that hasn't reported recently:
+   * reputation erodes by `reputationDecayRate` (fraction) per call. Intended to be
+   * invoked periodically (e.g. from a scheduled sweep) per registered oracle so
+   * idle/unresponsive oracles don't retain an indefinitely high reputation while
+   * contributing nothing to consensus.
+   */
+  private applyReputationDecay(oracleId: string): void {
+    const oracle = this.oracles.get(oracleId);
+    if (!oracle) return;
+
+    oracle.reputation = Math.max(0, oracle.reputation * (1 - this.config.reputationDecayRate));
+    this.oracles.set(oracleId, oracle);
+  }
+
   updateReputation(oracleId: string, accurate: boolean): void {
     const oracle = this.oracles.get(oracleId);
     if (!oracle) return;
@@ -353,6 +371,7 @@ class OracleManager {
   }
 
   private computeMedian(prices: number[]): number {
+    if (prices.length === 0) return 0;
     const sorted = [...prices].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
 

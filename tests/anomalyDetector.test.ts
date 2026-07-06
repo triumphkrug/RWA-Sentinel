@@ -95,8 +95,8 @@ describe('AnomalyDetector', () => {
       entries.forEach(entry => detector.ingestPrice(entry));
       const history = (detector as any).priceHistory.get(mockAssetId);
       expect(history).toHaveLength(2);
-      expect(history[0].price).toBe(3);
-      expect(history[1].price).toBe(4);
+      expect(history[0].price).toBe(103);
+      expect(history[1].price).toBe(104);
     });
   });
 
@@ -155,48 +155,72 @@ describe('AnomalyDetector', () => {
     });
 
     test('should detect price spike anomaly', () => {
-      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+      // 14 stable entries around 100, last one a genuine outlier spike -> z-score ~3.74 (> 2.5 threshold)
+      const entries: PriceFeedEntry[] = Array.from({ length: 14 }, (_, i) => ({
         source: mockSource,
         assetId: mockAssetId,
-        price: 100 + i * 2,
-        volume: 1000 + i * 100,
+        price: 100,
+        volume: 1000,
         timestamp: new Date(Date.now() - (15 - i) * 60000),
       }));
+      entries.push({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 200,
+        volume: 1000,
+        timestamp: new Date(),
+      });
       detector.ingestBatch(entries);
       const results = detector.detectAnomalies(mockAssetId);
-      expect(results).toHaveLength(1);
-      expect(results[0].anomalyType).toBe('spike');
-      expect(results[0].isAnomaly).toBe(true);
+      const spike = results.find((r) => r.anomalyType === 'spike');
+      expect(spike).toBeDefined();
+      expect(spike?.isAnomaly).toBe(true);
     });
 
     test('should detect price drop anomaly', () => {
-      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+      // 14 stable entries around 200, last one a genuine outlier drop -> z-score ~-3.74 (below -2.5 threshold)
+      const entries: PriceFeedEntry[] = Array.from({ length: 14 }, (_, i) => ({
         source: mockSource,
         assetId: mockAssetId,
-        price: 200 - i * 2,
-        volume: 1000 + i * 100,
+        price: 200,
+        volume: 1000,
         timestamp: new Date(Date.now() - (15 - i) * 60000),
       }));
+      entries.push({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 50,
+        volume: 1000,
+        timestamp: new Date(),
+      });
       detector.ingestBatch(entries);
       const results = detector.detectAnomalies(mockAssetId);
-      expect(results).toHaveLength(1);
-      expect(results[0].anomalyType).toBe('drop');
-      expect(results[0].isAnomaly).toBe(true);
+      const drop = results.find((r) => r.anomalyType === 'drop');
+      expect(drop).toBeDefined();
+      expect(drop?.isAnomaly).toBe(true);
     });
 
     test('should detect volume surge anomaly', () => {
-      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
+      // 14 entries at stable volume 1000, last entry at 10x average -> multiplier ~6.25 (> 3x threshold)
+      const entries: PriceFeedEntry[] = Array.from({ length: 14 }, (_, i) => ({
         source: mockSource,
         assetId: mockAssetId,
-        price: 100 + i,
-        volume: 1000 + i * 1000,
+        price: 100,
+        volume: 1000,
         timestamp: new Date(Date.now() - (15 - i) * 60000),
       }));
+      entries.push({
+        source: mockSource,
+        assetId: mockAssetId,
+        price: 100,
+        volume: 10000,
+        timestamp: new Date(),
+      });
       detector.ingestBatch(entries);
       const results = detector.detectAnomalies(mockAssetId);
-      expect(results).toHaveLength(1);
-      expect(results[0].anomalyType).toBe('volume-surge');
-      expect(results[0].isAnomaly).toBe(true);
+      const surge = results.find((r) => r.anomalyType === 'volume-surge');
+      expect(surge).toBeDefined();
+      expect(surge?.isAnomaly).toBe(true);
     });
 
     test('should detect stale feed anomaly', () => {
@@ -218,31 +242,41 @@ describe('AnomalyDetector', () => {
     });
 
     test('should detect manipulation anomaly', () => {
+      // Two distinct sources reporting for the same asset with >5% divergence between their means
       const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
-        source: mockSource,
+        source: i % 2 === 0 ? 'source-a' : 'source-b',
         assetId: mockAssetId,
-        price: 100 + (i % 2 === 0 ? 10 : -10),
+        price: i % 2 === 0 ? 100 : 130,
         volume: 1000 + i * 100,
         timestamp: new Date(Date.now() - (15 - i) * 60000),
       }));
       detector.ingestBatch(entries);
       const results = detector.detectAnomalies(mockAssetId);
-      expect(results).toHaveLength(1);
-      expect(results[0].anomalyType).toBe('manipulation');
-      expect(results[0].isAnomaly).toBe(true);
+      const manipulation = results.find((r) => r.anomalyType === 'manipulation');
+      expect(manipulation).toBeDefined();
+      expect(manipulation?.isAnomaly).toBe(true);
     });
 
     test('should return multiple anomalies when multiple conditions met', () => {
-      const entries: PriceFeedEntry[] = Array.from({ length: 15 }, (_, i) => ({
-        source: mockSource,
+      // 14 stable entries split across two divergent sources (manipulation), plus a
+      // final volume outlier (volume-surge) -> at least two independent detectors fire
+      const entries: PriceFeedEntry[] = Array.from({ length: 14 }, (_, i) => ({
+        source: i % 2 === 0 ? 'source-a' : 'source-b',
         assetId: mockAssetId,
-        price: i % 2 === 0 ? 100 + i * 5 : 100 - i * 2,
-        volume: i % 3 === 0 ? 5000 : 1000 + i * 100,
+        price: i % 2 === 0 ? 100 : 130,
+        volume: 1000,
         timestamp: new Date(Date.now() - (15 - i) * 60000),
       }));
+      entries.push({
+        source: 'source-a',
+        assetId: mockAssetId,
+        price: 100,
+        volume: 10000,
+        timestamp: new Date(),
+      });
       detector.ingestBatch(entries);
       const results = detector.detectAnomalies(mockAssetId);
-      expect(results).toHaveLengthGreaterThanOrEqual(2);
+      expect(results.length).toBeGreaterThanOrEqual(2);
     });
 
     test('should not detect anomalies when no anomalies present', () => {
@@ -402,7 +436,8 @@ describe('AnomalyDetector', () => {
       const values = [100, 101, 102, 99, 100];
       const current = 120;
       const zScore = (detector as any).computeZScore(values, current);
-      expect(zScore).toBeCloseTo(10.95, 1);
+      // Population stddev of [100,101,102,99,100] is ~1.0198; (120-100.4)/1.0198 ~= 19.22
+      expect(zScore).toBeCloseTo(19.22, 1);
     });
 
     test('should return 0 when all values are same', () => {

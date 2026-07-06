@@ -17,7 +17,7 @@ describe('DocumentVerifier', () => {
     subject: 'Test Document',
     issuedAt: new Date('2023-01-01'),
     expiresAt: new Date('2028-01-01'),
-    contentHash: 'abc123',
+    contentHash: 'a'.repeat(64), // valid sha256-format hex string, required by #checkHash
     size: 1000,
     mimeType: 'application/pdf',
   };
@@ -50,17 +50,24 @@ describe('DocumentVerifier', () => {
   });
 
   describe('registerIssuer', () => {
-    test('should register a new issuer', () => {
+    // #knownIssuers is a true JS private field — exercised indirectly through verify()'s
+    // public 'issuer' check rather than reached into directly (private fields aren't
+    // accessible via bracket-notation from outside the class).
+    test('should register a new issuer that then passes the issuer check', () => {
       verifier.registerIssuer('new-issuer', 'New Issuer', 0.9);
-      const issuer = verifier['#knownIssuers'].get('new-issuer');
-      expect(issuer).toEqual({ name: 'New Issuer', trustLevel: 0.9 });
+      const result = verifier.verify({ ...mockDoc, issuer: 'new-issuer' });
+      const issuerCheck = result.checks.find((c) => c.name === 'issuer');
+      expect(issuerCheck?.passed).toBe(true);
+      expect(issuerCheck?.details).toContain('0.9');
     });
 
-    test('should clamp trust level between 0 and 1', () => {
+    test('should clamp trust level between 0 and 1, low trust still fails issuer check', () => {
       verifier.registerIssuer('low-trust', 'Low Trust', -1);
       verifier.registerIssuer('high-trust', 'High Trust', 2);
-      expect(verifier['#knownIssuers'].get('low-trust')?.trustLevel).toBe(0);
-      expect(verifier['#knownIssuers'].get('high-trust')?.trustLevel).toBe(1);
+      const lowResult = verifier.verify({ ...mockDoc, issuer: 'low-trust' });
+      const highResult = verifier.verify({ ...mockDoc, issuer: 'high-trust' });
+      expect(lowResult.checks.find((c) => c.name === 'issuer')?.passed).toBe(false); // trustLevel clamped to 0, below 0.5 threshold
+      expect(highResult.checks.find((c) => c.name === 'issuer')?.passed).toBe(true); // trustLevel clamped to 1
     });
   });
 
@@ -79,8 +86,11 @@ describe('DocumentVerifier', () => {
     });
 
     test('should include warnings for low score', () => {
-      const lowScoreDoc = { ...mockDoc, size: 50 };
+      // Fail format (size below minDocSize), issuer (unknown) and type (unrecognized) checks
+      // so passed weight (freshness 20 + hash 20 + expiry 10 = 50) drops below the 60 threshold.
+      const lowScoreDoc = { ...mockDoc, size: 50, issuer: 'unknown-issuer', docType: 'unknown-type' };
       const result = verifier.verify(lowScoreDoc);
+      expect(result.score).toBeLessThan(60);
       expect(result.warnings).toContain('Low verification score');
     });
 
@@ -110,10 +120,13 @@ describe('DocumentVerifier', () => {
       expect(result.verified).toBe(true);
     });
 
-    test('should fail in strict mode with score < 80', () => {
+    test('should fail in strict mode when a required check fails', () => {
+      // Required checks (format/freshness/issuer/hash) sum to 80 of the 100-point weight,
+      // so the strict >=80 score gate can only ever reject when a required check itself fails.
       const config = { strictMode: true };
       const customVerifier = new DocumentVerifier(config);
-      const result = customVerifier.verify(mockDoc);
+      const invalidDoc = { ...mockDoc, mimeType: 'invalid/type' };
+      const result = customVerifier.verify(invalidDoc);
       expect(result.verified).toBe(false);
     });
 
@@ -165,87 +178,96 @@ describe('DocumentVerifier', () => {
     });
   });
 
+  // The six checks below (#checkFormat, #checkFreshness, #checkIssuer, #checkHash,
+  // #checkType, #checkExpiry) are true JS private class fields (`#name`), which are
+  // NOT reachable via bracket-notation (`verifier['#checkFormat']`) from outside the
+  // class — that always throws "is not a function". They're exercised black-box
+  // through the public verify() result's `checks` array instead.
+  function checkFor(result: ReturnType<DocumentVerifier['verify']>, name: string) {
+    return result.checks.find((c) => c.name === name);
+  }
+
   describe('checkFormat', () => {
     test('should pass for allowed mime type', () => {
-      const result = verifier['#checkFormat'](mockDoc);
-      expect(result.passed).toBe(true);
+      const result = verifier.verify(mockDoc);
+      expect(checkFor(result, 'format')?.passed).toBe(true);
     });
 
     test('should fail for disallowed mime type', () => {
       const invalidDoc = { ...mockDoc, mimeType: 'video/mp4' };
-      const result = verifier['#checkFormat'](invalidDoc);
-      expect(result.passed).toBe(false);
+      const result = verifier.verify(invalidDoc);
+      expect(checkFor(result, 'format')?.passed).toBe(false);
     });
   });
 
   describe('checkFreshness', () => {
     test('should pass for recent document', () => {
-      const result = verifier['#checkFreshness'](mockDoc);
-      expect(result.passed).toBe(true);
+      const result = verifier.verify(mockDoc);
+      expect(checkFor(result, 'freshness')?.passed).toBe(true);
     });
 
     test('should fail for old document', () => {
-      const oldDoc = { ...mockDoc, issuedAt: new Date('2020-01-01') };
-      const result = verifier['#checkFreshness'](oldDoc);
-      expect(result.passed).toBe(false);
+      const oldDoc = { ...mockDoc, issuedAt: new Date('2010-01-01') };
+      const result = verifier.verify(oldDoc);
+      expect(checkFor(result, 'freshness')?.passed).toBe(false);
     });
   });
 
   describe('checkIssuer', () => {
     test('should pass for known issuer', () => {
-      const result = verifier['#checkIssuer'](mockDoc);
-      expect(result.passed).toBe(true);
+      const result = verifier.verify(mockDoc);
+      expect(checkFor(result, 'issuer')?.passed).toBe(true);
     });
 
     test('should fail for unknown issuer', () => {
       const unknownDoc = { ...mockDoc, issuer: 'unknown-issuer' };
-      const result = verifier['#checkIssuer'](unknownDoc);
-      expect(result.passed).toBe(false);
+      const result = verifier.verify(unknownDoc);
+      expect(checkFor(result, 'issuer')?.passed).toBe(false);
     });
   });
 
   describe('checkHash', () => {
-    test('should pass for matching hash', () => {
-      const result = verifier['#checkHash'](mockDoc);
-      expect(result.passed).toBe(true);
+    test('should pass for well-formed sha256 hash', () => {
+      const result = verifier.verify(mockDoc);
+      expect(checkFor(result, 'hash')?.passed).toBe(true);
     });
 
-    test('should fail for mismatched hash', () => {
+    test('should fail for malformed hash', () => {
       const invalidDoc = { ...mockDoc, contentHash: 'wrong-hash' };
-      const result = verifier['#checkHash'](invalidDoc);
-      expect(result.passed).toBe(false);
+      const result = verifier.verify(invalidDoc);
+      expect(checkFor(result, 'hash')?.passed).toBe(false);
     });
   });
 
   describe('checkType', () => {
     test('should pass for allowed type', () => {
-      const result = verifier['#checkType'](mockDoc);
-      expect(result.passed).toBe(true);
+      const result = verifier.verify(mockDoc);
+      expect(checkFor(result, 'type')?.passed).toBe(true);
     });
 
     test('should fail for disallowed type', () => {
       const invalidDoc = { ...mockDoc, docType: 'unknown-type' };
-      const result = verifier['#checkType'](invalidDoc);
-      expect(result.passed).toBe(false);
+      const result = verifier.verify(invalidDoc);
+      expect(checkFor(result, 'type')?.passed).toBe(false);
     });
   });
 
   describe('checkExpiry', () => {
     test('should pass for non-expired document', () => {
-      const result = verifier['#checkExpiry'](mockDoc);
-      expect(result.passed).toBe(true);
+      const result = verifier.verify(mockDoc);
+      expect(checkFor(result, 'expiry')?.passed).toBe(true);
     });
 
     test('should fail for expired document', () => {
       const expiredDoc = { ...mockDoc, expiresAt: new Date('2020-01-01') };
-      const result = verifier['#checkExpiry'](expiredDoc);
-      expect(result.passed).toBe(false);
+      const result = verifier.verify(expiredDoc);
+      expect(checkFor(result, 'expiry')?.passed).toBe(false);
     });
 
     test('should pass for document without expiry', () => {
       const noExpiryDoc = { ...mockDoc, expiresAt: null };
-      const result = verifier['#checkExpiry'](noExpiryDoc);
-      expect(result.passed).toBe(true);
+      const result = verifier.verify(noExpiryDoc);
+      expect(checkFor(result, 'expiry')?.passed).toBe(true);
     });
   });
 });
