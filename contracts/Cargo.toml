@@ -7,3 +7,15 @@ members = [
     "tests",
 ]
 resolver = "2"
+
+# NOTE: profile settings must live at the workspace root - per-package
+# [profile.release] blocks are silently ignored by Cargo otherwise (root
+# cause finding from the WASM-install diagnostic session: contracts were
+# never actually being built with LTO/opt-level=z despite each Cargo.toml
+# declaring it, which is part of why install WASM sizes exceeded the
+# network's smallest wasm lane cap).
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+panic = "abort"
