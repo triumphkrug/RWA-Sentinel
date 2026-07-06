@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch agent/src/index.ts",
-    "test": "jest",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint agent/src --ext .ts",
     "lint:fix": "eslint agent/src --ext .ts --fix",
@@ -31,6 +31,7 @@
     "typescript": "^5.4.0"
   },
   "dependencies": {
+    "@noble/curves": "^2.2.0",
     "casper-js-sdk": "^5.0.12",
     "fastify": "^4.26.0",
     "pg": "^8.22.0",
