@@ -1,38 +1,50 @@
 /**
- * Publishes attestations to Casper Network via RPC.
+ * Publishes attestations and executes governance/slashing actions on the
+ * Casper Network via the official casper-js-sdk.
  *
- * Uses NOWNodes as the primary RPC provider with automatic
- * fallback to the default node URL when NOWNodes is unavailable.
- * Uses the account_put_deploy JSON-RPC call to submit deploys
- * to the attestation-store smart contract.
+ * Uses `ContractCallBuilder` + `RpcClient.putTransaction` to build and sign
+ * real, verifiable Casper transactions against the deployed attestation-store,
+ * governance-dao, and oracle-slashing contracts. Falls back to a locally
+ * computed, clearly-labeled `unconfirmed-*` hash only when no deployer key
+ * is configured (e.g. local dev without secrets) or the RPC call itself
+ * fails — callers must treat that prefix as "not confirmed on-chain".
  */
 
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import casperSdk from 'casper-js-sdk';
 import type { PublishRequest, PublishResult } from './types.js';
 
-const NOWNODES_URL = 'https://casper.nownodes.io/rpc';
+const {
+  PrivateKey,
+  KeyAlgorithm,
+  HttpHandler,
+  RpcClient,
+  ContractCallBuilder,
+  Args,
+  CLValue,
+  CLTypeString,
+  CLTypeUInt64,
+} = casperSdk;
 
 interface CasperPublisherConfig {
   nodeUrl: string;
   chainName: string;
-  contractHash: string;
+  contractHash: string; // attestation-store
   deployerKeyPath: string;
-  nownodesApiKey?: string;
+  governanceContractHash?: string;
+  slashingContractHash?: string;
 }
 
 export class CasperPublisher {
   private readonly config: CasperPublisherConfig;
   private readonly pendingTxs = new Map<string, PublishResult>();
-  private deployerKey: string | null = null;
-  private readonly nownodesKey: string;
+  private privateKey: InstanceType<typeof PrivateKey> | null = null;
+  private readonly rpcClient: InstanceType<typeof RpcClient>;
 
   constructor(config: CasperPublisherConfig) {
     this.config = config;
-    this.nownodesKey = config.nownodesApiKey || process.env.NOWNODES_API_KEY || '';
-    if (this.nownodesKey) {
-      console.log('[publisher] NOWNodes RPC configured as primary provider');
-    }
+    this.rpcClient = new RpcClient(new HttpHandler(config.nodeUrl));
     this.loadKey();
   }
 
@@ -44,15 +56,17 @@ export class CasperPublisher {
         console.warn('[publisher] invalid deployer key path');
         return;
       }
-      this.deployerKey = readFileSync(keyPath, 'utf-8').trim();
-      console.log('[publisher] deployer key loaded');
+      const pem = readFileSync(keyPath, 'utf-8');
+      this.privateKey = PrivateKey.fromPem(pem, KeyAlgorithm.SECP256K1);
+      console.log('[publisher] deployer key loaded, account:', this.privateKey.publicKey.toHex());
     } catch {
-      console.warn('[publisher] no deployer key found, submits will generate deterministic hashes');
+      console.warn('[publisher] no deployer key found, submits will generate deterministic unconfirmed hashes');
     }
   }
 
   /**
-   * Publish a batch of attestations to the on-chain attestation-store contract.
+   * Publish a batch of attestations to the on-chain attestation-store contract
+   * (`batch_attest` entry point).
    */
   async publishBatch(request: PublishRequest): Promise<PublishResult> {
     if (request.assetIds.length === 0) {
@@ -62,23 +76,38 @@ export class CasperPublisher {
       throw new Error('Batch size exceeds maximum of 10');
     }
 
-    const deployPayload = this.buildDeploy(request);
-    const deployHash = this.hashPayload(deployPayload);
+    const args = Args.fromMap({
+      asset_ids: CLValue.newCLList(
+        CLTypeString,
+        request.assetIds.map((id) => CLValue.newCLString(id))
+      ),
+      trust_scores: CLValue.newCLList(
+        CLTypeUInt64,
+        request.trustScores.map((s) => CLValue.newCLUint64(s))
+      ),
+      factors_hashes: CLValue.newCLList(
+        CLTypeString,
+        request.factorsHashes.map((h) => CLValue.newCLString(h))
+      ),
+      evidence_hashes: CLValue.newCLList(
+        CLTypeString,
+        request.evidenceHashes.map((h) => CLValue.newCLString(h))
+      ),
+    });
 
-    let transactionHash: string;
-    try {
-      transactionHash = await this.submitDeploy(deployPayload);
-    } catch (err) {
-      console.warn('[publisher] rpc submit failed, using computed hash:', err);
-      transactionHash = deployHash;
-    }
+    const transactionHash = await this.callContract(
+      this.config.contractHash,
+      'batch_attest',
+      args,
+      this.buildLocalHashPayload(request)
+    );
 
     const result: PublishResult = {
       batchId: `BATCH-${randomUUID().slice(0, 8)}`,
       transactionHash,
       publishedAt: new Date(),
       invoiceCount: request.assetIds.length,
-      status: 'submitted',
+      status: transactionHash.startsWith('unconfirmed-') ? 'failed' : 'submitted',
     };
 
     this.pendingTxs.set(result.batchId, result);
@@ -86,128 +115,108 @@ export class CasperPublisher {
   }
 
   /**
-   * Check the status of a previously submitted publish transaction.
+   * Execute an approved governance proposal on-chain via the governance-dao
+   * contract's `execute_proposal` entry point.
+   */
+  async executeGovernanceProposal(proposalId: number): Promise<string> {
+    if (!this.config.governanceContractHash) {
+      throw new Error('governanceContractHash not configured');
+    }
+    const args = Args.fromMap({ proposal_id: CLValue.newCLUint64(proposalId) });
+    return this.callContract(
+      this.config.governanceContractHash,
+      'execute_proposal',
+      args,
+      { proposalId }
+    );
+  }
+
+  /**
+   * Execute an oracle slash on-chain via the oracle-slashing contract's
+   * `execute_slash` entry point.
+   */
+  async executeOracleSlash(oracleId: string): Promise<string> {
+    if (!this.config.slashingContractHash) {
+      throw new Error('slashingContractHash not configured');
+    }
+    const args = Args.fromMap({ oracle_id: CLValue.newCLString(oracleId) });
+    return this.callContract(
+      this.config.slashingContractHash,
+      'execute_slash',
+      args,
+      { oracleId }
+    );
+  }
+
+  /**
+   * Check the status of a previously submitted publish transaction by
+   * querying its confirmed on-chain execution result.
    */
   async checkStatus(batchId: string): Promise<PublishResult | null> {
     const result = this.pendingTxs.get(batchId);
     if (!result) return null;
+    if (result.transactionHash.startsWith('unconfirmed-')) return result;
 
     try {
-      const data = await this.rpcCall({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'info_get_deploy',
-        params: { deploy_hash: result.transactionHash },
-      });
-      if (data.result) {
-        result.status = 'confirmed';
-      }
+      const info = await this.rpcClient.getTransactionByTransactionHash(result.transactionHash);
+      const errorMessage = (
+        info as unknown as { executionInfo?: { executionResult?: { errorMessage?: string } } }
+      ).executionInfo?.executionResult?.errorMessage;
+      result.status = errorMessage ? 'failed' : 'confirmed';
     } catch {
       /* node unreachable, keep current status */
     }
     return result;
   }
 
-  private buildDeploy(request: PublishRequest): Record<string, unknown> {
-    const args = [];
-    for (let i = 0; i < request.assetIds.length; i++) {
-      args.push({
-        asset_id: request.assetIds[i],
-        trust_score: request.trustScores[i],
-        factors_hash: request.factorsHashes[i],
-        evidence_hash: request.evidenceHashes[i],
-      });
+  /**
+   * Builds, signs, and submits a real Casper transaction calling the given
+   * contract entry point. Returns the confirmed transaction hash, or a
+   * clearly-labeled `unconfirmed-<sha256>` fallback if no key is configured
+   * or submission fails.
+   */
+  private async callContract(
+    contractHash: string,
+    entryPoint: string,
+    args: InstanceType<typeof Args>,
+    localHashSeed: unknown
+  ): Promise<string> {
+    const localHash = this.hashPayload({ contractHash, entryPoint, localHashSeed });
+
+    if (!this.privateKey) {
+      console.warn(`[publisher] no deployer key configured; using local hash ${localHash.slice(0, 16)}… (unconfirmed)`);
+      return `unconfirmed-${localHash}`;
     }
 
-    return {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'account_put_deploy',
-      params: {
-        deploy: {
-          header: {
-            account: this.deployerKey
-              ? 'from-key'
-              : '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79',
-            timestamp: new Date().toISOString(),
-            ttl: '30m',
-            gas_price: 1,
-            chain_name: this.config.chainName,
-          },
-          payment: {
-            ModuleBytes: {
-              module_bytes: '',
-              args: [
-                ['amount', { cl_type: 'U512', bytes: '0500e8764817', parsed: '100000000000' }],
-              ],
-            },
-          },
-          session: {
-            StoredContractByHash: {
-              hash: this.config.contractHash,
-              entry_point: 'batch_attest',
-              args: [
-                ['batch_data', { cl_type: 'String', bytes: '', parsed: JSON.stringify(args) }],
-                ['count', { cl_type: 'U32', bytes: '', parsed: request.assetIds.length }],
-              ],
-            },
-          },
-        },
-      },
-    };
+    try {
+      const transaction = new ContractCallBuilder()
+        .byHash(contractHash)
+        .entryPoint(entryPoint)
+        .runtimeArgs(args)
+        .from(this.privateKey.publicKey)
+        .chainName(this.config.chainName)
+        .payment(30_000_000_000) // 30 CSPR, generous for contract-call gas
+        .build();
+
+      transaction.sign(this.privateKey);
+      const result = await this.rpcClient.putTransaction(transaction);
+      return result.transactionHash.toHex();
+    } catch (err) {
+      console.warn(`[publisher] rpc submit failed for ${entryPoint}, using computed hash:`, err);
+      return `unconfirmed-${localHash}`;
+    }
   }
 
-  private hashPayload(payload: Record<string, unknown>): string {
+  private hashPayload(payload: unknown): string {
     return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
   }
 
-  /**
-   * Send a JSON-RPC request. Tries NOWNodes first, then falls back
-   * to the configured default node URL.
-   */
-  private async rpcCall(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
-    if (this.nownodesKey) {
-      try {
-        const resp = await fetch(NOWNODES_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'api-key': this.nownodesKey,
-          },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(15000),
-        });
-        const data = (await resp.json()) as Record<string, unknown>;
-        if (!data.error) return data;
-        console.warn('[publisher] NOWNodes RPC error, falling back:', data.error);
-      } catch (err) {
-        console.warn('[publisher] NOWNodes unavailable, falling back to default node:', err);
-      }
-    }
-    // Fallback to default node
-    const resp = await fetch(this.config.nodeUrl + '/rpc', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(15000),
-    });
-    return (await resp.json()) as Record<string, unknown>;
-  }
-
-  private async submitDeploy(payload: Record<string, unknown>): Promise<string> {
-    const data = (await this.rpcCall(payload)) as {
-      result?: { deploy_hash?: string };
-      error?: { message: string };
+  private buildLocalHashPayload(request: PublishRequest): unknown {
+    return {
+      assetIds: request.assetIds,
+      trustScores: request.trustScores,
+      factorsHashes: request.factorsHashes,
+      evidenceHashes: request.evidenceHashes,
     };
-    if (data.error) {
-      throw new Error(`RPC error: ${data.error.message}`);
-    }
-    if (data.result?.deploy_hash) {
-      return data.result.deploy_hash;
-    }
-    // Fallback: generate local hash but mark as unconfirmed
-    const localHash = this.hashPayload(payload);
-    console.warn(`Deploy submitted but no deploy_hash returned; using local hash ${localHash.slice(0, 16)}… (unconfirmed)`);
-    return `unconfirmed-${localHash}`;
   }
 }
