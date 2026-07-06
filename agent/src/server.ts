@@ -52,7 +52,7 @@ const governanceService = new GovernanceService({
 }, publisher);
 
 const slashingService = new OracleSlashingService({
-  challengePeriodHours: 72,
+  challengePeriodHours: 48,
   slashingPenaltyPercent: 10,
   reporterRewardPercent: 60,
   challengerRewardPercent: 20,
