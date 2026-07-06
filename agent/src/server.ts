@@ -58,7 +58,13 @@ let store: PgStore | null = null;
 
 // Instantiate modular services
 const governanceService = new GovernanceService({
-  votingPeriodHours: 168, // 7 days
+  // Shortened from the 7-day production default to a 2-day window for this
+  // deployment: a hackathon judge testing the live demo needs to see a
+  // proposal go from created -> voted -> executed within the judging
+  // window, which a 7-day production-scale voting period would never
+  // allow to complete live. 48h also matches the oracle-slashing contract's
+  // challenge period, keeping the two governance timers consistent.
+  votingPeriodHours: 48,
   quorumThresholdPercent: 51,
   minProposalStake: 1000,
 }, publisher);
