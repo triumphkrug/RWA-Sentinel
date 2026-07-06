@@ -17,18 +17,39 @@ function mockPublishResult(overrides: Partial<PublishResult> = {}): PublishResul
   };
 }
 
-function makePublisher(): jest.Mocked<Pick<CasperPublisher, 'publishBatch'>> {
+type GovernancePublisherMock = Pick<
+  CasperPublisher,
+  'publishBatch' | 'createGovernanceProposalOnChain' | 'voteOnChainProposal' | 'executeGovernanceProposal'
+>;
+type SlashingPublisherMock = Pick<
+  CasperPublisher,
+  'publishBatch' | 'ensureOracleRegisteredOnChain' | 'reportViolationOnChain' | 'executeOracleSlash'
+>;
+
+function makeGovernancePublisher(): jest.Mocked<GovernancePublisherMock> {
   return {
     publishBatch: jest.fn().mockResolvedValue(mockPublishResult()),
+    createGovernanceProposalOnChain: jest.fn().mockResolvedValue({ proposalId: 1, transactionHash: '0xonchainprop' }),
+    voteOnChainProposal: jest.fn().mockResolvedValue('0xonchainvote'),
+    executeGovernanceProposal: jest.fn().mockResolvedValue('0xonchainexec'),
+  };
+}
+
+function makeSlashingPublisher(): jest.Mocked<SlashingPublisherMock> {
+  return {
+    publishBatch: jest.fn().mockResolvedValue(mockPublishResult()),
+    ensureOracleRegisteredOnChain: jest.fn().mockResolvedValue('0xonchainregister'),
+    reportViolationOnChain: jest.fn().mockResolvedValue({ reportId: 'report_0', transactionHash: '0xonchainreport' }),
+    executeOracleSlash: jest.fn().mockResolvedValue('0xonchainslash'),
   };
 }
 
 describe('GovernanceService', () => {
-  let publisher: jest.Mocked<Pick<CasperPublisher, 'publishBatch'>>;
+  let publisher: jest.Mocked<GovernancePublisherMock>;
   let governance: GovernanceService;
 
   beforeEach(() => {
-    publisher = makePublisher();
+    publisher = makeGovernancePublisher();
     governance = new GovernanceService(
       { votingPeriodHours: 168, quorumThresholdPercent: 51, minProposalStake: 1000 },
       publisher as unknown as CasperPublisher,
@@ -115,16 +136,17 @@ describe('GovernanceService', () => {
 
     const executed = await governance.executeProposal(proposal.id);
     expect(executed.status).toBe('executed');
-    expect(publisher.publishBatch).toHaveBeenCalledTimes(1);
+    expect(publisher.createGovernanceProposalOnChain).toHaveBeenCalledTimes(1);
+    expect(publisher.executeGovernanceProposal).toHaveBeenCalledWith(1);
   });
 });
 
 describe('OracleSlashingService', () => {
-  let publisher: jest.Mocked<Pick<CasperPublisher, 'publishBatch'>>;
+  let publisher: jest.Mocked<SlashingPublisherMock>;
   let slashing: OracleSlashingService;
 
   beforeEach(() => {
-    publisher = makePublisher();
+    publisher = makeSlashingPublisher();
     slashing = new OracleSlashingService(
       {
         challengePeriodHours: 48,
@@ -176,7 +198,8 @@ describe('OracleSlashingService', () => {
     await slashing.validateEvidence(report.id, true);
     const executed = await slashing.executeSlash(report.id);
     expect(executed.status).toBe('slashed');
-    expect(publisher.publishBatch).toHaveBeenCalledTimes(1);
+    expect(publisher.reportViolationOnChain).toHaveBeenCalledTimes(1);
+    expect(publisher.executeOracleSlash).toHaveBeenCalledWith('report_0');
   });
 
   test('does not execute a slash when evidence is validated as invalid', async () => {
