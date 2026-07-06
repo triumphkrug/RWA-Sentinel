@@ -38,6 +38,13 @@ interface CasperPublisherConfig {
   /** Secondary signer used only as the on-chain "oracle owner" role for
    * register_oracle, since the contract rejects self-reports (owner === reporter). */
   oracleOwnerBotKeyPath?: string;
+  /** Additional independently-funded accounts used to cast real on-chain
+   * governance votes. governance-dao fixes each account's voting_power at
+   * 100 and requires 30% of the (placeholder) total_staked=1000 to reach
+   * quorum (300) - a single account can never pass a proposal for real, so
+   * multiple genuinely distinct, independently-signed accounts are required
+   * to demonstrate a real, non-simulated full governance cycle. */
+  extraGovernanceVoterKeyPaths?: string[];
   /** Optional CSPR.cloud API key, required when nodeUrl points at a
    * *.cspr.cloud RPC gateway (returns 401 without it). Some cloud hosts
    * (e.g. Render) cannot reach the public Casper Association RPC node
@@ -62,6 +69,7 @@ export class CasperPublisher {
   private readonly pendingTxs = new Map<string, PublishResult>();
   private privateKey: InstanceType<typeof PrivateKey> | null = null;
   private oracleOwnerKey: InstanceType<typeof PrivateKey> | null = null;
+  private readonly extraVoterKeys: InstanceType<typeof PrivateKey>[] = [];
   private readonly rpcClient: InstanceType<typeof RpcClient>;
 
   constructor(config: CasperPublisherConfig) {
@@ -74,6 +82,10 @@ export class CasperPublisher {
     this.privateKey = this.loadKey(config.deployerKeyPath, 'deployer');
     if (config.oracleOwnerBotKeyPath) {
       this.oracleOwnerKey = this.loadKey(config.oracleOwnerBotKeyPath, 'oracle-owner-bot');
+    }
+    for (const path of config.extraGovernanceVoterKeyPaths ?? []) {
+      const key = this.loadKey(path, 'governance-voter');
+      if (key) this.extraVoterKeys.push(key);
     }
   }
 
@@ -249,6 +261,74 @@ export class CasperPublisher {
   }
 
   /**
+   * Casts a real on-chain vote from a specific non-deployer account (each
+   * account can only vote once per proposal_id per the contract).
+   */
+  private async voteOnChainProposalAs(
+    signerKey: InstanceType<typeof PrivateKey>,
+    proposalId: number,
+    support: 'for' | 'against',
+    weight = 100
+  ): Promise<string> {
+    if (!this.config.governanceContractHash) {
+      throw new Error('governanceContractHash not configured');
+    }
+    const args = Args.fromMap({
+      proposal_id: CLValue.newCLUint64(proposalId),
+      support: CLValue.newCLUint64(support === 'for' ? 1 : 0),
+      weight: CLValue.newCLUint64(weight),
+    });
+    return this.callContractAs(signerKey, this.config.governanceContractHash, 'vote', args, {
+      proposalId,
+      support,
+      weight,
+      signer: signerKey.publicKey.toHex(),
+    });
+  }
+
+  /**
+   * Casts real on-chain votes from every independently-funded account this
+   * publisher controls (deployer + oracle-owner-bot + any configured extra
+   * voter keys), in the given direction. Each account is capped at its
+   * fixed on-chain voting_power (100); with 3 real distinct accounts this
+   * can reach the 30%-of-1000 quorum threshold (300) for real, letting
+   * execute_proposal genuinely succeed - not a simulation of a full
+   * governance cycle, an actual one, just with a small fixed voter set
+   * instead of a live public vote. Returns per-account results; a account
+   * that already voted on this proposal will report its error but does not
+   * abort the batch.
+   */
+  async castRealQuorumVotes(
+    proposalId: number,
+    support: 'for' | 'against'
+  ): Promise<Array<{ voter: string; result: string | null; error?: string }>> {
+    const signers = [this.privateKey, this.oracleOwnerKey, ...this.extraVoterKeys].filter(
+      (k): k is InstanceType<typeof PrivateKey> => k !== null,
+    );
+    const results: Array<{ voter: string; result: string | null; error?: string }> = [];
+    for (const signer of signers) {
+      try {
+        const txHash = await this.voteOnChainProposalAs(signer, proposalId, support);
+        if (!txHash.startsWith('unconfirmed-')) {
+          await this.waitForConfirmation(txHash);
+        }
+        results.push({ voter: signer.publicKey.toHex(), result: txHash });
+      } catch (error) {
+        results.push({
+          voter: signer.publicKey.toHex(),
+          result: null,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    // Allow the RPC gateway's global-state view to settle before the caller
+    // attempts execute_proposal (see the proposal_count race fixed earlier -
+    // the same multi-node lag applies to vote tallies).
+    await new Promise((resolve) => setTimeout(resolve, 8000));
+    return results;
+  }
+
+  /**
    * Ensures an oracle is registered on the on-chain oracle-slashing contract.
    * Registration is signed by the dedicated oracle-owner-bot key (not the
    * deployer), since report_violation reverts with ERR_SELF_REPORT if the
@@ -378,10 +458,20 @@ export class CasperPublisher {
     args: InstanceType<typeof Args>,
     localHashSeed: unknown
   ): Promise<string> {
+    return this.callContractAs(this.privateKey, contractHash, entryPoint, args, localHashSeed);
+  }
+
+  private async callContractAs(
+    signerKey: InstanceType<typeof PrivateKey> | null,
+    contractHash: string,
+    entryPoint: string,
+    args: InstanceType<typeof Args>,
+    localHashSeed: unknown
+  ): Promise<string> {
     const localHash = this.hashPayload({ contractHash, entryPoint, localHashSeed });
 
-    if (!this.privateKey) {
-      console.warn(`[publisher] no deployer key configured; using local hash ${localHash.slice(0, 16)}… (unconfirmed)`);
+    if (!signerKey) {
+      console.warn(`[publisher] no signer key configured; using local hash ${localHash.slice(0, 16)}… (unconfirmed)`);
       return `unconfirmed-${localHash}`;
     }
 
@@ -390,12 +480,12 @@ export class CasperPublisher {
         .byHash(contractHash)
         .entryPoint(entryPoint)
         .runtimeArgs(args)
-        .from(this.privateKey.publicKey)
+        .from(signerKey.publicKey)
         .chainName(this.config.chainName)
         .payment(30_000_000_000) // 30 CSPR, generous for contract-call gas
         .build();
 
-      transaction.sign(this.privateKey);
+      transaction.sign(signerKey);
       const result = await this.rpcClient.putTransaction(transaction);
       return result.transactionHash.toHex();
     } catch (err) {

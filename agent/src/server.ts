@@ -48,6 +48,7 @@ const publisher = new CasperPublisher({
   slashingContractHash: process.env.ORACLE_SLASHING_CONTRACT_HASH || 'a6aad9bfe842c32de65d68f35f07301f0a4c7b89ab7e741ea390e5c73ebac87a',
   deployerKeyPath: process.env.DEPLOYER_KEY_PATH || '/etc/secrets/deployer.pem',
   oracleOwnerBotKeyPath: process.env.ORACLE_OWNER_BOT_KEY_PATH,
+  extraGovernanceVoterKeyPaths: process.env.GOVERNANCE_VOTER3_KEY_PATH ? [process.env.GOVERNANCE_VOTER3_KEY_PATH] : [],
   csprCloudApiKey: process.env.CSPR_CLOUD_API_KEY,
 });
 

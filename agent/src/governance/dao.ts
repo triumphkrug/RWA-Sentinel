@@ -211,22 +211,6 @@ export class GovernanceService {
     proposal.voters.set(voterPublicKey, choice);
 
     console.log(`[governance] Vote cast for proposal ${proposalId} by ${voterPublicKey}: ${choice} with ${stakeWeight} stake.`);
-
-    // Best-effort: relay one real on-chain vote (from the deployer account,
-    // capped at its fixed on-chain voting_power of 100) so the on-chain
-    // proposal has genuine vote records too. This does NOT by itself reach
-    // the on-chain 30% quorum (300) with a single account - full on-chain
-    // execution requires multiple independently-staked real accounts to
-    // vote, same as any real DAO. Off-chain simulated quorum above remains
-    // the basis for the demo's approve/reject outcome.
-    if (proposal.onChainProposalId !== undefined) {
-      try {
-        await this.publisher.voteOnChainProposal(proposal.onChainProposalId, choice === 'for' ? 'for' : 'against');
-      } catch (error) {
-        console.warn(`[governance] On-chain vote relay failed for proposal ${proposalId} (non-fatal):`, error);
-      }
-    }
-
     return proposal;
   }
 
@@ -299,6 +283,23 @@ export class GovernanceService {
       throw new Error(
         `Proposal ${proposalId} has no on-chain proposal_id (on-chain creation failed or was never attempted) - cannot execute a real on-chain action for it.`,
       );
+    }
+
+    // Relay real on-chain votes matching the off-chain-approved direction
+    // from every independently-funded account this deployment controls, so
+    // the on-chain quorum (30% of the placeholder total_staked=1000, i.e.
+    // 300) can genuinely be met before attempting execution - a real vote
+    // count, not a simulated one, just from a small fixed operator-run
+    // voter set rather than a large public one. Individual accounts that
+    // already voted on this proposal report an error but don't block the
+    // rest of the batch.
+    const quorumVotes = await this.publisher.castRealQuorumVotes(proposal.onChainProposalId, 'for');
+    for (const v of quorumVotes) {
+      if (v.error) {
+        console.warn(`[governance] on-chain vote by ${v.voter} for proposal_id=${proposal.onChainProposalId} failed (non-fatal): ${v.error}`);
+      } else {
+        console.log(`[governance] on-chain vote by ${v.voter} for proposal_id=${proposal.onChainProposalId}: tx ${v.result}`);
+      }
     }
 
     console.log(`[governance] Executing proposal ${proposalId} on-chain (proposal_id=${proposal.onChainProposalId})...`);
