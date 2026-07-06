@@ -11,7 +11,7 @@ use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_types::account::AccountHash;
 use casper_types::contracts::NamedKeys;
 use casper_types::{EntryPointPayment, 
-    ApiError, CLType, CLValue, EntityEntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Key,
+    ApiError, CLType, CLTyped, CLValue, EntityEntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Key,
     Parameter, URef,
 };
 
@@ -176,7 +176,7 @@ pub extern "C" fn call() {
     entry_points.add_entry_point(EntityEntryPoint::new(
         "get_asset",
         vec![Parameter::new("asset_id", CLType::String)],
-        CLType::Any,
+        AssetRecord::cl_type(),
         EntryPointAccess::Public,
         EntryPointType::Called,
         EntryPointPayment::Caller,

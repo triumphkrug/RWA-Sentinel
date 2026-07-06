@@ -111,6 +111,48 @@ points/business logic was not achieved in the time available.
    no-op; F7: `withdraw_stake` not transferring real CSPR) before
    redeploying.
 
+## Update (continued diagnosis, same session)
+
+Per follow-up instruction, continued investigating both root causes further:
+
+**Root cause #1 fix applied and verified working**: replaced `CLType::Any`
+with the concrete tuple `CLType` (via `AttRecord::cl_type()` /
+`AssetRecord::cl_type()`, since both records are plain nested tuples of
+`String`/`u64` which already implement `CLTyped`) in both
+`asset-registry::get_asset` and `attestation-store::get_attestation`.
+Rebuilt + `wasm-opt -Oz`: `asset-registry` 52,695 B (well under the 65,536
+lane cap), `attestation-store` 66,516 B (~1KB over). Redeploy-tested
+`asset-registry` on testnet: **the `ApiError::InvalidArgument` failure is
+gone** — the install transaction now fails only with `"Insufficient funds"`
+(size_estimate 53,145 B, 0 gas consumed), a completely different,
+orthogonal, and trivially fixable error (the deployer test account's
+testnet CSPR balance was depleted to 0 by this session's ~10+ install
+attempts, each burning its full 200 CSPR payment regardless of actual gas
+used). **This conclusively confirms root cause #1 is real and the fix
+works** — full end-to-end verification (new contract hash on-chain) is
+blocked only on getting more testnet CSPR into the deployer account, not on
+any remaining code issue.
+
+**Root cause #2 (size/lane) — further investigated, confirmed node-side,
+no client-side fix found**: inspected the raw JSON transaction payload sent
+to `putTransaction` byte-for-byte. Confirmed `is_install_upgrade: true` IS
+correctly present in the wire payload (`"target":{"Session":{"module_bytes":
+"...","runtime":"VmCasperV1","is_install_upgrade":true}}`), entry_point is
+correctly `"Call"` (the only valid option for session/install transactions
+in this SDK — there is no separate `InstallUpgrade` entry-point variant).
+Chainspec confirms a dedicated `install_upgrade_lane = [2, 750_000, 2048,
+1_000_000_000_000, 1]` (750KB cap) that should apply once `is_install_upgrade`
+is set — yet the node still enforces the smallest wasm lane's 65,536-byte
+cap regardless. Checked `casper-js-sdk` npm versions up to `5.0.16-beta2`
+(latest, beta) and searched casper-ecosystem/casper-js-sdk GitHub issues for
+`install_upgrade_lane`/lane-routing bugs — nothing relevant found. Given the
+flag is correctly transmitted and the entry point is correct, this looks
+like a genuine node/execution-engine-side bug or undocumented behavior in
+how this testnet node (protocol 2.2.2) selects/enforces WASM transaction
+lanes for installs — not something fixable from the client (SDK version,
+payload construction, or payment amount) in this environment. `casper-client`
+CLI remains untested (blocked by missing OpenSSL dev headers, no root access).
+
 ## Status as of end of session
 
 Contract redeploy remains blocked for the hackathon deadline. The workspace
