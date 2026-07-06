@@ -408,21 +408,27 @@ export class CasperPublisher {
    * reported successful and query_global_state reflecting the new value). */
   private async pollForIncrement(read: () => Promise<number>, baseline: number, timeoutMs = 90_000): Promise<number> {
     const start = Date.now();
-    // Require the counter to be exactly baseline+1 (create_proposal/
-    // report_violation always increment by exactly 1 per call) rather than
-    // merely "greater than baseline". CSPR.cloud's RPC gateway load-balances
-    // across multiple backend nodes with independent, sometimes-lagging
-    // global state views, so a stale-low baseline read could otherwise let
-    // an unrelated, already-existing higher count slip through as a false
-    // match here - which would silently assign the WRONG proposal/report id.
-    // Failing safe (timeout, no on-chain id recorded, off-chain flow still
-    // works) is far better than recording a wrong/colliding id.
+    // CSPR.cloud's RPC gateway load-balances across multiple backend nodes
+    // with independent, sometimes-lagging global state views - a *single*
+    // baseline snapshot taken before submitting can itself be stale-low
+    // (observed live), making "wait for exactly baseline+1" wait forever
+    // once the real count has already moved past that target. Instead,
+    // require the read value to stabilize (same value on 2 consecutive
+    // polls) and be above the baseline floor - this tolerates a stale
+    // baseline while still guarding against a single transient bad read
+    // being trusted immediately.
+    let lastSeen: number | null = null;
     while (Date.now() - start < timeoutMs) {
       const value = await read();
-      if (value === baseline + 1) return value;
+      if (value > baseline) {
+        if (lastSeen === value) return value;
+        lastSeen = value;
+      } else {
+        lastSeen = null;
+      }
       await new Promise((resolve) => setTimeout(resolve, 3000));
     }
-    throw new Error(`timed out waiting for on-chain counter to reach exactly ${baseline + 1}`);
+    throw new Error(`timed out waiting for on-chain counter to stabilize above ${baseline}`);
   }
 
   /**
