@@ -211,6 +211,65 @@ new account can install these same wasms without issue — that would confirm/de
 limitation for the submission** — root cause not fully resolved despite exhausting size,
 format, and state-collision theories with real on-chain tests, not just guesses.
 
+## Update 3 (2026-07-07, new session): re-tested with CLType::Any fix actually applied to real asset-registry — still fails; ruled out payment/pricing-mode and simple post-success lockout theories
+
+Rebuilt real `asset-registry.wasm` (not diag-minimal) with the `CLType::Any` fix already
+present in `get_asset`'s return type (`AssetRecord::cl_type()`, concrete tuple type, confirmed
+via source read — this fix was apparently already applied to source between sessions but never
+redeploy-tested against the live contract). Result: submitted via `SessionBuilder()
+.installOrUpgrade()` twice, through two independent RPC endpoints (CSPR.cloud gateway and
+direct `node.testnet.casper.network`) — **both attempts fail identically**:
+`ApiError::InvalidArgument [3]`, `consumed_gas: 2410910` (byte-identical between the two RPC
+endpoints), tx hashes `3815e1003f0b851bb71bd316194628be7e2520b70708991f50d9f34b4c680ad1` and
+`58c745d372f2466ec07681e286eead8e849d0d17197f9abfb81916313490d7e9`.
+
+**This contradicts the "Root cause #1 confirmed" framing above** — that confirmation was only
+ever tested on the throwaway `diag-minimal` contract, never on a real redeploy of
+asset-registry itself. The CLType::Any fix does not, on its own, unblock the real contract.
+
+Additional checks performed this session, all negative (ruled out):
+- **Full transaction payload dumped and inspected field-by-field** before signing/submitting:
+  `pricing_mode: PaymentLimited { gas_price_tolerance: 1, payment_amount: 200_000_000_000,
+  standard_payment: true }`, `fields.args: Named: []`, `target.Session.is_install_upgrade:
+  true`, `runtime: VmCasperV1`, `entry_point: Call`, `scheduling: Standard` — structurally
+  identical to what a correct install transaction should look like; no malformed field found.
+  Rules out an SDK encoding bug in this specific payload.
+- **Queried full deploy history for this account via CSPR.cloud** (`/accounts/{hash}/deploys`,
+  56 entries across 2026-06-29 to 2026-07-06). Found the "simple post-first-success lockout"
+  theory (my initial hypothesis after spotting the 21:17:26 diag-minimal success followed by
+  many failures) does **not** hold: `ApiError::InvalidArgument` failures with the same tiny gas
+  signature (~1.05M–2.8M) appear scattered *throughout the whole day*, including well *before*
+  21:17:26 (e.g. 20:57:52, and a cluster at 15:45–15:53), interleaved with dozens of genuinely
+  successful higher-gas deploys (100M–580M gas range, mostly regular contract calls) and two
+  real successful installs (`dd29b349...` at 21:17:26, 20.6B gas; `e255a943...` at 21:13:51,
+  14.7B gas — both are the diag-minimal contract/package). So it is not "account gets locked
+  after first success" — some install/deploy shapes just consistently fail and others
+  consistently succeed, mixed together over time. Points back toward a structural
+  differentiator between diag-minimal and the 4 real contracts (dictionaries + multiple
+  `ByteArray(32)`-typed parameters + multi-entry-point registration are present in both,
+  per the doc's own incremental-build methodology, so if CLType::Any was truly isolated as
+  sufficient explanation, the real contract minus CLType::Any should have installed — it
+  didn't, so there's at least one more undiscovered differentiator).
+- Consulted external LLM (Cerebras `gpt-oss-120b`) for a fresh pair of eyes: raised a payment-
+  args/pricing-mode hypothesis, which is directly contradicted by the transaction-payload dump
+  above (payment/pricing fields are present and correctly formed). No usable new lead from that
+  query; no real GitHub issue links were available to cite since the model does not have
+  verified live access to casper-js-sdk's issue tracker.
+- Confirmed the account's named keys (`state_get_entity`) already contain
+  `asset_registry_contract`/`asset_registry_package`/`asset_registry_access` (and the
+  equivalents for all 3 other contracts + `diag_minimal_*`) from earlier successful installs
+  this project — consistent with previous session's named-key findings, not a new lead on its
+  own since `_v2` renaming was already tested and ruled out.
+- Did not attempt a fresh/unused testnet account this session either (same faucet-friction
+  cost/uncertainty judgment as before) or a third client implementation (`casper-client` CLI
+  via cargo install) — both remain the cheapest real next diagnostics if this is revisited.
+
+**Net effect**: this is now a *better-evidenced* known limitation than before, but still
+unresolved. Recommend not spending further engineering time on this redeploy path before the
+submission deadline; documented as a known limitation in `docs/KNOWN_LIMITATIONS.md` instead,
+and moved on to S1/S2/S3 checklist items which are testable/completable locally without
+further chain interaction.
+
 ## Recommended next steps (not completed this session)
 
 1. **Try the official `casper-client` Rust CLI** instead of `casper-js-sdk`

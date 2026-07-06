@@ -292,16 +292,50 @@ docker-compose up
 
 ## Smart Contracts
 
-Both deployed on Casper testnet.
+All four deployed on Casper testnet.
 
 | Contract | Hash | Testnet Explorer |
 |---|---|---|
 | **asset-registry** | `eac01f54...` | [View on cspr.live](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) |
 | **attestation-store** | `53c9e877...` | [View on cspr.live](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8) |
+| **governance-dao** | `154d32b5...` | [View on cspr.live](https://testnet.cspr.live/contract/154d32b56aa334a5f454b90292c829f994db24e998cf8a702c88c0b8034ceec4) |
+| **oracle-slashing** | `a6aad9bf...` | [View on cspr.live](https://testnet.cspr.live/contract/a6aad9bfe842c32de65d68f35f07301f0a4c7b89ab7e741ea390e5c73ebac87a) |
 
 Key entry points: `register_asset`, `batch_attest`, `get_attestation`, `challenge`, `stake_oracle`, `slash_oracle`, `dao_invalidate`, `invalidate_nft`.
 
 Security: 18 findings addressed (risk score reduced from 4/10 to 2/10). See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
+
+A known, documented redeploy limitation for two of these contracts' newest fixes is tracked
+in [docs/WASM_INSTALL_DIAGNOSIS.md](docs/WASM_INSTALL_DIAGNOSIS.md) and
+[docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) — the hashes above are the currently
+live, working versions.
+
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+---
+
+## What Is Real vs. What Is Simulated
+
+Full transparency on which parts of this project touch real infrastructure vs. which are
+clearly-labeled stand-ins, so reviewers don't have to guess:
+
+| Area | Status | Detail |
+|---|---|---|
+| Smart contracts | **Real** | 4 contracts live on Casper testnet (hashes above), real WASM, real entry points, real on-chain state (`query_global_state`-verifiable) |
+| On-chain transactions | **Real** | Deploy hashes for install/calls are real, resolvable on [testnet.cspr.live](https://testnet.cspr.live) |
+| GLEIF / company data lookups | **Real** (with fallback) | Calls the real GLEIF API; if an LEI isn't found or the API is unreachable, falls back to synthetic invoice generation — always labeled in logs (`[sentinel] Generated N demo invoices`) |
+| Quickstart "Demo mode" | **Explicitly simulated, labeled** | `npm start` with no API keys generates synthetic invoices so reviewers can run the full pipeline in <5 min with zero setup — every log line says "demo"/"synthetic" |
+| Portal "Agent Demo" page | **Real pipeline, guided UI** | Despite the name, this calls the real backend API (`getLEIData`, `postPipeline`, `getScores`, `getAttestationById`) end-to-end. The only synthetic part is a 3-second UI sleep standing in for async pipeline completion (would be a webhook in production) |
+| Oracle latency figures on the portal | **Labeled simulated** | e.g. "~2 seconds (simulated)" — shown as an estimate, not measured production telemetry, and explicitly marked as such in the UI text |
+| BLS multi-oracle consensus (3-of-5 threshold) | **Not implemented** | Single-oracle attestation today; multi-oracle consensus is roadmap (Tier B), not represented as working |
+| TEE-attested compliance / on-chain ZK KYC | **Not implemented** | See [Roadmap section](#roadmap-compliance-attestation-not-implemented) above — deliberately not built for this submission, called out as future work only |
+
+If you find anything in the UI or docs that looks real but isn't labeled as simulated, please
+open an issue — that's a bug in our labeling, not intended behavior.
 
 <div align="right">
 
