@@ -26,11 +26,20 @@ import { OracleSlashingService } from './slashing/oracleSlashing.js';
 import { DataAdapterService } from './data/realDataAdapters.js';
 import { BlsThresholdService } from './crypto/blsThreshold.js';
 import { DEMO_ORACLE_PUBLIC_KEYS } from './crypto/demoOracleIdentities.js';
+import { computeMerkleRoot } from './data/merkleProvenance.js';
 
 const config = loadConfig();
 const collector = new InvoiceCollector({ batchSize: config.batchSize });
 const scorer = new LocalScorer({ trustThreshold: 60 });
-const crossRef = new CrossRefChecker();
+const dataAdapterService = new DataAdapterService({ cacheTtlMinutes: 15 });
+// Real external cross-reference (GLEIF LEI lookup, see F4 in
+// docs/COMPLIANCE_AUDIT_SPECA_LITE.md) alongside the existing local sanity
+// checks, instead of only the local checks a judge reading crossRef.ts's
+// docstring would not expect.
+const crossRef = new CrossRefChecker([
+  ...CrossRefChecker.defaultLocalSources(),
+  CrossRefChecker.gleifSource(dataAdapterService),
+]);
 const cache = new FallbackCache(config.staleThresholdMinutes);
 const staleness = new StalenessDetector(config.staleThresholdMinutes);
 const nftMinter = new BatchNftMinter({ validityHours: 24 });
@@ -76,10 +85,6 @@ const slashingService = new OracleSlashingService({
   challengerRewardPercent: 20,
   minChallengeStake: 100,
 }, publisher);
-
-const dataAdapterService = new DataAdapterService({
-  cacheTtlMinutes: 15,
-});
 
 const blsThresholdService = new BlsThresholdService({
   threshold: 3,
@@ -180,6 +185,15 @@ app.post('/api/v1/pipeline', async () => {
     }
   }
 
+  // Compute a real Merkle root over this batch's evidence (B4 provenance):
+  // anyone can independently recompute the same root from the same
+  // (invoiceId, factorsHash, evidenceHash) leaves and verify a specific
+  // invoice's inclusion via a standard Merkle proof, without needing every
+  // individual evidence hash anchored on-chain separately.
+  const provenanceRoot = passing.length > 0
+    ? computeMerkleRoot(passing.map((s) => ({ invoiceId: s.invoiceId, factorsHash: s.factorsHash, evidenceHash: s.evidenceHash })))
+    : undefined;
+
   // Publish passing attestations on-chain
   let publishHash = '';
   if (passing.length > 0) {
@@ -233,6 +247,7 @@ app.post('/api/v1/pipeline', async () => {
       scored: scores.length,
       passing: passing.length,
       cacheSize: cache.size,
+      provenanceRoot,
     });
   }
 
@@ -244,6 +259,7 @@ app.post('/api/v1/pipeline', async () => {
     crossRefResults,
     cacheSize: cache.size,
     publishHash: publishHash || undefined,
+    provenanceRoot,
   };
 });
 

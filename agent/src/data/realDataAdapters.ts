@@ -124,8 +124,12 @@ export class DataAdapterService {
       legalName: attributes.entity.legalName.name,
       legalAddress: attributes.entity.legalAddress.addressLines.join(', '),
       country: attributes.entity.legalAddress.country,
-      entityStatus: attributes.entity.entityStatus,
-      registrationStatus: attributes.registration.registrationStatus,
+      // GLEIF's real field names are entity.status / registration.status
+      // (not entityStatus/registrationStatus) - the previous mapping read
+      // fields that don't exist in the actual API response, so both were
+      // always undefined and silently dropped from the JSON response.
+      entityStatus: attributes.entity.status,
+      registrationStatus: attributes.registration.status,
     };
   }
 

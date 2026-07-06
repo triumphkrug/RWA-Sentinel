@@ -74,9 +74,11 @@ export class PgStore {
         passing INTEGER,
         cache_size INTEGER,
         public_key TEXT,
+        provenance_root TEXT,
         run_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+    await this.pool.query(`ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS provenance_root TEXT`);
   }
 
   /** Save a scored result to the database. */
@@ -163,12 +165,13 @@ export class PgStore {
       passing: number;
       cacheSize: number;
       publicKey?: string;
+      provenanceRoot?: string;
     },
   ): Promise<void> {
     await this.pool.query(
       `
-      INSERT INTO pipeline_runs (run_id, generated, collected, scored, passing, cache_size, public_key)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      INSERT INTO pipeline_runs (run_id, generated, collected, scored, passing, cache_size, public_key, provenance_root)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       ON CONFLICT (run_id) DO NOTHING
     `,
       [
@@ -179,6 +182,7 @@ export class PgStore {
         data.passing,
         data.cacheSize,
         data.publicKey ?? null,
+        data.provenanceRoot ?? null,
       ],
     );
   }
