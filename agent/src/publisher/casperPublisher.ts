@@ -220,8 +220,14 @@ export class CasperPublisher {
       throw new Error('on-chain proposal creation failed to submit');
     }
 
+    const baselineCount = await this.readProposalCount();
     await this.waitForConfirmation(transactionHash);
-    const proposalId = await this.readProposalCount();
+    // Global state visible to query_global_state can lag briefly behind the
+    // transaction's own execution_result being reported as successful, so
+    // poll until the counter actually reflects this specific proposal
+    // rather than trusting a single immediate read (which raced ahead and
+    // returned a stale, pre-increment value in testing).
+    const proposalId = await this.pollForIncrement(() => this.readProposalCount(), baselineCount);
     return { proposalId, transactionHash };
   }
 
@@ -310,10 +316,24 @@ export class CasperPublisher {
       throw new Error('on-chain violation report failed to submit');
     }
 
+    const baselineCounter = await this.readReportCounter();
     await this.waitForConfirmation(transactionHash);
-    const counter = await this.readReportCounter();
-    const reportId = `report_${counter - 1}`; // counter is post-increment; this report used counter-1
+    const counter = await this.pollForIncrement(() => this.readReportCounter(), baselineCounter);
+    const reportId = `report_${counter - 1}`; // report_violation uses counter pre-increment, then increments
     return { reportId, transactionHash };
+  }
+
+  /** Polls a global-state read until it reflects an increment past `baseline`
+   * (handles the brief lag between a transaction's execution_result being
+   * reported successful and query_global_state reflecting the new value). */
+  private async pollForIncrement(read: () => Promise<number>, baseline: number, timeoutMs = 30_000): Promise<number> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const value = await read();
+      if (value > baseline) return value;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    throw new Error(`timed out waiting for on-chain counter to advance past ${baseline}`);
   }
 
   /**
