@@ -86,7 +86,11 @@ export class GovernanceService {
     if (publicKey === '02a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4') {
       return 50_000;
     }
-    return Math.floor(Math.random() * 1000) + 100; // Random stake for others
+    // Random low stake for unrecognized keys. Capped well below the default
+    // 1000 minProposalStake so an arbitrary/unregistered key can never
+    // randomly clear the proposal threshold before this is replaced by a
+    // real on-chain stake query.
+    return Math.floor(Math.random() * 500) + 100;
   }
 
   /**
