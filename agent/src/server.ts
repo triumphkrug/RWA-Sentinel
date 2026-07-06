@@ -25,6 +25,7 @@ import { GovernanceService } from './governance/dao.js';
 import { OracleSlashingService } from './slashing/oracleSlashing.js';
 import { DataAdapterService } from './data/realDataAdapters.js';
 import { BlsThresholdService } from './crypto/blsThreshold.js';
+import { DEMO_ORACLE_PUBLIC_KEYS } from './crypto/demoOracleIdentities.js';
 
 const config = loadConfig();
 const collector = new InvoiceCollector({ batchSize: config.batchSize });
@@ -75,9 +76,9 @@ const dataAdapterService = new DataAdapterService({
 });
 
 const blsThresholdService = new BlsThresholdService({
-  threshold: 2,
-  totalOracles: 3,
-  oraclePublicKeys: ['oracle-1', 'oracle-2', 'oracle-3'],
+  threshold: 3,
+  totalOracles: 5,
+  oraclePublicKeys: DEMO_ORACLE_PUBLIC_KEYS,
 });
 
 const app = Fastify({ logger: true });
