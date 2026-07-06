@@ -35,9 +35,11 @@ const staleness = new StalenessDetector(config.staleThresholdMinutes);
 const nftMinter = new BatchNftMinter({ validityHours: 24 });
 
 const publisher = new CasperPublisher({
-  nodeUrl: process.env.CASPER_NODE_URL || 'https://rpc.testnet.casperlabs.io',
+  nodeUrl: process.env.CASPER_NODE_URL || 'https://node.testnet.casper.network/rpc',
   chainName: process.env.CASPER_CHAIN || 'casper-test',
   contractHash: '53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8',
+  governanceContractHash: process.env.GOVERNANCE_DAO_CONTRACT_HASH || '154d32b56aa334a5f454b90292c829f994db24e998cf8a702c88c0b8034ceec4',
+  slashingContractHash: process.env.ORACLE_SLASHING_CONTRACT_HASH || 'a6aad9bfe842c32de65d68f35f07301f0a4c7b89ab7e741ea390e5c73ebac87a',
   deployerKeyPath: process.env.DEPLOYER_KEY_PATH || '/etc/secrets/deployer.pem',
 });
 
