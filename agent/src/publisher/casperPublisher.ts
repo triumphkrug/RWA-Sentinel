@@ -326,14 +326,23 @@ export class CasperPublisher {
   /** Polls a global-state read until it reflects an increment past `baseline`
    * (handles the brief lag between a transaction's execution_result being
    * reported successful and query_global_state reflecting the new value). */
-  private async pollForIncrement(read: () => Promise<number>, baseline: number, timeoutMs = 30_000): Promise<number> {
+  private async pollForIncrement(read: () => Promise<number>, baseline: number, timeoutMs = 90_000): Promise<number> {
     const start = Date.now();
+    // Require the counter to be exactly baseline+1 (create_proposal/
+    // report_violation always increment by exactly 1 per call) rather than
+    // merely "greater than baseline". CSPR.cloud's RPC gateway load-balances
+    // across multiple backend nodes with independent, sometimes-lagging
+    // global state views, so a stale-low baseline read could otherwise let
+    // an unrelated, already-existing higher count slip through as a false
+    // match here - which would silently assign the WRONG proposal/report id.
+    // Failing safe (timeout, no on-chain id recorded, off-chain flow still
+    // works) is far better than recording a wrong/colliding id.
     while (Date.now() - start < timeoutMs) {
       const value = await read();
-      if (value > baseline) return value;
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (value === baseline + 1) return value;
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
-    throw new Error(`timed out waiting for on-chain counter to advance past ${baseline}`);
+    throw new Error(`timed out waiting for on-chain counter to reach exactly ${baseline + 1}`);
   }
 
   /**
