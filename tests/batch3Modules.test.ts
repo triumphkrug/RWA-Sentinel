@@ -19,7 +19,7 @@ function mockPublishResult(overrides: Partial<PublishResult> = {}): PublishResul
 
 type GovernancePublisherMock = Pick<
   CasperPublisher,
-  'publishBatch' | 'createGovernanceProposalOnChain' | 'voteOnChainProposal' | 'executeGovernanceProposal'
+  'publishBatch' | 'createGovernanceProposalOnChain' | 'voteOnChainProposal' | 'executeGovernanceProposal' | 'castRealQuorumVotes'
 >;
 type SlashingPublisherMock = Pick<
   CasperPublisher,
@@ -32,6 +32,7 @@ function makeGovernancePublisher(): jest.Mocked<GovernancePublisherMock> {
     createGovernanceProposalOnChain: jest.fn().mockResolvedValue({ proposalId: 1, transactionHash: '0xonchainprop' }),
     voteOnChainProposal: jest.fn().mockResolvedValue('0xonchainvote'),
     executeGovernanceProposal: jest.fn().mockResolvedValue('0xonchainexec'),
+    castRealQuorumVotes: jest.fn().mockResolvedValue([{ voter: '02mock', result: '0xonchainvote' }]),
   };
 }
 
