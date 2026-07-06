@@ -7,6 +7,21 @@ import type { ScoringResult } from '../validator/types.js';
 
 const { Pool } = pg;
 
+/** Public-facing attestation shape returned by the /api/v1/attestations endpoints. */
+export interface AttestationRecord {
+  id: string;
+  asset_id: string;
+  asset_type: string;
+  identifier: string;
+  score: number;
+  status: string;
+  attestation_hash: string;
+  /** Real on-chain transaction hash once published; null until confirmed (never fabricated). */
+  casper_block_hash: string | null;
+  timestamp: string;
+  expires_at: string | null;
+}
+
 export class PgStore {
   private pool: pg.Pool;
 
@@ -210,7 +225,7 @@ export class PgStore {
     limit?: number;
     status?: string;
     minScore?: number;
-  }): Promise<{ attestations: ScoringResult[]; total: number; page: number; limit: number }> {
+  }): Promise<{ attestations: AttestationRecord[]; total: number; page: number; limit: number }> {
     const page = opts.page ?? 1;
     const limit = Math.min(opts.limit ?? 20, 100);
     const offset = (page - 1) * limit;
@@ -239,18 +254,49 @@ export class PgStore {
     );
 
     return {
-      attestations: rows.rows.map(this.rowToResult),
+      attestations: rows.rows.map(this.rowToAttestation),
       total,
       page,
       limit,
     };
   }
 
-  /** Get a single attestation by invoice_id. */
-  async getAttestation(invoiceId: string): Promise<ScoringResult | null> {
+  /** Get a single attestation by invoice_id, in the public API shape. */
+  async getAttestation(invoiceId: string): Promise<AttestationRecord | null> {
     const res = await this.pool.query(`SELECT * FROM scores WHERE invoice_id = $1`, [invoiceId]);
     if (res.rows.length === 0) return null;
-    return this.rowToResult(res.rows[0]);
+    return this.rowToAttestation(res.rows[0]);
+  }
+
+  /**
+   * Persists the real on-chain transaction hash for a batch of invoices once
+   * their attestation has actually been published on-chain. Called after
+   * CasperPublisher.publishBatch() returns a confirmed (non "unconfirmed-*")
+   * transaction hash - this is the single source of truth linking a stored
+   * score to its verifiable on-chain proof.
+   */
+  async updateDeployHash(invoiceIds: string[], deployHash: string): Promise<void> {
+    if (invoiceIds.length === 0) return;
+    await this.pool.query(`UPDATE scores SET deploy_hash = $1 WHERE invoice_id = ANY($2)`, [
+      deployHash,
+      invoiceIds,
+    ]);
+  }
+
+  /** Maps a raw `scores` row to the public-facing Attestation shape (matches frontend/src/lib/api.ts). */
+  private rowToAttestation(row: Record<string, unknown>): AttestationRecord {
+    return {
+      id: String(row.id),
+      asset_id: row.invoice_id as string,
+      asset_type: (row.asset_type as string) ?? 'invoice',
+      identifier: row.invoice_id as string,
+      score: row.trust_score as number,
+      status: (row.attestation_status as string) ?? 'pending',
+      attestation_hash: (row.evidence_hash as string) ?? '',
+      casper_block_hash: (row.deploy_hash as string | null) ?? null,
+      timestamp: (row.scored_at as Date).toISOString(),
+      expires_at: row.attestation_expires_at ? (row.attestation_expires_at as Date).toISOString() : null,
+    };
   }
 
   /** Load all scores (for in-memory cache population). */

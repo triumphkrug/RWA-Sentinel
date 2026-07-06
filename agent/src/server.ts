@@ -198,6 +198,18 @@ app.post('/api/v1/pipeline', async () => {
       ]),
     );
     await store.saveBatch(scores, invoiceMap);
+
+    // Only persist the deploy hash when it is a real, confirmed on-chain
+    // transaction - never write the "unconfirmed-*" local fallback hash into
+    // the record judges/users see, since that would misrepresent it as a
+    // verified on-chain proof.
+    if (publishHash && !publishHash.startsWith('unconfirmed-') && passing.length > 0) {
+      await store.updateDeployHash(
+        passing.map((s) => s.invoiceId),
+        publishHash,
+      );
+    }
+
     const runId = randomUUID().slice(0, 8);
     await store.savePipelineRun(runId, {
       generated: rawInvoices.length,

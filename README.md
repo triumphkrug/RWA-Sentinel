@@ -196,6 +196,37 @@ The Oracle Panel portal exposes the live DAO vote panel with one-click FOR/AGAIN
 
 ---
 
+## Roadmap: Compliance Attestation (Not Implemented)
+
+Two directions we researched but deliberately did **not** implement for this
+submission, to avoid shipping a shallow, easily-broken version of either:
+
+- **TEE-attested compliance checks (Intel SGX / AMD SEV)** — running the
+  6-factor risk scoring inside a hardware trusted execution environment so
+  the oracle's compliance verdict comes with a remote-attestation proof,
+  not just a signature. Requires TEE-enabled infrastructure and attestation
+  verification tooling we don't have wired up on testnet; a hand-rolled
+  version in the time available would be weaker than no claim at all.
+- **On-chain KYC proofs via zkSNARK** — letting an asset issuer prove
+  "this entity passed KYC/AML with provider X" on-chain without revealing
+  the underlying identity data, verified by a zkSNARK circuit rather than
+  a trusted oracle attestation. This needs a real circuit, trusted setup
+  (or a transparent proof system) and a verifier contract — out of scope
+  for the current sprint.
+
+Both are natural extensions of the existing attestation-NFT model (the
+attestation would simply carry a stronger proof type) and are tracked as
+future work, not represented anywhere in the current contracts, agent, or
+UI as implemented functionality.
+
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+---
+
 ## Quickstart
 
 Runs in under 5 minutes. Demo mode generates synthetic invoices — no Casper node or API keys required.
