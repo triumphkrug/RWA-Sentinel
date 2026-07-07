@@ -20,8 +20,7 @@ declare global {
   }
 }
 
-// Register at console.cspr.build for rwa-sentinel.xyz
-const CSPRCLICK_APP_ID = (import.meta.env.VITE_CSPRCLICK_APP_ID as string | undefined) || 'rwa-sentinel-xyz'
+const CSPRCLICK_APP_ID = (import.meta.env.VITE_CSPRCLICK_APP_ID as string | undefined) || '7c8101bb-03b8-4223-a6dd-9b7ce09e'
 
 // Light theme for RWA-Sentinel's white UI, no top bar
 window.clickUIOptions = {

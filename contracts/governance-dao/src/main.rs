@@ -32,6 +32,8 @@ const PROPOSAL_COUNT_KEY: &str = "proposal_count";
 const PRICE_BPS_KEY: &str = "price_bps"; // For revenue model
 
 const DEFAULT_PRICE_BPS: u64 = 0; // Default fee for proposals
+const TOTAL_STAKED_KEY: &str = "total_staked";
+const VOTER_STAKES_DICT: &str = "voter_stakes";
 
 const STATUS_ACTIVE: u64 = 0;
 const STATUS_PASSED: u64 = 1;
@@ -109,26 +111,62 @@ fn get_current_timestamp() -> u64 {
     runtime::get_blocktime().into()
 }
 
-/// Placeholder for total staked tokens in the DAO.
-/// In a real DAO, this would query a token contract.
+/// Read total staked from the on-chain named key (updated by register_voter).
 fn get_total_staked() -> u64 {
-    1000 // Example total staked tokens
+    let uref = runtime::get_key(TOTAL_STAKED_KEY)
+        .unwrap_or_revert()
+        .into_uref()
+        .unwrap_or_revert();
+    storage::read::<u64>(uref).unwrap_or_revert().unwrap_or(0)
 }
 
-/// Placeholder for an account's voting power.
-/// In a real DAO, this would query a token contract for balance or delegated balance.
+/// Read an account's voting power from the voter_stakes dictionary.
+/// Returns 0 if the account has delegated or is not registered.
 fn get_voting_power(account: &AccountHash) -> u64 {
     let delegations_uref = get_dict_uref(DELEGATIONS_DICT);
     let delegation: Option<String> = storage::dictionary_get(delegations_uref, &account.to_string())
         .unwrap_or_revert();
-    
-    // If an account has delegated, their voting power is 0.
-    // If an account has not delegated, their voting power is 100 (example).
+
     if delegation.is_some() {
-        0
-    } else {
-        100
+        return 0; // Delegated → no direct voting power
     }
+
+    let voter_stakes_uref = get_dict_uref(VOTER_STAKES_DICT);
+    let stake: Option<u64> = storage::dictionary_get(voter_stakes_uref, &account.to_string())
+        .unwrap_or_revert();
+    stake.unwrap_or(0)
+}
+
+/// Register a voter with a specific voting power (installer-only).
+/// Increments total_staked by the voter's power.
+#[no_mangle]
+pub extern "C" fn register_voter() {
+    if !is_installer() {
+        runtime::revert(ApiError::User(ERR_NOT_INSTALLER));
+    }
+
+    let account_hash_str: String = runtime::get_named_arg("account_hash");
+    let voting_power: u64 = runtime::get_named_arg("voting_power");
+
+    let voter_stakes_uref = get_dict_uref(VOTER_STAKES_DICT);
+
+    // Check if already registered, subtract old power first
+    let old_power: Option<u64> = storage::dictionary_get(voter_stakes_uref, &account_hash_str)
+        .unwrap_or_revert();
+
+    let total_staked_uref = runtime::get_key(TOTAL_STAKED_KEY)
+        .unwrap_or_revert()
+        .into_uref()
+        .unwrap_or_revert();
+    let mut total: u64 = storage::read(total_staked_uref).unwrap_or_revert().unwrap_or(0);
+
+    if let Some(old) = old_power {
+        total = total.saturating_sub(old);
+    }
+
+    total += voting_power;
+    storage::write(total_staked_uref, total);
+    storage::dictionary_put(voter_stakes_uref, &account_hash_str, voting_power);
 }
 
 #[no_mangle]
@@ -292,8 +330,27 @@ pub extern "C" fn execute_proposal() {
         runtime::revert(ApiError::User(ERR_NOT_PASSED));
     }
 
-    // Perform the action based on action_type (status update for this version)
-    // Extended action dispatch planned for Phase 2 integration
+    // Action dispatch based on action_type
+    let action_type = proposal.0.2;
+    match action_type {
+        ACTION_UPDATE_THRESHOLD => {
+            // Read params from proposal_details and update price_bps
+            let proposal_details_uref = get_dict_uref(PROPOSAL_DETAILS_DICT);
+            let details_opt: Option<ProposalDetailsRecord> =
+                storage::dictionary_get(proposal_details_uref, &proposal_key_str).unwrap_or_revert();
+            if let Some((_desc, params_str, new_bps)) = details_opt {
+                // Update price_bps from the proposal's price_bps field
+                let bps_uref = runtime::get_key(PRICE_BPS_KEY)
+                    .unwrap_or_revert()
+                    .into_uref()
+                    .unwrap_or_revert();
+                storage::write(bps_uref, new_bps);
+            }
+        }
+        // ACTION_UPDATE_WEIGHTS | ACTION_ADD_ORACLE | ACTION_REMOVE_ORACLE | ACTION_PAUSE
+        // → cross-contract dispatch deferred to Phase 2; status bookkeeping only.
+        _ => {}
+    }
 
     proposal.1.2 = STATUS_EXECUTED;
     proposal.2.2 = current_time;
@@ -385,8 +442,10 @@ pub extern "C" fn call() {
     let proposal_details_dict = storage::new_dictionary(PROPOSAL_DETAILS_DICT).unwrap_or_revert();
     let votes_dict = storage::new_dictionary(VOTES_DICT).unwrap_or_revert();
     let delegations_dict = storage::new_dictionary(DELEGATIONS_DICT).unwrap_or_revert();
+    let voter_stakes_dict = storage::new_dictionary(VOTER_STAKES_DICT).unwrap_or_revert();
     let proposal_count_uref = storage::new_uref(0u64);
     let price_bps_uref = storage::new_uref(DEFAULT_PRICE_BPS);
+    let total_staked_uref = storage::new_uref(0u64);
 
     let mut named_keys = NamedKeys::new();
     named_keys.insert(INSTALLER_KEY.into(), Key::Account(installer));
@@ -395,9 +454,23 @@ pub extern "C" fn call() {
     named_keys.insert(PROPOSAL_DETAILS_DICT.into(), proposal_details_dict.into());
     named_keys.insert(VOTES_DICT.into(), votes_dict.into());
     named_keys.insert(DELEGATIONS_DICT.into(), delegations_dict.into());
+    named_keys.insert(VOTER_STAKES_DICT.into(), voter_stakes_dict.into());
     named_keys.insert("price_bps".into(), price_bps_uref.into());
+    named_keys.insert(TOTAL_STAKED_KEY.into(), total_staked_uref.into());
 
     let mut entry_points = EntryPoints::new();
+
+    entry_points.add_entry_point(EntityEntryPoint::new(
+        "register_voter",
+        vec![
+            Parameter::new("account_hash", CLType::String),
+            Parameter::new("voting_power", CLType::U64),
+        ],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Called,
+        EntryPointPayment::Caller,
+    ));
 
     entry_points.add_entry_point(EntityEntryPoint::new(
         "create_proposal",
@@ -418,7 +491,8 @@ pub extern "C" fn call() {
         "vote",
         vec![
             Parameter::new("proposal_id", CLType::U64),
-            Parameter::new("support", CLType::Bool),
+            Parameter::new("support", CLType::U64),
+            Parameter::new("weight", CLType::U64),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
