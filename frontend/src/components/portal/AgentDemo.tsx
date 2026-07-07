@@ -10,6 +10,7 @@ import {
   AssetScore,
   Attestation,
   ErrorResponse,
+  RealInvoice,
 } from '../../lib/api';
 import {
   Play,
@@ -29,8 +30,39 @@ interface LogEntry {
   type: 'info' | 'success' | 'error';
 }
 
+// S2 (2026-07-07): explicit Demo/Real data-source toggle. "Real" is the
+// default mode - if you paste your own invoice JSON below, the pipeline
+// scores exactly that data through the same real scoring/cross-ref/Merkle/
+// on-chain-attestation flow as any other run. Only if you leave it empty
+// (or explicitly pick "Demo") does the backend fall back to its synthetic
+// invoice generator - and the API response always reports which one
+// actually happened (`dataSource`), so this page never silently mislabels
+// synthetic output as real.
+type DataMode = 'real' | 'demo';
+
+const EXAMPLE_REAL_INVOICE_JSON = JSON.stringify(
+  [
+    {
+      invoiceId: 'inv-real-0001',
+      issuer: '5493001KJTIIGC8Y1R12',
+      debtor: 'ACME Debtor Corp',
+      amountCents: 1_250_000,
+      currencyCode: 'USD',
+      issuedAt: new Date().toISOString(),
+      dueAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+      lineItems: [{ description: 'Consulting services, Q3', quantity: 1, unitPriceCents: 1_250_000 }],
+      metadata: {},
+    },
+  ],
+  null,
+  2,
+);
+
 const AgentDemo: React.FC = () => {
   const [lei, setLei] = useState<string>('5493001KJTIIGC8Y1R12'); // Example LEI
+  const [dataMode, setDataMode] = useState<DataMode>('real');
+  const [realInvoiceJson, setRealInvoiceJson] = useState<string>('');
+  const [invoiceJsonError, setInvoiceJsonError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loadingStep, setLoadingStep] = useState<number | null>(null);
   const [stepResults, setStepResults] = useState<{
@@ -79,9 +111,31 @@ const AgentDemo: React.FC = () => {
 
   const handleRunFullPipeline = async () => {
     resetDemo();
+    setInvoiceJsonError(null);
     if (!lei) {
       addLog('Please enter an LEI.', 'error');
       return;
+    }
+
+    // S2: parse+validate the real-invoice payload only when Real mode is
+    // selected and the box isn't empty. An empty box in Real mode is not
+    // silently treated as "real data" - we tell the user up front that the
+    // backend will fall back to its demo generator, and the run log below
+    // reports which one actually happened.
+    let invoices: RealInvoice[] | undefined;
+    if (dataMode === 'real' && realInvoiceJson.trim()) {
+      try {
+        const parsed = JSON.parse(realInvoiceJson);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          throw new Error('Expected a non-empty JSON array of invoices.');
+        }
+        invoices = parsed as RealInvoice[];
+      } catch (e: any) {
+        const msg = `Invalid real invoice JSON: ${e.message || e}`;
+        setInvoiceJsonError(msg);
+        addLog(msg, 'error');
+        return;
+      }
     }
 
     try {
@@ -91,9 +145,14 @@ const AgentDemo: React.FC = () => {
       addLog(`Fetched LEI Data for ${leiData.legal_name}`, 'info');
 
       // Step 2: Run scoring pipeline
-      const pipelineRes = await runStep(2, () => postPipeline({ lei }));
+      const pipelineRes = await runStep(2, () => postPipeline({ lei, invoices }));
       setStepResults((prev) => ({ ...prev, pipelineResponse: pipelineRes }));
-      addLog(`Pipeline initiated with ID: ${pipelineRes.pipeline_id}`, 'info');
+      addLog(
+        pipelineRes.dataSource === 'real-upload'
+          ? 'Pipeline scored your real, uploaded invoice data.'
+          : 'Pipeline used synthetic demo invoices (no real data was supplied).',
+        'info',
+      );
 
       // Simulate waiting for pipeline to complete (in a real app, this would be a webhook or polling)
       addLog('Simulating pipeline processing... (waiting 3 seconds)', 'info');
@@ -167,6 +226,54 @@ const AgentDemo: React.FC = () => {
           >
             Reset
           </button>
+        </div>
+
+        {/* S2: Demo/Real invoice data-source toggle - Real is the default. */}
+        <div className="border-t border-gray-200 pt-4 mt-2">
+          <div className="flex items-center space-x-4 mb-2">
+            <span className="text-sm font-medium text-gray-700">Invoice data source:</span>
+            <label className="inline-flex items-center space-x-1 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="dataMode"
+                value="real"
+                checked={dataMode === 'real'}
+                onChange={() => setDataMode('real')}
+                disabled={loadingStep !== null}
+              />
+              <span>Real (paste your own invoice JSON)</span>
+            </label>
+            <label className="inline-flex items-center space-x-1 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="dataMode"
+                value="demo"
+                checked={dataMode === 'demo'}
+                onChange={() => setDataMode('demo')}
+                disabled={loadingStep !== null}
+              />
+              <span>Demo (auto-generated synthetic invoices)</span>
+            </label>
+          </div>
+
+          {dataMode === 'real' && (
+            <div>
+              <textarea
+                value={realInvoiceJson}
+                onChange={(e) => setRealInvoiceJson(e.target.value)}
+                placeholder={`Paste a JSON array of invoices, e.g.:\n${EXAMPLE_REAL_INVOICE_JSON}`}
+                rows={5}
+                disabled={loadingStep !== null}
+                className="w-full p-2 border border-gray-300 rounded-md shadow-sm font-mono text-xs focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Left empty, the backend falls back to its synthetic demo generator instead — the
+                run log below always states which one actually happened, never silently labels
+                synthetic data as real.
+              </p>
+              {invoiceJsonError && <p className="text-xs text-red-600 mt-1">{invoiceJsonError}</p>}
+            </div>
+          )}
         </div>
       </div>
 

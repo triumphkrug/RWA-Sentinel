@@ -16,6 +16,28 @@ export interface ErrorResponse {
 }
 
 // --- Main API Types ---
+
+// Real invoice payload shape accepted by /api/v1/pipeline when the caller
+// supplies their own data instead of relying on the demo generator (S2,
+// 2026-07-07). Mirrors agent/src/collector/types.ts RawInvoice.
+export interface RealInvoiceLineItem {
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+}
+
+export interface RealInvoice {
+  invoiceId: string;
+  issuer: string;
+  debtor: string;
+  amountCents: number;
+  currencyCode: string;
+  issuedAt: string; // ISO date
+  dueAt: string; // ISO date
+  lineItems: RealInvoiceLineItem[];
+  metadata?: Record<string, string>;
+}
+
 export interface PipelineRunRequest {
   lei?: string;
   company_id?: string;
@@ -23,12 +45,19 @@ export interface PipelineRunRequest {
   symbol?: string;
   asset_type?: string; // e.g., 'equity', 'bond', 'commodity'
   metadata?: Record<string, any>;
+  // If provided, the pipeline scores these real invoices instead of
+  // generating synthetic ones - see the Demo/Real toggle in AgentDemo.tsx.
+  invoices?: RealInvoice[];
 }
 
 export interface PipelineRunResponse {
   pipeline_id: string;
   status: string;
   timestamp: string;
+  // Reports which data source the pipeline actually used for this run -
+  // 'real-upload' if caller-supplied invoices were scored, 'demo' if the
+  // synthetic generator was used (e.g. because none were supplied).
+  dataSource?: 'real-upload' | 'demo';
 }
 
 export interface ScoreFactor {
