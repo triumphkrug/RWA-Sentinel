@@ -22,3 +22,4 @@ Cargo.lock
 *.bak
 .vercel
 scripts_deploy/
+scripts_deploy/
