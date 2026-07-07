@@ -315,12 +315,12 @@ yet deployed (see [Roadmap: Compliance Attestation](#roadmap-compliance-attestat
 | Contract | Hash | Testnet Explorer |
 |---|---|---|
 | **asset-registry** | `eac01f54...` | [View on cspr.live](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) |
-| **attestation-store** | `53c9e877...` | [View on cspr.live](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8) |
+| **attestation-store** | `cffc53be...` | [View on cspr.live](https://testnet.cspr.live/contract/cffc53be1c57d4dc04c01515114a8e8cc8237e4ab12314e9fa0eabb7bac846a5) |
 | **governance-dao** | `154d32b5...` | [View on cspr.live](https://testnet.cspr.live/contract/154d32b56aa334a5f454b90292c829f994db24e998cf8a702c88c0b8034ceec4) |
-| **oracle-slashing** | `a6aad9bf...` | [View on cspr.live](https://testnet.cspr.live/contract/a6aad9bfe842c32de65d68f35f07301f0a4c7b89ab7e741ea390e5c73ebac87a) |
-| **kyc-gate** | *not deployed yet* | Source: [`contracts/kyc-gate/`](contracts/kyc-gate/) |
+| **oracle-slashing** | `d061c8eb...` | [View on cspr.live](https://testnet.cspr.live/contract/d061c8eb9dc567bf7c812477530386a75ad07c32144bcc72db7343e63908301d) |
+| **kyc-gate** | `6e0dd2dc...` | [View on cspr.live](https://testnet.cspr.live/contract/6e0dd2dc7673cf5c7c4e99ad5c956320a3f0f19db4cdb2293eab222611aa58d5) |
 
-Key entry points: `register_asset`, `batch_attest`, `get_attestation`, `challenge`, `stake_oracle`, `slash_oracle`, `dao_invalidate`, `invalidate_nft`.
+Key entry points: `register_asset`, `batch_attest`, `get_attestation`, `register_oracle`, `report_violation`, `execute_slash`, `withdraw_stake`, `dao_invalidate`, `create_proposal`, `vote`, `execute_proposal`, `set_kyc_status`.
 
 Security: 18 findings addressed (risk score reduced from 4/10 to 2/10). See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
 

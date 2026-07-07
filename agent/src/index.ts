@@ -41,21 +41,21 @@ async function main(): Promise<void> {
   const collected = collector.collectBatch(rawInvoices);
   console.log(`[sentinel] Collected ${collected.length} unique invoices`);
 
-  // Step 5: Score each invoice
-  const scores = scorer.scoreBatch(collected);
+  // Step 5: Cross-reference check all invoices (run before scoring so
+  // results feed into the scoring context's hasCrossRef factor)
+  const crossRefResults = new Map<string, boolean>();
+  for (const inv of collected) {
+    const xref = await crossRef.check(inv.invoice);
+    crossRefResults.set(inv.invoiceId, xref.crossRefPassed);
+    console.log(
+      `[sentinel] Cross-ref ${inv.invoiceId}: ${xref.crossRefPassed ? 'PASS' : 'FAIL'} (matched: ${xref.matchedSources.join(',') || 'none'})`,
+    );
+  }
+
+  // Step 6: Score each invoice with cross-reference results wired in
+  const scores = scorer.scoreBatch(collected, crossRefResults);
   const passing = scores.filter((s) => s.isAboveThreshold);
   console.log(`[sentinel] Scored: ${passing.length}/${scores.length} above threshold`);
-
-  // Step 6: Cross-reference check on passing invoices
-  for (const score of passing) {
-    const inv = collected.find((c) => c.invoiceId === score.invoiceId);
-    if (inv) {
-      const xref = await crossRef.check(inv.invoice);
-      console.log(
-        `[sentinel] Cross-ref ${score.invoiceId}: ${xref.crossRefPassed ? 'PASS' : 'FAIL'}`,
-      );
-    }
-  }
 
   // Step 7: Publish attestations to Casper
   if (passing.length > 0) {

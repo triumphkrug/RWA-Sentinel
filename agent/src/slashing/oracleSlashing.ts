@@ -65,16 +65,20 @@ export class OracleSlashingService {
   }
 
   /**
-   * Simulates fetching an oracle's current stake.
-   * @param oracleId The ID of the oracle.
-   * @returns The simulated stake amount.
+   * Fetches an oracle's current stake from the on-chain oracle-slashing
+   * contract dictionary. Falls back to a conservative default when the
+   * on-chain query fails (testnet RPC can be unreliable).
    */
   private async getOracleStake(oracleId: string): Promise<number> {
-    // TODO: Replace with actual on-chain query to oracle staking contract
-    // Simulate different stakes for different oracles
-    if (oracleId === 'oracle_alpha') return 500_000;
-    if (oracleId === 'oracle_beta') return 200_000;
-    return 100_000; // Default stake
+    try {
+      const stake = await this.publisher.queryOracleStake(oracleId);
+      if (stake > 0) return stake;
+    } catch (err) {
+      console.warn(`[slashing] on-chain stake query for ${oracleId} failed:`, err);
+    }
+    // Fallback: the deposit-first registration pattern requires 100 CSPR
+    // minimum (100e9 motes). Return in motes for consistency with on-chain.
+    return 100_000_000_000;
   }
 
   /**
