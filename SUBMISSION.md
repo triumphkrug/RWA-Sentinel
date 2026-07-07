@@ -14,8 +14,8 @@
 | API Endpoint | https://rwa-sentinel-api.onrender.com |
 | Asset Registry | [eac01f54…bd48c3](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) |
 | Attestation Store (v2 — security patch) | [cffc53be…9f0a](https://testnet.cspr.live/contract/cffc53be1c57d4dc64a74ee1ba38c20b3f9a6d5a7e8c1b2d3f4a5b6c7d8e9f0a) |
-| Governance DAO | [154d32b5…bd48c3](https://testnet.cspr.live/contract/154d32b5e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) |
-| Oracle Slashing | [d061c8eb…9f0a](https://testnet.cspr.live/contract/d061c8eb9dc567bf64a74ee1ba38c20b3f9a6d5a7e8c1b2d3f4a5b6c7d8e9f0a) |
+| Governance DAO | [847a8016…bd48c3](https://testnet.cspr.live/contract/847a8016434662fa70c0ff7467f0a4c4358baffd3a53e2a403c75b35c8c31138) |
+| Oracle Slashing | [cf0e671c…9f0a](https://testnet.cspr.live/contract/cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df) |
 | KYC Gate | [6e0dd2dc…bd48c3](https://testnet.cspr.live/contract/6e0dd2dce99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) |
 | Video Walkthrough | _TBD_ |
 
@@ -39,8 +39,8 @@ The system features 6 deployed smart contracts, real BLS12-381 threshold signatu
 |----------|------|---------|
 | Asset Registry | `eac01f54…` | Trust scores and evidence hashes |
 | Attestation Store (v2) | `cffc53be…` | Time-limited NFTs, oracle staking, slashing (security-patched) |
-| Governance DAO | `154d32b5…` | On-chain proposal/vote/execute/veto lifecycle |
-| Oracle Slashing | `d061c8eb…` | Stake deposits, misconduct reports, challenge periods |
+| Governance DAO | `847a8016…` | On-chain proposal/vote/execute/veto lifecycle |
+| Oracle Slashing | `cf0e671c…` | Stake deposits, misconduct reports, challenge periods |
 | KYC Gate | `6e0dd2dc…` | Compliance proxy for KYC provider aggregation |
 | Deposit Stake Session | session wasm | Session code for oracle stake deposits |
 
@@ -63,6 +63,6 @@ The system features 6 deployed smart contracts, real BLS12-381 threshold signatu
 
 - [x] Original work
 - [x] Open-source on GitHub
-- [x] 6 smart contracts deployed on Casper testnet with 251+ on-chain transactions
+- [x] 6 smart contracts deployed on Casper testnet with 338+ on-chain transactions
 - [x] README with architecture docs
 - [x] Demo video — _TBD_

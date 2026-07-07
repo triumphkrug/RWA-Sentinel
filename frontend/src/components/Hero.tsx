@@ -53,7 +53,7 @@ export default function Hero() {
   const stats = [
     { icon: Shield, val: '6-Factor', label: 'Trust Score' },
     { icon: Zap, val: '<3s', label: 'Verification' },
-    { icon: Globe, val: '3', label: 'Smart Contracts' },
+    { icon: Globe, val: '6', label: 'Smart Contracts' },
     { icon: TrendingUp, val: '100%', label: 'On-Chain' },
   ]
 
@@ -131,7 +131,7 @@ export default function Hero() {
 
           {/* Contract info — moved from footer */}
           <div className="max-w-lg bg-white/70 backdrop-blur rounded-xl px-4 py-3 border border-gray-100 text-sm text-gray-600">
-            <span className="font-semibold text-gray-800">3 smart contracts</span> deployed on Casper testnet — Attestation NFTs, scoring registry, and governance module.
+            <span className="font-semibold text-gray-800">6 smart contracts</span> deployed on Casper testnet — asset registry, attestation NFTs, governance DAO, oracle slashing, KYC gate, and stake deposits.
           </div>
         </div>
       </div>

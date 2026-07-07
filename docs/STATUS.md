@@ -4,14 +4,14 @@
 
 ## ✅ What's Live
 
-**6 smart contracts deployed** across 3 testnet accounts with **251+ on-chain transactions**.
+**6 smart contracts deployed** across 4 testnet accounts with **338+ on-chain transactions**.
 
 | Contract | Hash | Status |
 |---|---|---|
 | Asset Registry | `eac01f54…bd48c3` | ✅ Live |
 | Attestation Store (v2) | `cffc53be…46a5` | ✅ Live — security-patched |
-| Governance DAO | `154d32b5…` | ✅ Live |
-| Oracle Slashing | `d061c8eb…301d` | ✅ Live — redesigned register_oracle |
+| Governance DAO v2 | `847a8016…c31138` | ✅ Live — vote params + register_voter + execute_proposal dispatch |
+| Oracle Slashing v2 | `cf0e671c…9237df` | ✅ Live — EP name fixes + withdraw_stake transfer |
 | KYC Gate | `6e0dd2dc…` | ✅ Live |
 | Deposit Stake Session | session WASM | ✅ Ready |
 
@@ -27,7 +27,7 @@
 | Component | Evidence |
 |---|---|
 | 6 smart contracts on testnet | Deployed, verifiable on Casper explorer |
-| 251+ testnet transactions | Documented deploy hashes |
+| 338+ testnet transactions | Documented deploy hashes |
 | BLS12-381 cryptography | noble-curves library — real pairing verification |
 | GLEIF / CoinGecko / Companies House APIs | Live API calls to production services |
 | 6-factor scoring pipeline | Weighted composite scoring with real evaluators |
@@ -40,8 +40,9 @@ These items are architecturally prepared and planned for the next development ph
 
 | Feature | Status | Notes |
 |---|---|---|
-| `withdraw_stake` fund transfer | Access control ✅, transfer pending | Owner-only, capped — safe by design. Requires contract upgrade. |
-| `execute_proposal` action dispatch | Status tracking ✅, dispatch pending | Cross-contract action routing planned for Phase 2. |
+| `withdraw_stake` fund transfer | ✅ **Deployed** | Real `transfer_from_purse_to_account` + `total_staked` sync (v2) |
+| `execute_proposal` action dispatch | ✅ **Deployed** | Dispatches `ACTION_UPDATE_THRESHOLD` → updates `price_bps` (v2) |
+| `register_voter` + real stake tracking | ✅ **Deployed** | `voter_stakes` dict + `total_staked` named key (v2) |
 | BLS on-chain aggregated verification | Off-chain ✅, on-chain pending | Requires Casper runtime BLS precompile support. |
 | KYC gate ↔ asset-registry wiring | Both contracts ✅, integration pending | `is_kyc_proved` check ready to plug in on upgrade. |
 | Multi-asset category scoring | Extension types defined in `contracts/extensions/` | Enum-driven: real estate, commodities, bonds, carbon credits, etc. |

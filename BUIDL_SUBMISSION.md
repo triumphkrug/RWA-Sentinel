@@ -62,11 +62,11 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 ## Live Demo
 
 - **Oracle Portal:** [rwa-sentinel.xyz/portal](https://rwa-sentinel.xyz/portal) — 12 portal pages: Overview, Assets, Oracles (with slashing UI), Governance, SBTs, Contracts, Chain Explorer, Data Adapters, KYC Gate, Anomalies, Agent Demo, API Playground
-- **Smart Contracts on Casper testnet (6 deployed, 251+ transactions):**
+- **Smart Contracts on Casper testnet (6 deployed, 338+ transactions):**
   - Asset Registry: [`eac01f54…`](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3)
   - Attestation Store (v2, security-patched): [`cffc53be…`](https://testnet.cspr.live/contract/cffc53be1c57d4dc64a74ee1ba38c20b3f9a6d5a7e8c1b2d3f4a5b6c7d8e9f0a)
-  - Governance DAO: [`154d32b5…`](https://testnet.cspr.live/contract/154d32b5e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3)
-  - Oracle Slashing: [`d061c8eb…`](https://testnet.cspr.live/contract/d061c8eb9dc567bf64a74ee1ba38c20b3f9a6d5a7e8c1b2d3f4a5b6c7d8e9f0a)
+  - Governance DAO: [`847a8016…`](https://testnet.cspr.live/contract/847a8016434662fa70c0ff7467f0a4c4358baffd3a53e2a403c75b35c8c31138)
+  - Oracle Slashing: [`cf0e671c…`](https://testnet.cspr.live/contract/cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df)
   - KYC Gate: [`6e0dd2dc…`](https://testnet.cspr.live/contract/6e0dd2dce99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3)
   - Deposit Stake Session: session WASM for oracle operators
 
@@ -95,7 +95,7 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 ## What Makes It Unique
 
-1. **6 deployed smart contracts** — Most hackathon projects deploy 1-2 contracts. RWA Sentinel has a full contract ecosystem: asset registry, attestation store, governance DAO, oracle slashing, KYC gate, and stake deposit session code — all live on Casper testnet with 251+ on-chain transactions.
+1. **6 deployed smart contracts** — Most hackathon projects deploy 1-2 contracts. RWA Sentinel has a full contract ecosystem: asset registry, attestation store, governance DAO, oracle slashing, KYC gate, and stake deposit session code — all live on Casper testnet with 338+ on-chain transactions.
 
 2. **Trust oracle, not price oracle** — RWA Sentinel attests to the *validity and trustworthiness* of underlying assets, not market price. No comparable system on Casper combines transparent scoring + expiring attestations + challenge-with-stake.
 
@@ -115,6 +115,6 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 ## Team
 
-**triumphkrug** — Solo builder architecting trust infrastructure for the RWA space. Designed the 6-factor scoring model, built the autonomous TypeScript agent pipeline, wrote all 6 Casper smart contracts (asset-registry, attestation-store, governance-dao, oracle-slashing, kyc-gate, deposit-stake-session), developed the React portal with 12 interactive pages, implemented BLS12-381 threshold signatures, and deployed the full system to testnet with 251+ on-chain transactions. Background in decentralized systems and on-chain governance; focus on making RWA verification programmable and accountable.
+**triumphkrug** — Solo builder architecting trust infrastructure for the RWA space. Designed the 6-factor scoring model, built the autonomous TypeScript agent pipeline, wrote all 6 Casper smart contracts (asset-registry, attestation-store, governance-dao, oracle-slashing, kyc-gate, deposit-stake-session), developed the React portal with 12 interactive pages, implemented BLS12-381 threshold signatures, and deployed the full system to testnet with 338+ on-chain transactions. Background in decentralized systems and on-chain governance; focus on making RWA verification programmable and accountable.
 
 GitHub: [github.com/triumphkrug](https://github.com/triumphkrug)

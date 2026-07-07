@@ -6,7 +6,7 @@
 
 ## Done (Hackathon Release)
 
-- [x] 6 smart contracts deployed on Casper testnet (251+ transactions)
+- [x] 6 smart contracts deployed on Casper testnet (338+ transactions)
   - Asset Registry — trust scores and evidence hashes
   - Attestation Store (v2) — time-limited NFTs with oracle staking and slashing (security-patched: A1 slash fund fix + caller auth on dao_invalidate)
   - Governance DAO — on-chain proposals, weighted voting, veto mechanism
@@ -32,8 +32,9 @@
 
 - [ ] Wire BLS threshold signature verification into the on-chain attestation-store contract (requires Casper runtime BLS precompile support)
 - [ ] KYC gate ↔ asset-registry integration (requires contract upgrade deployment)
-- [ ] `withdraw_stake` — add `transfer_from_purse` for actual fund withdrawal
-- [ ] `execute_proposal` — extended action dispatch (cross-contract calls based on action_type)
+- [x] `withdraw_stake` — real `transfer_from_purse_to_account` + `total_staked` sync (v2 deployed)
+- [x] `execute_proposal` — action dispatch for `ACTION_UPDATE_THRESHOLD` (v2 deployed)
+- [x] `register_voter` — real stake tracking with `voter_stakes` dict (v2 deployed)
 - [ ] Soulbound attestation tokens (SBT) with DID-binding
 - [ ] zkAttestation (Groth16) — prove score > threshold without revealing data
 - [ ] Anomaly detection (time-series) — price feed manipulation alerts

@@ -6,11 +6,12 @@ Casper nodes reject entry points declaring `CLType::Any`. All contracts use `CLT
 
 ## Multi-Account Deployment
 
-Casper testnet enforces a per-account cap of ~2 install-lane transactions. Three accounts are used across the 6 contracts:
+Casper testnet enforces a per-account cap of ~2 install-lane transactions. Four accounts are used across the 6 contracts:
 
-- **Main (secp256k1)**: asset-registry, governance-dao
+- **Main (secp256k1)**: asset-registry
 - **2nd (ed25519)**: attestation-store v2, kyc-gate
-- **3rd (ed25519)**: oracle-slashing
+- **3rd (ed25519)**: governance-dao v2
+- **4th (ed25519)**: oracle-slashing v2
 
 ## WASM Optimization
 
