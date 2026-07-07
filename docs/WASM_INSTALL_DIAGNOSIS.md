@@ -425,3 +425,55 @@ counter/nonce/gas-price state) rather than per-package.
 Not spending further credits chasing this today per the one-attempt-per-session
 budget; real gas was spent (250 CSPR payment, ~3.06M gas) on this negative
 result, same as prior attempts.
+
+## Update 6 (2026-07-07, later session): official docs + casper-node source + ecosystem repos review — no fix found, one new cheap-to-test lead
+
+Per instruction, re-read official Casper v2.0 material and cross-checked against
+`casper-network/casper-node` source (GitHub, `dev` branch = protocol **2.2.0**,
+matching the testnet node's reported **2.2.2**) and a couple of ecosystem repos.
+No document explicitly describes this failure mode; the block-lanes/pricing-mode
+docs match what we already independently reverse-engineered from the wire
+payload. Findings, in order of usefulness:
+
+1. **Pulled the raw execution result directly from the testnet node RPC**
+   (`info_get_transaction`, not just CSPR.cloud) for tx `1ac51a7e...`: confirms
+   the *only* global-state effects are `balance-hold`/balance writes (the Fee
+   Elimination hold + its release) — **zero** contract/package-related effects.
+   Execution reverted before `create_contract_package_at_hash` /
+   `add_contract_version_with_message_topics` (the two host calls
+   `casper-contract` 5.1's `storage::new_contract()` actually makes — confirmed
+   by name in the decoded Wasm import table) ever wrote anything. Consistent
+   with prior sessions' observation that gas-consumed is size/content-invariant
+   — this looks like a rejection at a very early, generic stage (host-function
+   resolution or `call()` entry, before user logic), not a business-logic
+   revert inside `new_contract`/`add_contract_version`.
+2. **Checked the actual `add_contract_version_by_contract_package` source**
+   (`execution_engine/src/runtime/mod.rs`): if install/upgrade isn't permitted
+   for this transaction, it returns a *distinct*, named error
+   (`ApiError::NotAllowedToAddContractVersion`), not `InvalidArgument`. Since we
+   consistently see `InvalidArgument`, our failure is provably **not** that
+   specific permission check — rules out one more concrete theory.
+3. **Ruled out the "wrong Wasm target" theory before spending any gas on it**:
+   `veles-labs/casper-contract-kit` (an ecosystem alt-API library, real repo)
+   targets `wasm32v1-none` instead of our `wasm32-unknown-unknown`, which
+   looked promising — but casper-node's own `Makefile` (current `dev` branch)
+   still builds/tests its own contracts against `wasm32-unknown-unknown`, so
+   that is still the officially-supported target; switching wouldn't fix this bug.
+4. **New, previously-unchecked, free-to-test-locally lead**: casper-node's
+   pinned Rust toolchain for smart contracts is `smart_contracts/rust-toolchain`
+   = **`nightly-2025-08-28`**. We've been building with **`nightly-2025-02-04`**
+   — a ~7-month gap. Cost to test: zero gas, just recompile with the newer
+   nightly and diff the Wasm import/table section (`wasm-objdump -x`) against a
+   known-good successful install's binary (e.g. governance-dao's original
+   working install, still on disk/rebuildable) to check for host-function
+   ABI/index drift. **Not yet done** — recommended as the next actual next step
+   before spending any more testnet gas on redeploy attempts.
+5. `github.com/make-software/how-to-casper-network` is node-operator/validator
+   setup documentation, not contract-deploy tooling — no relevant hits.
+6. Halborn's Casper 2.0 audit and the FAQ/unboxing article are high-level
+   (governance, staking, RPC sidecar, Fee Elimination) and don't cover
+   contract-install wire-level behavior at the depth needed here.
+
+**Net effect**: no new fix, but the "wrong toolchain/ABI drift" theory is now
+the single leading untested hypothesis, is free to test locally (no gas), and
+should be tried before any further paid redeploy attempt.
