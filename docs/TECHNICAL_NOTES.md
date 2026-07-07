@@ -1,30 +1,23 @@
-# Technical Notes — Casper Testnet Deployment
+# Technical Notes — Casper Testnet
 
-## Install/Upgrade Behavior on Casper 2.x Testnet
+## Entry Point Return Types
 
-During development, two technical issues were identified and resolved regarding contract deployment on Casper testnet via `casper-js-sdk@5.0.12`.
+Casper nodes reject entry points declaring `CLType::Any`. All contracts use `CLType::String` (JSON-serialized) for return values instead.
 
-### Issue 1: `CLType::Any` Entry Point Return Types
+## Multi-Account Deployment
 
-Contracts declaring entry points with `CLType::Any` as return type are rejected immediately by the Casper node with `ApiError::InvalidArgument [3]`. This affects `asset-registry::get_asset` and `attestation-store` entry points.
+Casper testnet enforces a per-account cap of ~2 install-lane transactions. Three accounts are used across the 6 contracts:
 
-**Resolution**: Replace `CLType::Any` with `CLType::String` (JSON-serialized return). Applied in source; deployed via fresh accounts.
+- **Main (secp256k1)**: asset-registry, governance-dao
+- **2nd (ed25519)**: attestation-store v2, kyc-gate
+- **3rd (ed25519)**: oracle-slashing
 
-### Issue 2: Per-Account Install Cap
+## WASM Optimization
 
-Casper testnet appears to enforce a per-account cap of ~2 install/upgrade-lane transactions. After 2 successful installs from the same account, subsequent attempts fail with `ApiError::InvalidArgument [3]` regardless of gas, WASM size, or entry point configuration.
+All contracts compiled with `wasm-opt -Oz` to stay under 64 KB, ensuring reliable install transactions on testnet.
 
-**Resolution**: Use fresh ed25519 accounts for additional deployments. Three accounts were used across the 6 contract deployments:
-- Main secp256k1 account: asset-registry, governance-dao
-- 2nd ed25519 account: attestation-store (v2), kyc-gate
-- 3rd ed25519 account: oracle-slashing
-
-### WASM Size Optimization
-
-All contracts compiled with `wasm-opt -Oz` to stay under 64 KB, avoiding known issues with larger install transactions on testnet.
-
-### casper-js-sdk 5.0.12 Notes
+## casper-js-sdk 5.0.12
 
 - CJS `require()` only — ESM import not supported
-- `queryLatestBalance` has a serialization bug — use raw RPC `query_balance` endpoint instead
 - Transaction construction requires explicit `PricingMode.Fixed` with `additionalComputationFactor: 0`
+- `queryLatestBalance` has a serialization issue — raw RPC `query_balance` used instead

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getSlashingReports, SlashingReport, ErrorResponse, postConsensusInit, ConsensusInitResponse } from '../../lib/api';
+import { useClickRef } from '../../lib/click';
 import { Loader2, XCircle, Shield, AlertTriangle, CheckCircle, Gavel } from 'lucide-react';
 
 const Oracles: React.FC = () => {
+  const { publicKey: walletKey } = useClickRef();
   const [slashingReports, setSlashingReports] = useState<SlashingReport[]>([]);
   const [consensusInfo, setConsensusInfo] = useState<ConsensusInitResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,7 +182,6 @@ const Oracles: React.FC = () => {
                   oracle_id: prompt('Oracle address to report:') || '',
                   reason: prompt('Reason for report:') || '',
                   evidence: prompt('Evidence (URL or description):') || '',
-                  severity: 'medium',
                 });
                 alert(`Report submitted: ${result.report_id}`);
                 window.location.reload();
@@ -196,6 +197,7 @@ const Oracles: React.FC = () => {
                 const { postSlashingChallenge } = await import('../../lib/api');
                 const result = await postSlashingChallenge({
                   report_id: prompt('Report ID to challenge:') || '',
+                  challenger: walletKey || 'anonymous',
                   reason: prompt('Challenge reason:') || '',
                 });
                 alert(result.message);
@@ -212,7 +214,8 @@ const Oracles: React.FC = () => {
                 const { postSlashingValidate } = await import('../../lib/api');
                 const result = await postSlashingValidate({
                   report_id: prompt('Report ID to validate:') || '',
-                  is_valid: confirm('Is the evidence valid? OK=Yes, Cancel=No'),
+                  validator: walletKey || 'anonymous',
+                  valid: confirm('Is the evidence valid? OK=Yes, Cancel=No'),
                 });
                 alert(result.message);
                 window.location.reload();
@@ -228,6 +231,7 @@ const Oracles: React.FC = () => {
                 const { postSlashingExecute } = await import('../../lib/api');
                 const result = await postSlashingExecute({
                   report_id: prompt('Report ID to execute:') || '',
+                  executor: walletKey || 'anonymous',
                 });
                 alert(result.message);
                 window.location.reload();

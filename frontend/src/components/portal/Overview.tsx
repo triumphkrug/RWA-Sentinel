@@ -103,7 +103,7 @@ const Overview: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Pipeline Runs (Placeholder - API doesn't provide a list directly) */}
+      {/* Recent Pipeline Runs */}
       <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h3>
         {stats?.last_pipeline_run ? (

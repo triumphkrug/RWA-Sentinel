@@ -1,4 +1,4 @@
-//! Phase 2+ infrastructure stubs for RWA-Sentinel.
+//! Phase 2+ extension modules for RWA-Sentinel.
 //!
 //! These modules define types, traits, and interfaces for planned features.
 

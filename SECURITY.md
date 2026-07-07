@@ -27,5 +27,5 @@ The system assumes:
 
 Documented in [docs/STATUS.md](docs/STATUS.md):
 - No contract upgrade mechanism (hackathon scope)
-- Oracle rotation not yet implemented
+- Oracle rotation planned for Phase 2
 - Scoring weight updates require redeployment

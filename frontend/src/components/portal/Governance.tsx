@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useClickRef } from '../../lib/click';
 import {
   getGovernanceProposals,
   postGovernancePropose,
@@ -14,6 +15,7 @@ import {
 import { Loader2, XCircle, PlusCircle, CheckCircle, ThumbsUp, ThumbsDown, Play } from 'lucide-react';
 
 const Governance: React.FC = () => {
+  const { publicKey } = useClickRef();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,10 +87,9 @@ const Governance: React.FC = () => {
   };
 
   const handleVote = async (proposalId: string, support: boolean) => {
-    // Placeholder for actual wallet integration
-    const voterAddress = '0xVoterWalletAddress'; // Replace with connected wallet address
+    const voterAddress = publicKey;
     if (!voterAddress) {
-      alert('Please connect your wallet to vote.');
+      alert('Please connect your wallet via CSPR.click to vote.');
       return;
     }
 
@@ -114,10 +115,9 @@ const Governance: React.FC = () => {
   };
 
   const handleExecute = async (proposalId: string) => {
-    // Placeholder for actual wallet integration
-    const executorAddress = '0xExecutorWalletAddress'; // Replace with connected wallet address
+    const executorAddress = publicKey;
     if (!executorAddress) {
-      alert('Please connect your wallet to execute proposals.');
+      alert('Please connect your wallet via CSPR.click to execute proposals.');
       return;
     }
 

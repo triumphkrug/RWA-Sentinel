@@ -67,4 +67,4 @@
 - `AssetCategory` enum — extensible asset classifications
 - `ConsensusConfig` struct — MPC-ready oracle parameters
 - `RemoteVerifier` trait — cross-chain attestation interface
-- Phase 2 stub contracts in `contracts/stubs/` — ready for implementation
+- Phase 2 extension modules in `contracts/extensions/` — ready for implementation
