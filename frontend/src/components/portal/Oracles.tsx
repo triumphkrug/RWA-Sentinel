@@ -43,37 +43,36 @@ const Oracles: React.FC = () => {
       switch (activeAction) {
         case 'report': {
           const result = await postSlashingReport({
-            oracle_id: formData.oracle_id || '',
-            reason: formData.reason || '',
-            evidence: formData.evidence || '',
+            oracleId: formData.oracleId || '',
+            attestationId: formData.attestationId || '',
+            reporterPublicKey: walletKey || formData.reporterPublicKey || '',
+            evidenceHash: formData.evidenceHash || '',
           });
-          showToast(`Report submitted: ${result.report_id}`, 'success');
+          showToast(`Report submitted: ${(result as any).reportId}`, 'success');
           break;
         }
         case 'challenge': {
           const result = await postSlashingChallenge({
-            report_id: formData.report_id || '',
-            challenger: walletKey || 'anonymous',
-            reason: formData.reason || '',
+            reportId: formData.reportId || '',
+            challengerPublicKey: walletKey || formData.challengerPublicKey || '',
+            challengeStakeAmount: Number(formData.challengeStakeAmount) || 500,
           });
-          showToast(result.message || 'Challenge submitted', 'success');
+          showToast(`Challenge submitted: ${(result as any).reportId}`, 'success');
           break;
         }
         case 'validate': {
           const result = await postSlashingValidate({
-            report_id: formData.report_id || '',
-            validator: walletKey || 'anonymous',
-            valid: formData.valid === 'true',
+            reportId: formData.reportId || '',
+            isValid: formData.isValid === 'true',
           });
-          showToast(result.message || 'Validation submitted', 'success');
+          showToast(`Validation submitted: ${(result as any).reportId}`, 'success');
           break;
         }
         case 'execute': {
           const result = await postSlashingExecute({
-            report_id: formData.report_id || '',
-            executor: walletKey || 'anonymous',
+            reportId: formData.reportId || '',
           });
-          showToast(result.message || 'Slash executed', 'success');
+          showToast(`Slash executed: ${(result as any).reportId}`, 'success');
           break;
         }
       }
@@ -97,8 +96,9 @@ const Oracles: React.FC = () => {
       pending: 'bg-yellow-100 text-yellow-800',
       challenged: 'bg-orange-100 text-orange-800',
       validated: 'bg-green-100 text-green-800',
-      executed: 'bg-red-100 text-red-800',
-      dismissed: 'bg-gray-100 text-gray-800',
+      invalidated: 'bg-gray-100 text-gray-800',
+      slashed: 'bg-red-100 text-red-800',
+      resolved: 'bg-blue-100 text-blue-800',
     };
     return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status] || styles.pending}`}>{status}</span>;
   };
@@ -217,7 +217,7 @@ const Oracles: React.FC = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Report ID</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Oracle</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reporter</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Evidence</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                 </tr>
@@ -226,11 +226,11 @@ const Oracles: React.FC = () => {
                 {slashingReports.map((report) => (
                   <tr key={report.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-sm font-mono text-gray-900">{report.id.substring(0, 8)}…</td>
-                    <td className="px-4 py-3 text-sm font-mono text-gray-700">{report.oracle_id.substring(0, 8)}…</td>
-                    <td className="px-4 py-3 text-sm font-mono text-gray-700">{report.reporter.substring(0, 8)}…</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">{report.reason}</td>
+                    <td className="px-4 py-3 text-sm font-mono text-gray-700">{report.oracleId.substring(0, 8)}…</td>
+                    <td className="px-4 py-3 text-sm font-mono text-gray-700">{report.reporterPublicKey.substring(0, 8)}…</td>
+                    <td className="px-4 py-3 text-sm font-mono text-gray-700 max-w-xs truncate">{report.evidenceHash.substring(0, 12)}…</td>
                     <td className="px-4 py-3 text-sm">{getStatusBadge(report.status)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{new Date(report.timestamp).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{new Date(report.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -282,21 +282,22 @@ const Oracles: React.FC = () => {
       <Modal open={activeAction === 'report'} onClose={() => setActiveAction(null)} title="Report Oracle Misconduct">
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Oracle Address</label>
-            <input type="text" value={formData.oracle_id || ''} onChange={e => setFormData(p => ({ ...p, oracle_id: e.target.value }))}
-              placeholder="0197cedb..." className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Oracle ID</label>
+            <input type="text" value={formData.oracleId || ''} onChange={e => setFormData(p => ({ ...p, oracleId: e.target.value }))}
+              placeholder="0197cedbd7498429c4c277fc..." className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-            <input type="text" value={formData.reason || ''} onChange={e => setFormData(p => ({ ...p, reason: e.target.value }))}
-              placeholder="Score manipulation detected" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Attestation ID</label>
+            <input type="text" value={formData.attestationId || ''} onChange={e => setFormData(p => ({ ...p, attestationId: e.target.value }))}
+              placeholder="att-001" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Evidence (URL or description)</label>
-            <input type="text" value={formData.evidence || ''} onChange={e => setFormData(p => ({ ...p, evidence: e.target.value }))}
-              placeholder="https://..." className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Evidence Hash</label>
+            <input type="text" value={formData.evidenceHash || ''} onChange={e => setFormData(p => ({ ...p, evidenceHash: e.target.value }))}
+              placeholder="sha256-evidence-hash" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500" />
           </div>
-          <button onClick={handleSubmitAction} disabled={submitting || !formData.oracle_id || !formData.reason}
+          <p className="text-xs text-gray-500">Reporting as: {walletKey ? walletKey.substring(0, 16) + '…' : 'anonymous (connect wallet)'}</p>
+          <button onClick={handleSubmitAction} disabled={submitting || !formData.oracleId || !formData.attestationId || !formData.evidenceHash}
             className="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />} Submit Report
           </button>
@@ -307,16 +308,16 @@ const Oracles: React.FC = () => {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Report ID</label>
-            <input type="text" value={formData.report_id || ''} onChange={e => setFormData(p => ({ ...p, report_id: e.target.value }))}
+            <input type="text" value={formData.reportId || ''} onChange={e => setFormData(p => ({ ...p, reportId: e.target.value }))}
               placeholder="Paste report ID" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Challenge Reason</label>
-            <input type="text" value={formData.reason || ''} onChange={e => setFormData(p => ({ ...p, reason: e.target.value }))}
-              placeholder="Scoring was legitimate" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Challenge Stake (CSPR)</label>
+            <input type="number" value={formData.challengeStakeAmount || '500'} onChange={e => setFormData(p => ({ ...p, challengeStakeAmount: e.target.value }))}
+              placeholder="500" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
           </div>
           <p className="text-xs text-gray-500">Challenging as: {walletKey ? walletKey.substring(0, 16) + '…' : 'anonymous (connect wallet for identity tracking)'}</p>
-          <button onClick={handleSubmitAction} disabled={submitting || !formData.report_id || !formData.reason}
+          <button onClick={handleSubmitAction} disabled={submitting || !formData.reportId}
             className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Swords className="h-4 w-4" />} Submit Challenge
           </button>
@@ -327,23 +328,23 @@ const Oracles: React.FC = () => {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Report ID</label>
-            <input type="text" value={formData.report_id || ''} onChange={e => setFormData(p => ({ ...p, report_id: e.target.value }))}
+            <input type="text" value={formData.reportId || ''} onChange={e => setFormData(p => ({ ...p, reportId: e.target.value }))}
               placeholder="Paste report ID" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Is the evidence valid?</label>
             <div className="flex gap-3">
               <label className="flex items-center gap-1.5 text-sm">
-                <input type="radio" name="valid" checked={formData.valid === 'true'} onChange={() => setFormData(p => ({ ...p, valid: 'true' }))} />
+                <input type="radio" name="isValid" checked={formData.isValid === 'true'} onChange={() => setFormData(p => ({ ...p, isValid: 'true' }))} />
                 <span className="text-green-700 font-medium">Yes, valid</span>
               </label>
               <label className="flex items-center gap-1.5 text-sm">
-                <input type="radio" name="valid" checked={formData.valid === 'false'} onChange={() => setFormData(p => ({ ...p, valid: 'false' }))} />
+                <input type="radio" name="isValid" checked={formData.isValid === 'false'} onChange={() => setFormData(p => ({ ...p, isValid: 'false' }))} />
                 <span className="text-red-700 font-medium">No, invalid</span>
               </label>
             </div>
           </div>
-          <button onClick={handleSubmitAction} disabled={submitting || !formData.report_id || formData.valid === undefined}
+          <button onClick={handleSubmitAction} disabled={submitting || !formData.reportId || formData.isValid === undefined}
             className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck className="h-4 w-4" />} Submit Validation
           </button>
@@ -354,14 +355,14 @@ const Oracles: React.FC = () => {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Report ID</label>
-            <input type="text" value={formData.report_id || ''} onChange={e => setFormData(p => ({ ...p, report_id: e.target.value }))}
+            <input type="text" value={formData.reportId || ''} onChange={e => setFormData(p => ({ ...p, reportId: e.target.value }))}
               placeholder="Paste report ID" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500" />
           </div>
           <p className="text-xs text-gray-500">Executing as: {walletKey ? walletKey.substring(0, 16) + '…' : 'anonymous (connect wallet for identity tracking)'}</p>
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
             <strong>Warning:</strong> This will execute the slash penalty on-chain. The oracle's stake will be reduced by the slashing penalty percentage.
           </div>
-          <button onClick={handleSubmitAction} disabled={submitting || !formData.report_id}
+          <button onClick={handleSubmitAction} disabled={submitting || !formData.reportId}
             className="w-full rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Hammer className="h-4 w-4" />} Execute Slash
           </button>
