@@ -16,8 +16,9 @@ const Assets: React.FC = () => {
       setError(null);
       try {
         const data = await getScores();
-        setAssets(data);
-        setFilteredAssets(data); // Initialize filtered assets
+        const list = Array.isArray(data) ? data : [];
+        setAssets(list);
+        setFilteredAssets(list);
       } catch (err: any) {
         const errorRes: ErrorResponse = err;
         setError(errorRes.message || 'Failed to fetch assets');

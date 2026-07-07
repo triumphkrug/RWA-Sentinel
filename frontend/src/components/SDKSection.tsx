@@ -1,41 +1,51 @@
-import { Terminal, Package, Cpu } from 'lucide-react'
+import { Terminal, Package, Cpu, ExternalLink } from 'lucide-react'
 
 const tools = [
   {
     icon: Terminal,
     name: 'TypeScript SDK',
-    desc: 'Full-featured SDK for scoring, attestation, and cache management. Works with Node.js and browser environments.',
+    count: '9 methods',
+    desc: 'Full-featured SDK for scoring, attestation, challenge, and stake management. Works with Node.js and browser environments.',
+    docUrl: 'https://github.com/triumphkrug/RWA-Sentinel/blob/main/sdk/README.md',
     install: 'npm install @rwa-sentinel/sdk',
     code: `import { Sentinel } from '@rwa-sentinel/sdk'
 
 const sentinel = new Sentinel({
-  endpoint: 'https://rwa-sentinel.xyz',
-  casperRPC: 'https://casper.nownodes.io/rpc'  // Powered by NOWNodes
+  endpoint: 'https://rwa-sentinel.xyz'
 })
 
-const result = await sentinel.pipeline.run()
-console.log(result.passing, 'assets verified')`,
+// Score assets, query attestations, manage stakes
+const scores = await sentinel.getScores()
+const att = await sentinel.getAttestation(id)`,
   },
   {
     icon: Package,
     name: 'MCP Server',
-    desc: 'Model Context Protocol server for AI agent integration. Feed attestation data directly into LLM workflows.',
+    count: '24 tools',
+    desc: 'Model Context Protocol server for AI agent integration. Feed attestation data directly into LLM workflows and autonomous agents.',
+    docUrl: 'https://github.com/triumphkrug/RWA-Sentinel/blob/main/sdk/MCP_README.md',
     install: 'npx rwa-sentinel-mcp',
-    code: `// MCP tools exposed:
-// rwa_run_pipeline   — execute full pipeline
-// rwa_get_scores     — fetch scored assets
-// rwa_check_validity — query attestation status
-// rwa_cache_stats    — monitor cache health`,
+    code: `// 24 MCP tools exposed:
+rwa_run_pipeline       — execute full pipeline
+rwa_get_scores         — fetch scored assets
+rwa_check_validity     — attestation status
+rwa_kyc_check          — on-chain KYC lookup
+rwa_detect_anomalies   — AI anomaly detection
+// + 19 more tools (governance, slashing…)`,
   },
   {
     icon: Cpu,
     name: 'REST API',
-    desc: 'Direct HTTP endpoints for custom integrations. Run pipelines, query scores, check cache, and verify attestations.',
+    count: '40+ endpoints',
+    desc: 'Direct HTTP endpoints for custom integrations. Scoring pipeline, attestations, governance, slashing, chain data, and extensions.',
+    docUrl: 'https://github.com/triumphkrug/RWA-Sentinel/blob/main/docs/API_REFERENCE.md',
     install: 'curl https://rwa-sentinel.xyz/health',
-    code: `POST /api/v1/pipeline     — run verification
-GET  /api/v1/scores       — fetch scored invoices
-GET  /api/v1/cache/stats   — cache health
-GET  /health              — service status`,
+    code: `POST /api/v1/pipeline        — run scoring
+GET  /api/v1/scores          — fetch scores
+GET  /api/v1/attestations    — list attestations
+POST /api/v1/governance/*    — DAO actions
+POST /api/v1/slashing/*      — oracle slashing
+GET  /api/v1/extensions/*    — KYC, bridge, categories`,
   },
 ]
 
@@ -48,18 +58,30 @@ export default function SDKSection() {
             <span className="shimmer-text">DEVELOPERS:</span>{' '}
             Integrate in minutes
           </h2>
+          <p className="text-gray-500 mt-3">Three integration paths — SDK, MCP, and REST API — all fully documented</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
           {tools.map((t, i) => (
             <div key={i} className="rwa-card flex flex-col">
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-1">
                 <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
                   <t.icon className="w-5 h-5 text-blue-600" />
                 </div>
-                <h3 className="font-bold text-gray-900">{t.name}</h3>
+                <div>
+                  <h3 className="font-bold text-gray-900">{t.name}</h3>
+                  <p className="text-xs text-blue-600 font-medium">{t.count}</p>
+                </div>
               </div>
               <p className="text-sm text-gray-500 leading-relaxed mb-4">{t.desc}</p>
+              <a
+                href={t.docUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 font-medium mb-4"
+              >
+                View Documentation <ExternalLink className="w-3.5 h-3.5" />
+              </a>
               <div className="bg-gray-900 rounded-xl p-4 font-mono text-xs mb-3">
                 <p className="text-green-400 mb-2">$ {t.install}</p>
               </div>

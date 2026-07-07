@@ -9,7 +9,7 @@ const reasons = [
 
 export default function WhyTimeLimited() {
   return (
-    <section className="py-24 bg-amber-50/30 border-y border-amber-100/50">
+    <section id="why" className="py-24 bg-amber-50/30 border-y border-amber-100/50">
       <div className="rwa-section">
         <div className="text-center max-w-2xl mx-auto mb-14">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">

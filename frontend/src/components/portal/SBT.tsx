@@ -45,7 +45,7 @@ const SBT: React.FC = () => {
     if (found) {
       setVerificationResult(`Hash found! Attestation ID: ${found.id}. Status: ${found.status}. Score: ${found.score}`);
     } else {
-      setVerificationResult('Hash not found in recorded attestations.');
+      setVerificationResult('Hash not found in recorded attestations. Paste the attestation_hash value (e.g., bf0ce98af2b2...) from an existing attestation, or run the Agent Demo pipeline to generate new attestations.');
     }
   };
 
@@ -86,31 +86,19 @@ const SBT: React.FC = () => {
         Click any attestation below to preview its SBT card.
       </p>
 
-      {/* Wallet & Mint */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6 flex items-center justify-between">
-        <h3 className="text-xl font-semibold text-gray-900">Mint a New SBT</h3>
-        {publicKey ? (
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg font-mono border border-green-200">
-              <Wallet className="h-4 w-4 inline mr-1.5" />{shortKey(publicKey)}
-            </span>
-            <button
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-              onClick={() => alert('SBT minting requires an active attestation pipeline batch. Run the Agent Demo first to generate attestations, then mint here.')}
-            >
-              Mint SBT
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => clickRef?.signIn()}
-            disabled={!ready}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-          >
-            <Wallet className="h-5 w-5 mr-2" />
-            {ready ? 'Connect Wallet to Mint' : 'Loading Wallet SDK…'}
-          </button>
-        )}
+      {/* What are SBTs */}
+      <div className="bg-blue-50 rounded-xl border border-blue-200 p-5">
+        <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+          <Award className="h-5 w-5" /> How SBTs Work
+        </h3>
+        <ul className="text-sm text-blue-800 space-y-1.5">
+          <li>Each attestation becomes a non-transferable Soulbound Token bound to the verifier's DID</li>
+          <li>SBTs expire when the underlying attestation expires — DeFi protocols call <code className="bg-white/80 px-1 rounded">is_valid()</code> to check</li>
+          <li>Click any attestation in the list below to preview its SBT card visualization</li>
+          <li>Use the hash verifier at the bottom to check any attestation hash against the on-chain record</li>
+          {publicKey && <li>Connected as: <code className="bg-white/80 px-1 rounded font-mono text-xs">{shortKey(publicKey)}</code></li>}
+          {!publicKey && <li>Connect your wallet in the sidebar to associate SBTs with your account</li>}
+        </ul>
       </div>
 
       {/* SBT Card Preview + Attestation List */}

@@ -1,309 +1,287 @@
-import React, { useState } from 'react';
-import * as api from '../../lib/api';
-import { Play, Copy, RefreshCcw, XCircle, Loader2 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Play, Copy, RefreshCcw, XCircle, Loader2, Search } from 'lucide-react';
 
 interface Endpoint {
   name: string;
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'PUT';
   path: string;
-  params?: Record<string, any>;
   body?: Record<string, any>;
   description: string;
+  category: string;
 }
 
 const endpoints: Endpoint[] = [
-  // --- Core ---
-  { name: 'Get Health', method: 'GET', path: '/health', description: 'Check API health status.' },
-  { name: 'Get Stats', method: 'GET', path: '/api/v1/stats', description: 'Retrieve overall portal statistics.' },
-  { name: 'Get Factors', method: 'GET', path: '/api/v1/factors', description: 'List the 6 scoring factors with weights.' },
-  { name: 'Get Cache Stats', method: 'GET', path: '/api/v1/cache/stats', description: 'View scoring cache statistics.' },
+  // Core
+  { category: 'Core', name: 'Health', method: 'GET', path: '/health', description: 'API health, uptime, contracts' },
+  { category: 'Core', name: 'Stats', method: 'GET', path: '/api/v1/stats', description: 'Portal statistics' },
+  { category: 'Core', name: 'Factors', method: 'GET', path: '/api/v1/factors', description: '6 scoring factors with weights' },
+  { category: 'Core', name: 'Cache Stats', method: 'GET', path: '/api/v1/cache/stats', description: 'Scoring cache metrics' },
 
-  // --- Pipeline ---
-  { name: 'Run Pipeline', method: 'POST', path: '/api/v1/pipeline', body: { lei: '5493001KJTIIGC8Y1R12' }, description: 'Run the full RWA scoring pipeline end-to-end.' },
-  { name: 'Get Scores', method: 'GET', path: '/api/v1/scores', description: 'List all asset trust scores.' },
+  // Pipeline
+  { category: 'Pipeline', name: 'Run Pipeline', method: 'POST', path: '/api/v1/pipeline', body: { lei: '5493001KJTIIGC8Y1R12' }, description: 'Execute full scoring pipeline' },
+  { category: 'Pipeline', name: 'Scores', method: 'GET', path: '/api/v1/scores', description: 'All asset trust scores' },
 
-  // --- Attestations ---
-  { name: 'Get Attestations', method: 'GET', path: '/api/v1/attestations', params: { page: 1, limit: 10, status: 'attested' }, description: 'List attestations with optional filters.' },
-  { name: 'Get Attestation by ID', method: 'GET', path: '/api/v1/attestations/:id', params: { id: 'example_attestation_id' }, description: 'Retrieve a single attestation by ID.' },
-  { name: 'Verify Attestation', method: 'GET', path: '/api/v1/attestations/:tokenId/verify', params: { tokenId: 'example_token' }, description: 'Verify an attestation token on-chain.' },
+  // Attestations
+  { category: 'Attestations', name: 'List Attestations', method: 'GET', path: '/api/v1/attestations?limit=10&status=attested', description: 'Filtered attestation list' },
+  { category: 'Attestations', name: 'Verify Token', method: 'GET', path: '/api/v1/attestations/example/verify', description: 'Verify attestation token' },
 
-  // --- Data Adapters ---
-  { name: 'Get LEI Data', method: 'GET', path: '/api/v1/data/lei/:lei', params: { lei: '5493001KJTIIGC8Y1R12' }, description: 'Fetch Legal Entity Identifier (LEI) data from GLEIF.' },
-  { name: 'Get Price Data', method: 'GET', path: '/api/v1/data/price/:symbol', params: { symbol: 'bitcoin' }, description: 'Fetch asset price data from CoinGecko.' },
-  { name: 'Get Company Data', method: 'GET', path: '/api/v1/data/company/:jurisdiction/:id', params: { jurisdiction: 'gb', id: '00000006' }, description: 'Fetch company registration data from Companies House.' },
+  // Data
+  { category: 'Data', name: 'LEI Lookup', method: 'GET', path: '/api/v1/data/lei/5493001KJTIIGC8Y1R12', description: 'GLEIF entity data' },
+  { category: 'Data', name: 'Price Data', method: 'GET', path: '/api/v1/data/price/bitcoin', description: 'CoinGecko market data' },
+  { category: 'Data', name: 'Company Data', method: 'GET', path: '/api/v1/data/company/gb/00000006', description: 'Companies House lookup' },
+  { category: 'Data', name: 'Data Cache Stats', method: 'GET', path: '/api/v1/data/cache/stats', description: 'Data adapter cache' },
 
-  // --- Governance ---
-  { name: 'Get Governance Proposals', method: 'GET', path: '/api/v1/governance/proposals', description: 'List all DAO governance proposals.' },
-  { name: 'Create Proposal', method: 'POST', path: '/api/v1/governance/propose', body: { title: 'Test Proposal', description: 'Adjust scoring threshold', duration_days: 3 }, description: 'Create a new governance proposal.' },
-  { name: 'Vote on Proposal', method: 'POST', path: '/api/v1/governance/vote', body: { proposal_id: 'example', support: true, weight: 100 }, description: 'Vote on an active proposal.' },
-  { name: 'Execute Proposal', method: 'POST', path: '/api/v1/governance/execute', body: { proposal_id: 'example' }, description: 'Execute a passed proposal.' },
+  // Governance
+  { category: 'Governance', name: 'Proposals', method: 'GET', path: '/api/v1/governance/proposals', description: 'List DAO proposals' },
+  { category: 'Governance', name: 'Create Proposal', method: 'POST', path: '/api/v1/governance/propose', body: { type: 'parameter_change', description: 'Adjust trust score threshold to 70', proposerPublicKey: '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79', executionData: {} }, description: 'Submit new proposal' },
+  { category: 'Governance', name: 'Vote', method: 'POST', path: '/api/v1/governance/vote', body: { proposalId: '<paste proposal ID>', voterPublicKey: '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79', choice: 'for' }, description: 'Vote on proposal' },
+  { category: 'Governance', name: 'Execute Proposal', method: 'POST', path: '/api/v1/governance/execute', body: { proposalId: '<paste proposal ID>' }, description: 'Execute approved proposal' },
 
-  // --- Slashing ---
-  { name: 'Get Slashing Reports', method: 'GET', path: '/api/v1/slashing/reports', description: 'List all oracle slashing reports.' },
-  { name: 'Report Violation', method: 'POST', path: '/api/v1/slashing/report', body: { oracle_id: 'oracle-1', evidence: 'score manipulation', severity: 3 }, description: 'Report an oracle violation.' },
-  { name: 'Challenge Report', method: 'POST', path: '/api/v1/slashing/challenge', body: { report_id: 'example', counter_evidence: 'legitimate scoring' }, description: 'Challenge a slashing report.' },
+  // Slashing
+  { category: 'Slashing', name: 'Reports', method: 'GET', path: '/api/v1/slashing/reports', description: 'List slashing reports' },
+  { category: 'Slashing', name: 'Report Violation', method: 'POST', path: '/api/v1/slashing/report', body: { oraclePublicKey: '0197cedbd7498429c4c277fc313d8e90574b5d189552c86244deaef3b37fd4c81f', reporterPublicKey: '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79', reason: 'Score manipulation detected', severity: 3 }, description: 'Report oracle misconduct' },
+  { category: 'Slashing', name: 'Challenge Report', method: 'POST', path: '/api/v1/slashing/challenge', body: { reportId: '<paste report ID>', challengerPublicKey: '0197cedbd7498429c4c277fc313d8e90574b5d189552c86244deaef3b37fd4c81f', counterEvidence: 'Scoring was legitimate' }, description: 'Challenge a report' },
 
-  // --- Chain Explorer ---
-  { name: 'Chain Overview', method: 'GET', path: '/api/v1/chain/overview', description: 'High-level overview of Casper chain activity.' },
-  { name: 'Chain Activity', method: 'GET', path: '/api/v1/chain/activity', description: 'Recent chain activity feed.' },
-  { name: 'Chain Transactions', method: 'GET', path: '/api/v1/chain/transactions', description: 'List on-chain transactions.' },
+  // Chain
+  { category: 'Chain', name: 'Chain All', method: 'GET', path: '/api/v1/chain/all', description: 'Full chain overview + activity + txs' },
+  { category: 'Chain', name: 'Chain Overview', method: 'GET', path: '/api/v1/chain/overview', description: 'Block height, era, validators' },
+  { category: 'Chain', name: 'Chain Activity', method: 'GET', path: '/api/v1/chain/activity', description: 'Daily transaction activity' },
+  { category: 'Chain', name: 'Chain Transactions', method: 'GET', path: '/api/v1/chain/transactions', description: 'Recent large transactions' },
 
-  // --- BLS Consensus ---
-  { name: 'Init Consensus', method: 'POST', path: '/api/v1/consensus/init', description: 'Initialize BLS 3-of-5 threshold consensus round.' },
+  // Consensus
+  { category: 'Consensus', name: 'Init Consensus', method: 'POST', path: '/api/v1/consensus/init', body: { attestationId: 'att-001', messageHash: 'abc123def456' }, description: 'Initialize BLS 3-of-5 consensus round' },
 
-  // --- Extensions ---
-  { name: 'Asset Categories', method: 'GET', path: '/api/v1/extensions/categories', description: 'List all 10 asset categories with scoring weight profiles.' },
-  { name: 'KYC Check', method: 'POST', path: '/api/v1/extensions/kyc/check', body: { submitterPublicKey: '0197cedb...' }, description: 'Check on-chain KYC status for a public key.' },
-  { name: 'Bridge Chains', method: 'GET', path: '/api/v1/extensions/bridge/chains', description: 'List supported cross-chain bridge networks.' },
-  { name: 'Bridge Verify', method: 'POST', path: '/api/v1/extensions/bridge/verify', body: { chainId: 1, contractAddress: '0x742d35Cc...', attestationHash: 'abc123...' }, description: 'Verify a cross-chain attestation.' },
+  // Extensions
+  { category: 'Extensions', name: 'Asset Categories', method: 'GET', path: '/api/v1/extensions/categories', description: '10 asset category profiles' },
+  { category: 'Extensions', name: 'KYC Check', method: 'POST', path: '/api/v1/extensions/kyc/check', body: { submitterPublicKey: '0197cedbd7498429c4c277fc313d8e90574b5d189552c86244deaef3b37fd4c81f' }, description: 'Check on-chain KYC status' },
+  { category: 'Extensions', name: 'Bridge Chains', method: 'GET', path: '/api/v1/extensions/bridge/chains', description: 'Supported cross-chain networks' },
+  { category: 'Extensions', name: 'Bridge Verify', method: 'POST', path: '/api/v1/extensions/bridge/verify', body: { chainId: 1, contractAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD1E', attestationHash: 'abc123' }, description: 'Verify cross-chain attestation' },
 
-  // --- Anomaly Detection ---
-  { name: 'Detect Anomalies', method: 'POST', path: '/api/v1/anomalies/detect', body: {}, description: 'Run AI anomaly detection across all attestations.' },
+  // Anomalies
+  { category: 'Anomalies', name: 'Detect Anomalies', method: 'POST', path: '/api/v1/anomalies/detect', body: {}, description: 'Run AI anomaly detection' },
 
-  // --- Documents ---
-  { name: 'Verify Document', method: 'POST', path: '/api/v1/documents/verify', body: { hash: 'sha256...' }, description: 'Verify a document hash against stored records.' },
-  { name: 'Submit Document', method: 'POST', path: '/api/v1/documents', body: { content: 'document data', metadata: {} }, description: 'Submit a new document for verification.' },
-  { name: 'Document Status', method: 'GET', path: '/api/v1/documents/:hash/status', params: { hash: 'example_hash' }, description: 'Get verification status of a document.' },
+  // Documents
+  { category: 'Documents', name: 'Verify Document', method: 'POST', path: '/api/v1/documents/verify', body: { hash: 'sha256-example-hash' }, description: 'Verify document hash' },
+  { category: 'Documents', name: 'Submit Document', method: 'POST', path: '/api/v1/documents', body: { content: 'document payload', metadata: { type: 'invoice' } }, description: 'Submit document for verification' },
 
-  // --- Asset History ---
-  { name: 'Asset History', method: 'GET', path: '/api/v1/assets/:assetId/history', params: { assetId: 'asset-001' }, description: 'Get scoring history for a specific asset.' },
+  // Assets
+  { category: 'Assets', name: 'Asset History', method: 'GET', path: '/api/v1/assets/asset-001/history', description: 'Scoring history for an asset' },
 ];
 
 const Playground: React.FC = () => {
   const [selectedEndpoint, setSelectedEndpoint] = useState<Endpoint | null>(null);
-  const [requestBody, setRequestBody] = useState<string>('');
-  const [requestParams, setRequestParams] = useState<string>('');
+  const [editedPath, setEditedPath] = useState('');
+  const [requestBody, setRequestBody] = useState('');
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredEndpoints = useMemo(() => {
+    if (!searchQuery.trim()) return endpoints;
+    const q = searchQuery.toLowerCase();
+    return endpoints.filter(e =>
+      e.name.toLowerCase().includes(q) ||
+      e.path.toLowerCase().includes(q) ||
+      e.category.toLowerCase().includes(q) ||
+      e.description.toLowerCase().includes(q) ||
+      e.method.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
+
+  const groupedEndpoints = useMemo(() => {
+    const groups: Record<string, Endpoint[]> = {};
+    filteredEndpoints.forEach(e => {
+      if (!groups[e.category]) groups[e.category] = [];
+      groups[e.category].push(e);
+    });
+    return groups;
+  }, [filteredEndpoints]);
 
   const handleEndpointSelect = (endpoint: Endpoint) => {
     setSelectedEndpoint(endpoint);
+    setEditedPath(endpoint.path);
     setRequestBody(endpoint.body ? JSON.stringify(endpoint.body, null, 2) : '');
-    setRequestParams(endpoint.params ? JSON.stringify(endpoint.params, null, 2) : '');
     setResponse(null);
     setError(null);
   };
 
   const executeRequest = async () => {
-    if (!selectedEndpoint) {
-      setError('Please select an endpoint first.');
-      return;
-    }
-
+    if (!selectedEndpoint) return;
     setLoading(true);
     setError(null);
     setResponse(null);
 
     try {
-      let parsedBody: any = {};
-      if (selectedEndpoint.method === 'POST' && requestBody) {
-        try {
-          parsedBody = JSON.parse(requestBody);
-        } catch (e) {
-          throw new Error('Invalid JSON in request body.');
-        }
+      const config: RequestInit = { method: selectedEndpoint.method };
+      if (selectedEndpoint.method === 'POST' || selectedEndpoint.method === 'PUT') {
+        config.headers = { 'Content-Type': 'application/json' };
+        config.body = requestBody || '{}';
+        // Validate JSON
+        try { JSON.parse(config.body as string); } catch { throw new Error('Invalid JSON in request body'); }
       }
 
-      let parsedParams: Record<string, any> = {};
-      if (requestParams) {
-        try {
-          parsedParams = JSON.parse(requestParams);
-        } catch (e) {
-          throw new Error('Invalid JSON in request parameters.');
-        }
-      }
-
-      let path = selectedEndpoint.path;
-      // Replace path parameters like :id, :lei, :jurisdiction
-      for (const key in parsedParams) {
-        if (path.includes(`:${key}`)) {
-          path = path.replace(`:${key}`, parsedParams[key]);
-          delete parsedParams[key]; // Remove from params if used in path
-        }
-      }
-
-      // Find the corresponding API function
-      const apiFunctionName = `get${selectedEndpoint.name.replace(/ /g, '').replace('Post', '').replace('Get', '')}`;
-      const postApiFunctionName = `post${selectedEndpoint.name.replace(/ /g, '').replace('Post', '').replace('Get', '')}`;
-
-      let result;
-      if (selectedEndpoint.method === 'GET') {
-        // Special handling for functions that take params object vs direct path params
-        if (selectedEndpoint.path.includes(':')) {
-          // If path contains params, assume the function takes them directly
-          const func = (api as any)[apiFunctionName];
-          if (typeof func === 'function') {
-            const args = Object.values(parsedParams); // Pass remaining params as arguments
-            result = await func(...args);
-          } else {
-            // Fallback for generic GET with query params
-            result = await api.getAttestations(parsedParams); // Example, needs more robust mapping
-          }
-        } else {
-          const func = (api as any)[apiFunctionName];
-          if (typeof func === 'function') {
-            result = await func(parsedParams); // Pass params as a single object for query strings
-          } else {
-            // Generic GET for paths without specific functions or params
-            result = await (api as any).fetcher(path, 'GET', { params: parsedParams });
-          }
-        }
-      } else if (selectedEndpoint.method === 'POST') {
-        const func = (api as any)[postApiFunctionName];
-        if (typeof func === 'function') {
-          result = await func(parsedBody);
-        } else {
-          // Fallback for generic POST
-          result = await (api as any).fetcher(path, 'POST', parsedBody);
-        }
-      } else {
-        throw new Error('Unsupported HTTP method.');
-      }
-
-      setResponse(result);
+      const res = await fetch(editedPath, config);
+      const data = await res.json();
+      setResponse({ status: res.status, statusText: res.ok ? 'OK' : res.statusText, data });
     } catch (err: any) {
-      const errorRes: api.ErrorResponse = err;
-      setError(errorRes.message || 'An unknown API error occurred.');
-      console.error('API Playground Error:', err);
+      setError(err.message || 'Request failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const copyResponseToClipboard = () => {
-    if (response) {
-      navigator.clipboard.writeText(JSON.stringify(response, null, 2));
-      alert('Response copied to clipboard!');
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-gray-900">API Playground</h2>
-      <p className="text-gray-700">
-        Interact directly with the RWA-Sentinel API. Select an endpoint, modify parameters/body, and execute requests to see real-time responses.
-      </p>
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">API Playground</h2>
+        <p className="text-gray-500 mt-1">
+          Interact directly with all {endpoints.length} API endpoints. Select an endpoint, edit parameters, and execute.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Endpoint List */}
-        <div className="lg:col-span-1 bg-white border border-gray-200 shadow-sm rounded-lg p-4 h-full overflow-y-auto max-h-[calc(100vh-200px)]">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Endpoints</h3>
-          <ul className="space-y-2">
-            {endpoints.map((endpoint) => (
-              <li key={endpoint.name}>
-                <button
-                  onClick={() => handleEndpointSelect(endpoint)}
-                  className={`w-full text-left p-3 rounded-md transition-colors duration-150 ${
-                    selectedEndpoint?.name === endpoint.name
-                      ? 'bg-blue-50 text-blue-700 font-medium border-l-4 border-blue-600 -ml-1 pl-2'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <span className={`font-mono text-xs px-2 py-1 rounded ${endpoint.method === 'GET' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
-                    {endpoint.method}
-                  </span>
-                  <span className="ml-2 font-medium">{endpoint.name}</span>
-                  <p className="text-xs text-gray-500 mt-1">{endpoint.description}</p>
-                </button>
-              </li>
+        {/* Endpoint List with search */}
+        <div className="lg:col-span-1 bg-white border border-gray-200 shadow-sm rounded-lg flex flex-col max-h-[calc(100vh-180px)]">
+          {/* Fixed search header */}
+          <div className="sticky top-0 bg-white border-b border-gray-100 p-3 z-10 rounded-t-lg">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search endpoints..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1.5">{filteredEndpoints.length} endpoints</p>
+          </div>
+
+          {/* Scrollable endpoint list */}
+          <div className="flex-1 overflow-y-auto p-2">
+            {Object.entries(groupedEndpoints).map(([category, eps]) => (
+              <div key={category} className="mb-3">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-2 py-1">{category}</p>
+                {eps.map(ep => (
+                  <button
+                    key={ep.name + ep.path}
+                    onClick={() => handleEndpointSelect(ep)}
+                    className={`w-full text-left px-2.5 py-2 rounded-lg transition-colors text-sm ${
+                      selectedEndpoint?.name === ep.name && selectedEndpoint?.path === ep.path
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                        ep.method === 'GET' ? 'bg-green-100 text-green-700' : ep.method === 'POST' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {ep.method}
+                      </span>
+                      <span className="font-medium truncate">{ep.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
 
-        {/* Request and Response */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Request Panel */}
+        <div className="lg:col-span-2">
           {selectedEndpoint ? (
-            <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Request: {selectedEndpoint.name}</h3>
-              <p className="text-gray-700 mb-4">
-                <span className={`font-mono text-sm px-2 py-1 rounded ${selectedEndpoint.method === 'GET' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
-                  {selectedEndpoint.method}
-                </span>
-                <span className="ml-2 font-mono text-gray-800">{selectedEndpoint.path}</span>
-              </p>
-
-              {/* Parameters */}
-              <div className="mb-4">
-                <label htmlFor="requestParams" className="block text-sm font-medium text-gray-700 mb-2">
-                  Parameters (JSON for path/query params):
-                </label>
-                <textarea
-                  id="requestParams"
-                  rows={4}
-                  className="font-mono w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
-                  value={requestParams}
-                  onChange={(e) => setRequestParams(e.target.value)}
-                  placeholder='{"id": "...", "lei": "...", "page": 1}'
-                ></textarea>
+            <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6 space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{selectedEndpoint.name}</h3>
+                <p className="text-sm text-gray-500">{selectedEndpoint.description}</p>
               </div>
 
-              {/* Request Body */}
-              {selectedEndpoint.method === 'POST' && (
-                <div className="mb-4">
-                  <label htmlFor="requestBody" className="block text-sm font-medium text-gray-700 mb-2">
-                    Request Body (JSON):
-                  </label>
+              {/* Path */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">URL Path (editable)</label>
+                <div className="flex items-center gap-2">
+                  <span className={`font-mono text-xs px-2 py-1 rounded font-medium shrink-0 ${
+                    selectedEndpoint.method === 'GET' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
+                  }`}>{selectedEndpoint.method}</span>
+                  <input
+                    value={editedPath}
+                    onChange={e => setEditedPath(e.target.value)}
+                    className="flex-1 font-mono text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Body */}
+              {(selectedEndpoint.method === 'POST' || selectedEndpoint.method === 'PUT') && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Request Body (JSON)</label>
                   <textarea
-                    id="requestBody"
-                    rows={8}
-                    className="font-mono w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                    rows={6}
+                    className="font-mono w-full p-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
                     value={requestBody}
-                    onChange={(e) => setRequestBody(e.target.value)}
-                    placeholder='{"key": "value", "another_key": 123}'
-                  ></textarea>
+                    onChange={e => setRequestBody(e.target.value)}
+                  />
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex space-x-3">
+              {/* Actions */}
+              <div className="flex gap-2">
                 <button
                   onClick={executeRequest}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   disabled={loading}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {loading ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Play className="h-5 w-5 mr-2" />}
-                  Run Request
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  Run
                 </button>
                 <button
-                  onClick={() => handleEndpointSelect(selectedEndpoint)} // Reset to default body/params
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  disabled={loading}
+                  onClick={() => handleEndpointSelect(selectedEndpoint)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm hover:bg-gray-50"
                 >
-                  <RefreshCcw className="h-5 w-5 mr-2" />
-                  Reset
+                  <RefreshCcw className="h-4 w-4" /> Reset
                 </button>
               </div>
 
               {/* Response */}
-              <div className="mt-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-3">Response:</h4>
-                {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center mb-4">
-                    <XCircle className="h-5 w-5 mr-3" />
-                    <p>Error: {error}</p>
+              {(error || response) && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-medium text-gray-500">Response</label>
+                    {response && (
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          response.status < 300 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {response.status} {response.statusText}
+                        </span>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(JSON.stringify(response.data, null, 2))}
+                          className="text-gray-400 hover:text-gray-600"
+                          title="Copy"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-                {response && (
-                  <div className="relative bg-gray-800 text-white p-4 rounded-md font-mono text-sm overflow-x-auto">
-                    <pre>{JSON.stringify(response, null, 2)}</pre>
-                    <button
-                      onClick={copyResponseToClipboard}
-                      className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:bg-gray-700"
-                      title="Copy to clipboard"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-                {!loading && !error && !response && (
-                  <p className="text-gray-600">Run a request to see the response here.</p>
-                )}
-              </div>
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm flex items-center gap-2">
+                      <XCircle className="h-4 w-4 shrink-0" /> {error}
+                    </div>
+                  )}
+                  {response && (
+                    <pre className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs overflow-x-auto max-h-96">
+                      {JSON.stringify(response.data, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6 text-center text-gray-600 h-full flex items-center justify-center">
-              <p>Select an endpoint from the left sidebar to start interacting with the API.</p>
+            <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-12 text-center text-gray-400">
+              <Play className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p>Select an endpoint to get started</p>
             </div>
           )}
         </div>

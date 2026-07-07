@@ -1,350 +1,268 @@
 import React, { useEffect, useState } from 'react';
-import { useClickRef } from '../../lib/click';
 import {
-  getGovernanceProposals,
-  postGovernancePropose,
-  postGovernanceVote,
-  postGovernanceExecute,
-  Proposal,
-  ProposeRequest,
-  VoteRequest,
-  ExecuteRequest,
-  ErrorResponse,
-  ProposalStatus,
+  getGovernanceProposals, postGovernancePropose, postGovernanceVote, postGovernanceExecute,
+  Proposal, ErrorResponse
 } from '../../lib/api';
-import { Loader2, XCircle, PlusCircle, CheckCircle, ThumbsUp, ThumbsDown, Play } from 'lucide-react';
+import { useClickRef } from '../../lib/click';
+import { Loader2, XCircle, Gavel, Plus, ThumbsUp, ThumbsDown, Play, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 const Governance: React.FC = () => {
-  const { publicKey } = useClickRef();
+  const { publicKey: walletKey } = useClickRef();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showProposeForm, setShowProposeForm] = useState(false);
-  const [newProposal, setNewProposal] = useState<ProposeRequest>({
-    title: '',
-    description: '',
-    target_contract: '',
-    target_method: '',
-    parameters: {},
-    duration_days: 7,
-  });
-  const [formLoading, setFormLoading] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState<'parameter_change' | 'contract_upgrade' | 'treasury_spend'>('parameter_change');
+  const [formDesc, setFormDesc] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchProposals = async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await getGovernanceProposals();
-      setProposals(data.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()));
+      setProposals(data);
     } catch (err: any) {
-      const errorRes: ErrorResponse = err;
-      setError(errorRes.message || 'Failed to fetch proposals');
-      console.error('Error fetching proposals:', err);
+      setError(err.message || 'Failed to fetch proposals');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchProposals();
-  }, []);
+  useEffect(() => { fetchProposals(); }, []);
 
-  const handleProposeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setNewProposal((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleProposeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormLoading(true);
-    setFormError(null);
-    setFormSuccess(null);
+  const handlePropose = async () => {
+    if (!formDesc.trim()) {
+      setActionError('Description is required');
+      return;
+    }
+    const pubKey = walletKey || '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79';
+    setSubmitting(true);
+    setActionError(null);
     try {
-      // Basic validation
-      if (!newProposal.title || !newProposal.description) {
-        throw new Error('Title and Description are required.');
-      }
-      // Assuming parameters might be JSON string
-      const payload = {
-        ...newProposal,
-        parameters: typeof newProposal.parameters === 'string' ? JSON.parse(newProposal.parameters) : (newProposal.parameters || {}),
-        duration_days: Number(newProposal.duration_days) || 7,
-      };
-      await postGovernancePropose(payload);
-      setFormSuccess('Proposal submitted successfully!');
-      setNewProposal({ title: '', description: '', target_contract: '', target_method: '', parameters: {}, duration_days: 7 });
-      setShowProposeForm(false);
-      fetchProposals(); // Refresh list
+      await postGovernancePropose({
+        type: formType,
+        description: formDesc.trim(),
+        proposerPublicKey: pubKey,
+        executionData: {},
+      });
+      setFormDesc('');
+      setShowForm(false);
+      await fetchProposals();
     } catch (err: any) {
-      const errorMsg = err.message || (err as ErrorResponse).message || 'Failed to submit proposal';
-      setFormError(errorMsg);
-      console.error('Error submitting proposal:', err);
+      setActionError(err.message || 'Failed to create proposal');
     } finally {
-      setFormLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleVote = async (proposalId: string, support: boolean) => {
-    const voterAddress = publicKey;
-    if (!voterAddress) {
-      alert('Please connect your wallet via CSPR.click to vote.');
-      return;
-    }
-
-    if (!confirm(`Are you sure you want to vote ${support ? 'FOR' : 'AGAINST'} this proposal?`)) {
-      return;
-    }
-
+  const handleVote = async (proposalId: string, choice: 'for' | 'against') => {
+    const pubKey = walletKey || '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79';
+    setActionError(null);
     try {
-      const voteRequest: VoteRequest = {
-        proposal_id: proposalId,
-        voter: voterAddress,
-        support: support,
-        weight: 100, // Example weight, could be based on token balance
-      };
-      await postGovernanceVote(voteRequest);
-      alert('Vote cast successfully!');
-      fetchProposals(); // Refresh list
+      await postGovernanceVote({ proposalId, voterPublicKey: pubKey, support: choice });
+      await fetchProposals();
     } catch (err: any) {
-      const errorMsg = (err as ErrorResponse).message || 'Failed to cast vote';
-      alert(`Error: ${errorMsg}`);
-      console.error('Error casting vote:', err);
+      setActionError(err.message || 'Failed to vote');
     }
   };
 
   const handleExecute = async (proposalId: string) => {
-    const executorAddress = publicKey;
-    if (!executorAddress) {
-      alert('Please connect your wallet via CSPR.click to execute proposals.');
-      return;
-    }
-
-    if (!confirm('Are you sure you want to execute this proposal? This action is irreversible.')) {
-      return;
-    }
-
+    const pubKey = walletKey || '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79';
+    setActionError(null);
     try {
-      const executeRequest: ExecuteRequest = {
-        proposal_id: proposalId,
-        executor: executorAddress,
-      };
-      await postGovernanceExecute(executeRequest);
-      alert('Proposal executed successfully!');
-      fetchProposals(); // Refresh list
+      await postGovernanceExecute({ proposalId, executorPublicKey: pubKey });
+      await fetchProposals();
     } catch (err: any) {
-      const errorMsg = (err as ErrorResponse).message || 'Failed to execute proposal';
-      alert(`Error: ${errorMsg}`);
-      console.error('Error executing proposal:', err);
+      setActionError(err.message || 'Failed to execute');
     }
   };
 
-  const getStatusBadge = (status: ProposalStatus) => {
-    switch (status) {
-      case 'pending':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Pending</span>;
-      case 'active':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Active</span>;
-      case 'passed':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Passed</span>;
-      case 'failed':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Failed</span>;
-      case 'executed':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Executed</span>;
-      default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Unknown</span>;
-    }
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
+      pending: { bg: 'bg-gray-100 text-gray-700', icon: <Clock className="h-3 w-3" /> },
+      voting: { bg: 'bg-blue-100 text-blue-700', icon: <Gavel className="h-3 w-3" /> },
+      approved: { bg: 'bg-green-100 text-green-700', icon: <CheckCircle className="h-3 w-3" /> },
+      rejected: { bg: 'bg-red-100 text-red-700', icon: <XCircle className="h-3 w-3" /> },
+      executed: { bg: 'bg-purple-100 text-purple-700', icon: <Play className="h-3 w-3" /> },
+      expired: { bg: 'bg-gray-100 text-gray-500', icon: <Clock className="h-3 w-3" /> },
+    };
+    const s = styles[status] || styles.pending;
+    return (
+      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${s.bg}`}>
+        {s.icon} {status}
+      </span>
+    );
   };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <p className="ml-3 text-gray-600">Loading governance proposals...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center">
-        <XCircle className="h-5 w-5 mr-3" />
-        <p>Error: {error}</p>
+        <p className="ml-3 text-gray-600">Loading governance data...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-gray-900">DAO Governance</h2>
-
-      {/* Create Proposal */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-gray-900">Create New Proposal</h3>
-          <button
-            onClick={() => setShowProposeForm(!showProposeForm)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <PlusCircle className="h-5 w-5 mr-2" />
-            {showProposeForm ? 'Hide Form' : 'New Proposal'}
-          </button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Gavel className="h-6 w-6 text-blue-600" /> Governance DAO
+          </h2>
+          <p className="text-gray-500 mt-1">Create proposals, vote, and execute on-chain governance actions</p>
         </div>
-
-        {showProposeForm && (
-          <form onSubmit={handleProposeSubmit} className="space-y-4 mt-4">
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
-              <input
-                type="text"
-                name="title"
-                id="title"
-                value={newProposal.title}
-                onChange={handleProposeChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea
-                name="description"
-                id="description"
-                rows={4}
-                value={newProposal.description}
-                onChange={handleProposeChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              ></textarea>
-            </div>
-            <div>
-              <label htmlFor="target_contract" className="block text-sm font-medium text-gray-700">Target Contract (Optional)</label>
-              <input
-                type="text"
-                name="target_contract"
-                id="target_contract"
-                value={newProposal.target_contract || ''}
-                onChange={handleProposeChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="target_method" className="block text-sm font-medium text-gray-700">Target Method (Optional)</label>
-              <input
-                type="text"
-                name="target_method"
-                id="target_method"
-                value={newProposal.target_method || ''}
-                onChange={handleProposeChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="parameters" className="block text-sm font-medium text-gray-700">Parameters (JSON, Optional)</label>
-              <textarea
-                name="parameters"
-                id="parameters"
-                rows={3}
-                value={typeof newProposal.parameters === 'string' ? newProposal.parameters : JSON.stringify(newProposal.parameters, null, 2)}
-                onChange={(e) => setNewProposal(prev => ({ ...prev, parameters: e.target.value as any }))}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm focus:ring-blue-500 focus:border-blue-500"
-                placeholder='{"key": "value"}'
-              ></textarea>
-            </div>
-            <div>
-              <label htmlFor="duration_days" className="block text-sm font-medium text-gray-700">Voting Duration (Days)</label>
-              <input
-                type="number"
-                name="duration_days"
-                id="duration_days"
-                value={newProposal.duration_days}
-                onChange={handleProposeChange}
-                min="1"
-                max="30"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            {formError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-center">
-                <XCircle className="h-5 w-5 mr-3" />
-                <p>{formError}</p>
-              </div>
-            )}
-            {formSuccess && (
-              <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg flex items-center">
-                <CheckCircle className="h-5 w-5 mr-3" />
-                <p>{formSuccess}</p>
-              </div>
-            )}
-            <button
-              type="submit"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              disabled={formLoading}
-            >
-              {formLoading ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <PlusCircle className="h-5 w-5 mr-2" />}
-              Submit Proposal
-            </button>
-          </form>
-        )}
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4" /> New Proposal
+        </button>
       </div>
+
+      {actionError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-center gap-2 text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0" /> {actionError}
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">{error}</div>
+      )}
+
+      {/* Create Proposal Form */}
+      {showForm && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Proposal</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Proposal Type</label>
+              <select
+                value={formType}
+                onChange={e => setFormType(e.target.value as any)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="parameter_change">Parameter Change</option>
+                <option value="contract_upgrade">Contract Upgrade</option>
+                <option value="treasury_spend">Treasury Spend</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                value={formDesc}
+                onChange={e => setFormDesc(e.target.value)}
+                placeholder="Describe what this proposal does..."
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handlePropose}
+                disabled={submitting || !formDesc.trim()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Submit Proposal
+              </button>
+              <button
+                onClick={() => { setShowForm(false); setFormDesc(''); }}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              {walletKey
+                ? `Proposing as: ${walletKey.substring(0, 12)}...`
+                : 'Connect your wallet to propose with your account, or the default deployer key will be used.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Proposals List */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-gray-900">All Proposals</h3>
-        {proposals.length === 0 ? (
-          <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6 text-center text-gray-600">
-            <p>No governance proposals found.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {proposals.map((proposal) => (
-              <div key={proposal.id} className="bg-white border border-gray-200 shadow-sm rounded-lg p-5 flex flex-col">
-                <div className="flex justify-between items-start mb-3">
-                  <h4 className="text-lg font-semibold text-gray-900">{proposal.title}</h4>
-                  {getStatusBadge(proposal.status)}
+      {proposals.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+          <Gavel className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-600 font-medium">No proposals yet</p>
+          <p className="text-sm text-gray-500 mt-1">Create the first governance proposal to get started.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {proposals.map(proposal => (
+            <div key={proposal.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    {getStatusBadge(proposal.status)}
+                    <span className="text-xs text-gray-400 capitalize">{(proposal.type || '').replace(/_/g, ' ')}</span>
+                  </div>
+                  <p className="text-gray-900 font-medium">{proposal.description}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    ID: {proposal.id.substring(0, 8)}... · Proposer: {(proposal.proposerPublicKey || '').substring(0, 12)}...
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 mb-3 flex-grow">{proposal.description}</p>
-                <div className="text-xs text-gray-500 mb-2">
-                  <p>Proposer: <span className="font-medium">{proposal.proposer.substring(0, 10)}...</span></p>
-                  <p>Votes For: <span className="font-medium text-green-600">{proposal.votes_for}</span></p>
-                  <p>Votes Against: <span className="font-medium text-red-600">{proposal.votes_against}</span></p>
-                  <p>Ends: {new Date(proposal.end_time).toLocaleString()}</p>
+              </div>
+
+              {/* Voting bar */}
+              <div className="mb-3">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>For: {proposal.votesFor}</span>
+                  <span>Against: {proposal.votesAgainst}</span>
                 </div>
-                <div className="flex space-x-2 mt-auto pt-3 border-t border-gray-100">
-                  {proposal.status === 'active' && (
+                <div className="w-full bg-gray-100 rounded-full h-2 flex overflow-hidden">
+                  {(proposal.votesFor + proposal.votesAgainst) > 0 ? (
                     <>
-                      <button
-                        onClick={() => handleVote(proposal.id, true)}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                      >
-                        <ThumbsUp className="h-4 w-4 mr-1" /> For
-                      </button>
-                      <button
-                        onClick={() => handleVote(proposal.id, false)}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      >
-                        <ThumbsDown className="h-4 w-4 mr-1" /> Against
-                      </button>
+                      <div className="bg-green-500 h-full" style={{ width: `${(proposal.votesFor / (proposal.votesFor + proposal.votesAgainst)) * 100}%` }} />
+                      <div className="bg-red-400 h-full" style={{ width: `${(proposal.votesAgainst / (proposal.votesFor + proposal.votesAgainst)) * 100}%` }} />
                     </>
-                  )}
-                  {proposal.status === 'passed' && !proposal.execution_hash && (
-                    <button
-                      onClick={() => handleExecute(proposal.id)}
-                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                    >
-                      <Play className="h-4 w-4 mr-1" /> Execute
-                    </button>
-                  )}
-                  {proposal.execution_hash && (
-                    <span className="text-sm text-gray-500">Executed: {proposal.execution_hash.substring(0, 10)}...</span>
+                  ) : (
+                    <div className="bg-gray-200 h-full w-full" />
                   )}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                {(proposal.status === 'voting' || proposal.status === 'pending') && (
+                  <>
+                    <button
+                      onClick={() => handleVote(proposal.id, 'for')}
+                      className="inline-flex items-center gap-1 rounded-lg bg-green-50 border border-green-200 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100"
+                    >
+                      <ThumbsUp className="h-3.5 w-3.5" /> Vote For
+                    </button>
+                    <button
+                      onClick={() => handleVote(proposal.id, 'against')}
+                      className="inline-flex items-center gap-1 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+                    >
+                      <ThumbsDown className="h-3.5 w-3.5" /> Vote Against
+                    </button>
+                  </>
+                )}
+                {proposal.status === 'approved' && (
+                  <button
+                    onClick={() => handleExecute(proposal.id)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-purple-50 border border-purple-200 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                  >
+                    <Play className="h-3.5 w-3.5" /> Execute
+                  </button>
+                )}
+              </div>
+
+              {/* Dates */}
+              <div className="flex gap-4 mt-3 text-xs text-gray-400">
+                <span>Created: {new Date(proposal.createdAt).toLocaleString()}</span>
+                <span>Voting ends: {new Date(proposal.votingEndsAt).toLocaleString()}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

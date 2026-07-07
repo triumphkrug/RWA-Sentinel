@@ -92,11 +92,6 @@ export default function Hero() {
       {/* Content */}
       <div className="rwa-section relative z-30 pb-20 pt-28 lg:pt-36">
         <div className="max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold tracking-wide">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            CASPER NETWORK &middot; AI ORACLE
-          </div>
-
           <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold text-gray-900 leading-[1.08] mb-5 tracking-tight">
             Truth has an<br />
             expiration date.<br />
