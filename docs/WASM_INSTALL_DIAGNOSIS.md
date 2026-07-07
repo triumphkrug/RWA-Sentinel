@@ -338,3 +338,40 @@ Contract redeploy remains blocked for the hackathon deadline. The workspace
 properly-optimized contracts for any future redeploy attempt). No contracts
 were actually redeployed/changed on-chain this session; the currently live
 `asset-registry`/`attestation-store` contract hashes are unaffected.
+
+## Update 4 (2026-07-07, same session): tested install-or-upgrade on a contract with zero CLType::Any — fails identically, ruling out CLType::Any as a necessary condition
+
+Found and fixed a real, separate bug in `oracle-slashing::call()` (installer never
+called `system::create_purse()` for `stake_purse`/`fee_purse` — both
+`register_oracle` and `execute_slash` would revert on any real invocation;
+see `KNOWN_LIMITATIONS.md`). Rebuilt with the fix (`wasm-opt -Oz` → 66,112 B,
++312 B over the currently-live 65,800 B), then attempted a genuine
+`SessionBuilder().installOrUpgrade().contractHash(<oracle-slashing package
+hash>)` upgrade transaction — deliberately chosen because `oracle-slashing`
+has **no `CLType::Any` usage anywhere** (confirmed via grep), unlike
+`asset-registry`/`attestation-store`.
+
+Result: **identical failure** — `ApiError::InvalidArgument`, `consumed_gas:
+2,858,810` (same tiny-gas signature as every other failed install-or-upgrade
+this project, ~1.05M–2.86M range), tx `23f87703f72ff1cb04691bd72ec0d3c525794947accbf9ac9e7af30eb96652bf`.
+
+**This is a genuinely new, clarifying data point**: the block is **not**
+specific to `CLType::Any`, wasm size, or any per-contract trait — it
+reproduces on a contract with none of those factors. The one consistent
+pattern across every failure (this + all prior attempts, both real
+contracts and diag-minimal) is that they are all *install-or-upgrade
+targeting an already-existing contract package* (`isInstallUpgrade: true`
++ `contractHash(<package hash>)` pointing at a package that already has a
+version on-chain). The only successful installs this project (diag-minimal
+21:17:26, governance-dao, oracle-slashing's original install) were all
+**first-time installs of a brand-new package**, never upgrades of an
+existing one. This narrows the search meaningfully for whoever picks this
+back up: test whether a fresh, never-before-installed package hash can
+receive a **second** upgrade transaction cleanly, which would confirm
+"upgrade path specifically" vs. some other still-undiscovered factor.
+
+The `oracle-slashing` purse-creation fix itself is real, compiles cleanly,
+and is committed to source — it is simply not live on-chain because this
+redeploy blocker prevents shipping *any* contract upgrade, not just this
+one. Stopping here per the one-attempt budget for this path this session;
+not spending further credits on it.

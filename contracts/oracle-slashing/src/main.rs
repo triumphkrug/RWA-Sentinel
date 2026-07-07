@@ -415,6 +415,16 @@ pub extern "C" fn call() {
     let min_stake_uref = storage::new_uref(U512::from(1_000_000_000u64)); // 1 CSPR min stake
     let slash_bps_uref = storage::new_uref(1000u64); // 10% slash rate
 
+    // Real fund-custody purses for register_oracle (stake deposit) and
+    // execute_slash (stake -> fee transfer on confirmed slash). Without
+    // these, both entry points revert on `get_key(STAKE_PURSE/FEE_PURSE)`
+    // the moment they're actually invoked — this was a real bug found in
+    // the 2026-07 A1 no-unilateral-withdraw audit: the installer never
+    // created either purse, so the whole real-funds stake/slash mechanism
+    // was unreachable on-chain despite the access-control logic being correct.
+    let stake_purse = system::create_purse();
+    let fee_purse = system::create_purse();
+
     let mut named_keys = NamedKeys::new();
     named_keys.insert(INSTALLER_KEY.into(), Key::Account(installer));
     named_keys.insert(ORACLE_DICT.into(), oracles_dict.into());
@@ -423,6 +433,8 @@ pub extern "C" fn call() {
     named_keys.insert("report_count".into(), report_count_uref.into());
     named_keys.insert("min_stake".into(), min_stake_uref.into());
     named_keys.insert("slash_bps".into(), slash_bps_uref.into());
+    named_keys.insert(STAKE_PURSE.into(), stake_purse.into());
+    named_keys.insert(FEE_PURSE.into(), fee_purse.into());
 
     let mut entry_points = EntryPoints::new();
 
