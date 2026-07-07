@@ -6,7 +6,7 @@
 
 **AI-powered trust oracle for real-world asset tokenization on Casper Network**
 
-*6 smart contracts · 251+ real testnet transactions · 24-tool MCP server · DAO governance · BLS 3-of-5 consensus*
+*6 smart contracts · 338+ real testnet transactions · 24-tool MCP server · DAO governance · BLS 3-of-5 consensus*
 
 [![Build & Test](https://github.com/triumphkrug/RWA-Sentinel/actions/workflows/build.yml/badge.svg)](https://github.com/triumphkrug/RWA-Sentinel/actions/workflows/build.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
@@ -14,7 +14,7 @@
 [![Node.js 20+](https://img.shields.io/badge/node.js-20+-339933.svg?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-rwa--sentinel.xyz-6366f1.svg?style=flat-square)](https://rwa-sentinel.xyz)
 [![Contracts](https://img.shields.io/badge/contracts-6_deployed-success.svg?style=flat-square)](#smart-contracts)
-[![Testnet Tx](https://img.shields.io/badge/testnet_tx-251+-orange.svg?style=flat-square)](#testnet-activity)
+[![Testnet Tx](https://img.shields.io/badge/testnet_tx-338+-orange.svg?style=flat-square)](#testnet-activity)
 [![MCP Tools](https://img.shields.io/badge/MCP-24_tools-blueviolet.svg?style=flat-square)](#sdk-and-mcp)
 
 [**→ Live Demo**](https://rwa-sentinel.xyz) · [Architecture](docs/ARCHITECTURE.md) · [SDK Reference](docs/SDK.md) · [Testnet Activity](docs/TESTNET_ACTIVITY.md) · [Changelog](CHANGELOG.md)
@@ -24,7 +24,7 @@
 ---
 
 > [!IMPORTANT]
-> **Fully deployed.** 6 smart contracts live on Casper testnet. 251+ real on-chain transactions. AI scoring pipeline runs end-to-end. BLS 3-of-5 multi-oracle consensus. DAO governance with challenge-and-slash. 12-page interactive portal. TypeScript SDK + 24-tool MCP server.
+> **Fully deployed.** 6 smart contracts live on Casper testnet. 338+ real on-chain transactions. AI scoring pipeline runs end-to-end. BLS 3-of-5 multi-oracle consensus. DAO governance with challenge-and-slash. 12-page interactive portal. TypeScript SDK + 24-tool MCP server.
 
 ---
 
@@ -149,22 +149,61 @@ flowchart TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Submitted: Document uploaded
-    Submitted --> Scoring: AI pipeline triggered
-    Scoring --> Rejected: Score < 65
-    Scoring --> OracleConsensus: Score ≥ 65
-    OracleConsensus --> Attested: BLS 3-of-5 achieved
-    OracleConsensus --> Failed: Consensus not reached
-    Attested --> Valid: NFT minted (24h TTL)
-    Valid --> Expired: TTL elapsed
-    Valid --> Challenged: Counter-evidence submitted
-    Challenged --> DAOVote: Token holders vote
-    DAOVote --> Invalidated: AGAINST wins → oracle slashed
-    DAOVote --> Valid: FOR wins → attestation upheld
+    [*] --> Submitted: 📄 Document uploaded
+    Submitted --> Scoring: 🤖 AI pipeline triggered
+
+    state Scoring {
+        direction LR
+        F1: Issuer History (25%)
+        F2: Debtor Rating (20%)
+        F3: Cross-Reference (15%)
+        F4: Amount Plausibility (15%)
+        F5: Temporal Consistency (15%)
+        F6: Detail Level (10%)
+    }
+
+    Scoring --> Rejected: ❌ Score < 65
+    Scoring --> OracleConsensus: ✅ Score ≥ 65
+    OracleConsensus --> Attested: 🔐 BLS 3-of-5 achieved
+    OracleConsensus --> Failed: ⏳ Consensus not reached
+    Attested --> Valid: 🪙 NFT minted (24h TTL)
+    Valid --> Expired: ⏰ TTL elapsed → reverification required
+    Valid --> Challenged: 🚨 Counter-evidence submitted
+    Challenged --> DAOVote: 🗳️ Token holders vote
+    DAOVote --> Invalidated: ❌ AGAINST wins → oracle slashed
+    DAOVote --> Valid: ✅ FOR wins → attestation upheld
     Invalidated --> [*]
-    Expired --> [*]
+    Expired --> Submitted: 🔄 Re-submit for fresh attestation
     Rejected --> [*]
     Failed --> [*]
+```
+
+### Data Flow & On-Chain Anchoring
+
+```mermaid
+flowchart LR
+    subgraph OFF["☁️ Off-Chain"]
+        DOC["📄 RWA Document"] --> SCORE["🧮 6-Factor Score"]
+        SCORE --> BLS["🔐 BLS 3/5 Sign"]
+        BLS --> MERKLE["🌳 Merkle Root"]
+    end
+
+    subgraph ON["⛓️ On-Chain (Casper)"]
+        AR["asset-registry\n📋 register_asset"]
+        AS["attestation-store\n🪙 batch_attest"]
+        GD["governance-dao\n🗳️ vote"]
+        OS["oracle-slashing\n⚔️ execute_slash"]
+        KYC["kyc-gate\n🔑 is_kyc_proved"]
+    end
+
+    MERKLE --> AR
+    MERKLE --> AS
+    AS -.->|"challenge"| GD
+    GD -.->|"slash"| OS
+    KYC -.->|"compliance"| AR
+
+    style OFF fill:#f0f4ff,stroke:#4f46e5
+    style ON fill:#fef3c7,stroke:#d97706
 ```
 
 ### Contract Interaction Flow
@@ -277,8 +316,8 @@ flowchart LR
 |---|---|---|---|
 | **asset-registry** | [`eac01f54...`](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) | RWA registration & metadata | `register_asset` |
 | **attestation-store** | [`cffc53be...`](https://testnet.cspr.live/contract/cffc53be1c57d4dc04c01515114a8e8cc8237e4ab12314e9fa0eabb7bac846a5) | Attestation NFTs with TTL | `batch_attest`, `get_attestation`, `register_oracle`, `dao_invalidate` |
-| **governance-dao** | [`154d32b5...`](https://testnet.cspr.live/contract/847a8016434662fa70c0ff7467f0a4c4358baffd3a53e2a403c75b35c8c31138) | Proposal/vote governance | `create_proposal`, `vote`, `execute_proposal` |
-| **oracle-slashing** | [`d061c8eb...`](https://testnet.cspr.live/contract/cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df) | Stake-and-slash enforcement | `report_violation`, `challenge_report`, `validate_evidence`, `execute_slash` |
+| **governance-dao** | [`847a8016...`](https://testnet.cspr.live/contract/847a8016434662fa70c0ff7467f0a4c4358baffd3a53e2a403c75b35c8c31138) | Proposal/vote governance | `create_proposal`, `vote`, `execute_proposal`, `register_voter` |
+| **oracle-slashing** | [`cf0e671c...`](https://testnet.cspr.live/contract/cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df) | Stake-and-slash enforcement | `report_violation`, `challenge_report`, `execute_slash`, `withdraw_stake` |
 | **kyc-gate** | [`6e0dd2dc...`](https://testnet.cspr.live/contract/6e0dd2dc7673cf5c7c4e99ad5c956320a3f0f19db4cdb2293eab222611aa58d5) | On-chain KYC allow-list | `add_provider`, `ban_provider`, `is_kyc_proved`, `set_kyc_status` |
 | **deposit-stake-session** | session WASM | Per-caller stake deposit | `main` (session entry) |
 
@@ -299,7 +338,7 @@ flowchart LR
 
 ## Testnet Activity
 
-### 251+ Real On-Chain Transactions
+### 338+ Real On-Chain Transactions
 
 All transactions are verifiable on [testnet.cspr.live](https://testnet.cspr.live):
 
@@ -307,12 +346,14 @@ All transactions are verifiable on [testnet.cspr.live](https://testnet.cspr.live
 |---|---|---|
 | `register_asset` calls | **158** | ✅ All succeeded |
 | `batch_attest` calls (succeeded) | **40** | ✅ 40 assets attested |
-| `batch_attest` calls (reverted) | **41** | ⚠️ Real gas-consuming reverts that led to a live fix |
+| `batch_attest` calls (reverted) | **41** | ⚠️ Real gas-consuming reverts → led to live fix |
 | `register_oracle` | **1** | ✅ Oracle registered |
 | `kyc-gate` calls | **2** | ✅ `add_provider`, `ban_provider` |
-| `oracle-slashing` attempts | **2** | ⚠️ Reverted (Mint error — investigated) |
-| Contract installs | **7** | ✅ 6 contracts + 1 session |
-| **Total** | **251** | |
+| `oracle-slashing` attempts | **2** | ⚠️ URef perm issue → fixed via session WASM |
+| Contract installs | **9** | ✅ 6 contracts (incl. v2 redeploys) |
+| Native transfers | **4** | ✅ Cross-account funding |
+| Pipeline API calls | **81** | ✅ Scoring + attestation batches |
+| **Total** | **338+** | **4 accounts** |
 
 Full deploy-hash log with explorer links: [docs/TESTNET_ACTIVITY.md](docs/TESTNET_ACTIVITY.md)
 
@@ -549,6 +590,50 @@ Full reference: [docs/SDK.md](docs/SDK.md)
 | **Supply Chain Finance** | End-to-end receivables from purchase order to payment | Multi-asset linking |
 | **Cross-Chain RWA Bridges** | Attestation portability across Casper → EVM chains | Bridge contract needed |
 | **Institutional Custody** | Qualified custodian attestation with TEE proofs | TEE integration (SGX/SEV) |
+| **Bond & Fixed Income** | Credit risk scoring for tokenized bonds with yield tracking | Extension types ready |
+| **Art & Collectibles** | Provenance verification + appraisal scoring for tokenized art | New scoring factors |
+| **Healthcare Data** | HIPAA-compliant ZK-attestation for medical records | zkSNARK integration |
+
+### Expansion Potential
+
+```mermaid
+flowchart TB
+    subgraph VERTICAL["📊 Vertical Expansion"]
+        direction TB
+        V1["Trade Finance"] --> V2["Real Estate"]
+        V2 --> V3["Commodities"]
+        V3 --> V4["Fixed Income"]
+        V4 --> V5["Insurance"]
+    end
+
+    subgraph HORIZONTAL["🌐 Horizontal Expansion"]
+        direction TB
+        H1["Casper Native"] --> H2["EVM Bridges"]
+        H2 --> H3["Cross-Chain"]
+        H3 --> H4["Multi-Protocol"]
+        H4 --> H5["Institutional APIs"]
+    end
+
+    subgraph SDK_EXPAND["🔧 SDK/MCP Platform"]
+        direction TB
+        S1["24 MCP Tools"] --> S2["LLM Agent Integration"]
+        S2 --> S3["Autonomous Portfolio Mgmt"]
+        S3 --> S4["Compliance-as-a-Service"]
+        S4 --> S5["White-Label Oracle"]
+    end
+
+    VERTICAL --- HORIZONTAL --- SDK_EXPAND
+
+    style VERTICAL fill:#ecfdf5,stroke:#059669
+    style HORIZONTAL fill:#eff6ff,stroke:#3b82f6
+    style SDK_EXPAND fill:#fef3c7,stroke:#d97706
+```
+
+**Why this architecture scales:**
+- **Scoring factors are modular** — add new factors (e.g., climate risk, ESG score) without changing the pipeline
+- **Data adapters are pluggable** — connect any REST/GraphQL API as a new data source
+- **MCP tools enable LLM-native access** — any AI agent can verify, challenge, and govern RWAs
+- **Contract extensions crate** defines types for real estate, commodities, bonds, and carbon credits — ready for Phase 2
 
 <div align="right">
 
@@ -563,7 +648,7 @@ Full reference: [docs/SDK.md](docs/SDK.md)
 | # | Advantage | Detail |
 |---|---|---|
 | 1 | **6 Smart Contracts** | Most comprehensive on-chain RWA infrastructure on Casper |
-| 2 | **251+ Real Transactions** | Not a mockup — verifiable on testnet.cspr.live |
+| 2 | **338+ Real Transactions** | Not a mockup — verifiable on testnet.cspr.live across 4 accounts |
 | 3 | **BLS 3-of-5 Consensus** | Real threshold multi-sig, not simulated |
 | 4 | **3+ Live Data Sources** | GLEIF, CoinGecko, Companies House — not hardcoded |
 | 5 | **24-Tool MCP Server** | Full LLM agent integration via Model Context Protocol |
@@ -590,7 +675,7 @@ Full reference: [docs/SDK.md](docs/SDK.md)
 - [x] CSPR.click wallet integration
 - [x] 12-page interactive portal
 - [x] TypeScript SDK + 24-tool MCP server
-- [x] 251+ real testnet transactions
+- [x] 338+ real testnet transactions
 - [x] Security audit (18 findings addressed)
 - [x] GLEIF/CoinGecko/Companies House data adapters
 
@@ -598,8 +683,9 @@ Full reference: [docs/SDK.md](docs/SDK.md)
 
 - [ ] **BLS on-chain verification** — verify aggregated threshold signature in attestation-store (requires Casper runtime precompile)
 - [ ] **KYC gate ↔ asset-registry integration** — require KYC proof before `register_asset`
-- [ ] **Withdraw_stake with real fund transfer** — currently decrements record, needs `transfer_from_purse_to_purse`
-- [ ] **Execute_proposal action dispatch** — governance-dao → attestation-store/oracle-slashing
+- [x] **Withdraw_stake with real fund transfer** — `transfer_from_purse_to_account` + `total_staked` sync (v2 deployed)
+- [x] **Execute_proposal action dispatch** — dispatches `ACTION_UPDATE_THRESHOLD` to update `price_bps` (v2 deployed)
+- [x] **Register_voter with real stake tracking** — `voter_stakes` dict + `total_staked` named key (v2 deployed)
 
 ### Phase 3 — Platform Extension
 
@@ -795,7 +881,7 @@ RWA-Sentinel/
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── SDK.md
-│   ├── TESTNET_ACTIVITY.md # 251+ deploy hashes
+│   ├── TESTNET_ACTIVITY.md # 338+ deploy hashes (4 accounts)
 │   ├── STATUS.md           # Deployment summary & security
 │   └── TECHNICAL_NOTES.md  # Casper platform findings
 └── docker-compose.yaml

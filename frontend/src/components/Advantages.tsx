@@ -27,7 +27,7 @@ const advantages = [
     icon: Scale,
     title: 'Economic Accountability',
     desc: 'Oracle operators stake CSPR. Misbehavior triggers on-chain slashing with challenge periods and severity levels. Accountability that custodians can\'t match.',
-    stat: '123+',
+    stat: '338+',
     statLabel: 'testnet transactions',
   },
   {

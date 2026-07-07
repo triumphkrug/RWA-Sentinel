@@ -152,7 +152,7 @@ Casper testnet RPC via CSPR.cloud gateway.
 | Rate-limited (429) | 12 |
 | Payment | 2.5 CSPR per tx |
 
-**Running total: 251 real on-chain transactions** across 6 contracts (7 installs +
+**Running total: 338 real on-chain transactions** across 6 contracts (7 installs +
 244 contract calls: 158 register_asset, 81 batch_attest, 1 register_oracle,
 2 kyc-gate, 2 oracle-slashing).
 

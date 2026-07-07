@@ -44,11 +44,12 @@ const CONTRACTS: Record<string, ContractInfo> = {
     description:
       'Decentralized governance for protocol parameters. Supports proposal creation, stake-weighted voting, and on-chain execution with quorum enforcement.',
     icon: <Scale className="h-7 w-7 text-violet-600" />,
-    account: 'Main deployer (secp256k1)',
+    account: '3rd deployer (ed25519)',
     status: 'live',
     functions: [
       { name: 'create_proposal(title, description, action_type, data, deposit)', description: 'Submit a new governance proposal' },
       { name: 'vote(proposal_id, support, weight)', description: 'Cast a stake-weighted vote' },
+      { name: 'register_voter(voter_account)', description: 'Register a voter with initial stake (installer only)' },
       { name: 'execute_proposal(proposal_id)', description: 'Execute an approved proposal (quorum required)' },
       { name: 'veto_proposal(proposal_id)', description: 'Emergency veto (installer only)' },
     ],
@@ -58,7 +59,7 @@ const CONTRACTS: Record<string, ContractInfo> = {
     description:
       'Manages oracle stake deposits, violation reporting, and permissionless slashing. Uses deposit-first registration pattern with on-chain balance verification.',
     icon: <Eye className="h-7 w-7 text-amber-600" />,
-    account: '3rd deployer (ed25519)',
+    account: '4th deployer (ed25519)',
     status: 'live',
     functions: [
       { name: 'register_oracle(oracle_id, stake)', description: 'Register oracle after depositing stake into contract purse' },
