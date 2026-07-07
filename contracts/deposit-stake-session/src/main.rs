@@ -2,7 +2,7 @@
 //! *before* calling `register_oracle`.
 //!
 //! `register_oracle` no longer takes a `source_purse: URef` arg (see
-//! `contracts/oracle-slashing/src/main.rs` and `docs/KNOWN_LIMITATIONS.md` for why a
+//! `contracts/oracle-slashing/src/main.rs` and `docs/STATUS.md` for why a
 //! caller-supplied purse arg to a stored-contract entry point reliably reverted with
 //! `Mint error: 4` on this network, even via the textbook session-wasm pattern). Instead,
 //! deposits happen here, in session code that calls `system::transfer_from_purse_to_purse`

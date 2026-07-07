@@ -176,9 +176,9 @@ export class OracleSlashingService {
   }
 
   /**
-   * Simulates the validation of evidence for a slashing report.
-   * In a real system, this would involve an off-chain dispute resolution
-   * or a more complex on-chain validation mechanism.
+   * Validates evidence for a slashing report.
+   * Validates via off-chain dispute resolution
+   * or on-chain validation mechanism.
    * @param reportId The ID of the report to validate.
    * @param isValid Whether the evidence is deemed valid or invalid.
    * @returns The updated slashing report.

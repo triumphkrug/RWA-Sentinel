@@ -107,3 +107,10 @@
     filter: brightness(1.6) sepia(1) saturate(4) hue-rotate(15deg) drop-shadow(0 0 8px rgba(184,144,48,0.5));
   }
 }
+
+/* ── CSPR.click wallet integration ── */
+/* Hide the SDK's built-in top bar — RWA-Sentinel has its own UI */
+.csprclick-top-bar { display: none !important; }
+#csprclick-ui { position: absolute; top: 0; left: 0; height: 0; overflow: visible; }
+.ReactModal__Overlay { z-index: 1000 !important; }
+.ReactModal__Content { z-index: 1001 !important; }

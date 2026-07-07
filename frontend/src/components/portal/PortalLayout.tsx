@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import ErrorBoundary from './ErrorBoundary';
+import WalletStatus from './WalletStatus';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
   Menu,
   X,
   BarChart3,
-  Wallet,
   Building,
   Gavel,
   ScrollText,
@@ -14,6 +14,9 @@ import {
   FlaskConical,
   Puzzle,
   GitFork,
+  Link2,
+  Database,
+  Shield,
 } from 'lucide-react';
 
 interface NavItem {
@@ -29,6 +32,9 @@ const navItems: NavItem[] = [
   { name: 'Governance', path: '/portal/governance', icon: Gavel },
   { name: 'SBTs', path: '/portal/sbt', icon: ScrollText },
   { name: 'Contracts', path: '/portal/contracts', icon: FileText },
+  { name: 'Chain Explorer', path: '/portal/chain', icon: Link2 },
+  { name: 'Data Adapters', path: '/portal/data', icon: Database },
+  { name: 'KYC Gate', path: '/portal/kyc', icon: Shield },
   { name: 'Anomalies', path: '/portal/anomalies', icon: AlertTriangle },
   { name: 'Agent Demo', path: '/portal/agent-demo', icon: FlaskConical },
   { name: 'API Playground', path: '/portal/playground', icon: Puzzle },
@@ -61,21 +67,21 @@ const PortalLayout: React.FC = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-grow">
+        <nav className="flex-grow overflow-y-auto">
           <ul>
             {navItems.map((item) => (
-              <li key={item.name} className="mb-2">
+              <li key={item.name} className="mb-1">
                 <NavLink
                   to={item.path}
-                  end={item.path === '/portal'} // 'end' prop for exact match on root path
+                  end={item.path === '/portal'}
                   className={({ isActive }) =>
-                    `flex items-center p-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 ${
+                    `flex items-center p-2.5 rounded-lg text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 ${
                       isActive ? 'bg-blue-50 text-blue-600 font-medium border-l-4 border-blue-600 -ml-1 pl-2' : ''
                     }`
                   }
-                  onClick={() => setSidebarOpen(false)} // Close sidebar on mobile after click
+                  onClick={() => setSidebarOpen(false)}
                 >
-                  <item.icon className="mr-3" size={20} />
+                  <item.icon className="mr-3 shrink-0" size={18} />
                   <span>{item.name}</span>
                 </NavLink>
               </li>
@@ -85,22 +91,16 @@ const PortalLayout: React.FC = () => {
 
         {/* Wallet Connect */}
         <div className="mt-auto pt-4 border-t border-gray-200">
-          <button className="flex items-center justify-center w-full p-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-150">
-            <Wallet className="mr-2" size={20} />
-            Connect Wallet
-          </button>
+          <WalletStatus />
         </div>
       </aside>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col md:ml-64">
-        {/* Header (optional, can be used for page title or global actions) */}
+        {/* Header */}
         <header className="bg-white border-b border-gray-200 p-4 md:p-6 shadow-sm hidden md:flex items-center justify-between">
-          <div className="flex items-center">
-            <button className="md:hidden text-gray-600 mr-4" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
+          <div className="flex items-center" />
+          <WalletStatus />
         </header>
 
         {/* Content Area */}

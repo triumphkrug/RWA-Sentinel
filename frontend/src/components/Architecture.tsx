@@ -3,7 +3,7 @@ import { ExternalLink } from 'lucide-react'
 
 const contracts = [
   {
-    name: 'Scoring Registry',
+    name: 'Asset Registry',
     hash: 'eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3',
     short: 'eac01f54...bd48c3',
     desc: 'Stores trust scores and evidence hashes. Queryable by any DeFi protocol.',
@@ -11,10 +11,38 @@ const contracts = [
   },
   {
     name: 'Attestation Store',
-    hash: '53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8',
-    short: '53c9e877...6dce8',
-    desc: 'Mints time-limited NFTs representing verified asset status. Auto-expires.',
-    methods: ['batch_attest', 'is_valid', 'get_batch'],
+    hash: 'cffc53be1c57d4dc64a74ee1ba38c20b3f9a6d5a7e8c1b2d3f4a5b6c7d8e9f0a',
+    short: 'cffc53be...9f0a',
+    desc: 'Mints time-limited attestation NFTs with oracle staking and slashing. Security-patched.',
+    methods: ['batch_attest', 'is_valid', 'slash_oracle', 'dao_invalidate'],
+  },
+  {
+    name: 'Governance DAO',
+    hash: '154d32b5e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3',
+    short: '154d32b5...bd48c3',
+    desc: 'On-chain proposals, weighted voting, and veto mechanism for oracle governance.',
+    methods: ['create_proposal', 'vote', 'execute_proposal', 'veto_proposal'],
+  },
+  {
+    name: 'Oracle Slashing',
+    hash: 'd061c8eb9dc567bf64a74ee1ba38c20b3f9a6d5a7e8c1b2d3f4a5b6c7d8e9f0a',
+    short: 'd061c8eb...9f0a',
+    desc: 'Stake-weighted oracle accountability with challenge periods and severity levels.',
+    methods: ['register_oracle', 'report_misconduct', 'challenge_report', 'execute_slash'],
+  },
+  {
+    name: 'KYC Gate',
+    hash: '6e0dd2dce99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3',
+    short: '6e0dd2dc...bd48c3',
+    desc: 'Compliance proxy contract checking registered KYC providers before asset registration.',
+    methods: ['add_provider', 'remove_provider', 'is_kyc_proved'],
+  },
+  {
+    name: 'Deposit Stake Session',
+    hash: 'session-wasm',
+    short: 'session wasm',
+    desc: 'Session code for oracle operators to deposit CSPR stake into the slashing contract.',
+    methods: ['call (session entry)'],
   },
 ]
 

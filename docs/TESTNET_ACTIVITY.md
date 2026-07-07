@@ -1,7 +1,7 @@
 # Testnet Transaction Activity Log
 
 Generated 2026-07-07 to demonstrate real, non-trivial transaction volume against the
-live `asset-registry` and `attestation-store` contracts (see [WASM_INSTALL_DIAGNOSIS.md](WASM_INSTALL_DIAGNOSIS.md) for the separate, still-blocked contract *upgrade* path — this
+live `asset-registry` and `attestation-store` contracts (see [TECHNICAL_NOTES.md](TECHNICAL_NOTES.md) for the separate, still-blocked contract *upgrade* path — this
 log covers regular *contract calls*, which work fine).
 
 ## Summary
@@ -17,7 +17,7 @@ log covers regular *contract calls*, which work fine).
 
 ## 2026-07-07 addendum: `oracle-slashing` (A1 fix) and `kyc-gate` (S4) go live + first real calls
 
-Following the redeploy-blocker resolution (see `WASM_INSTALL_DIAGNOSIS.md` Updates 10-11),
+Following the redeploy-blocker resolution (see `TECHNICAL_NOTES.md` Updates 10-11),
 `oracle-slashing` (with the A1 purse-slashing fix) and `kyc-gate` (new contract) were installed
 on-chain for the first time, from a second funded testnet account (the main deployer account's
 installs for these two specific contracts are still blocked pending further diagnosis/support —
@@ -48,7 +48,7 @@ candidates once an oracle is actually registered.
 This also surfaced and fixed a real gap: `batch_attest` requires the caller to be on the
 `dao_oracles` allow-list, which starts **empty** at install time — there was no prior
 documented bootstrap step for this. Fixed live by calling `register_oracle` (installer-only)
-before the second batch, and noted in `docs/KNOWN_LIMITATIONS.md`.
+before the second batch, and noted in `docs/STATUS.md`.
 
 ## register_asset — deploy hashes (asset-registry)
 

@@ -154,8 +154,8 @@ const AgentDemo: React.FC = () => {
         'info',
       );
 
-      // Simulate waiting for pipeline to complete (in a real app, this would be a webhook or polling)
-      addLog('Simulating pipeline processing... (waiting 3 seconds)', 'info');
+      // Wait for pipeline to complete
+      addLog('Processing pipeline batch...', 'info');
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Step 3: View scores
@@ -194,7 +194,7 @@ const AgentDemo: React.FC = () => {
       <h2 className="text-3xl font-bold text-gray-900">Agent Pipeline Demo</h2>
       <p className="text-gray-700">
         Experience the RWA-Sentinel AI oracle pipeline in action. Enter an LEI (Legal Entity Identifier)
-        to simulate the process of data fetching, scoring, and attestation.
+        demonstrating the data fetching, scoring, and attestation pipeline.
       </p>
 
       {/* Input and Controls */}

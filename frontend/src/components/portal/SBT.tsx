@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { getAttestations, Attestation, ErrorResponse } from '../../lib/api';
+import { useClickRef } from '../../lib/click';
+import { shortKey } from '../../lib/wallet';
 import { Loader2, XCircle, Award, CheckCircle, Link, Wallet } from 'lucide-react';
 
 const EXPLORER_BASE_URL = 'https://testnet.cspr.live';
 
 const SBT: React.FC = () => {
+  const { publicKey, ready, clickRef } = useClickRef();
   const [attestations, setAttestations] = useState<Attestation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,13 +78,31 @@ const SBT: React.FC = () => {
         These non-transferable tokens represent the trust score and verification status of an asset at a given time.
       </p>
 
-      {/* Mint SBT Button */}
+      {/* Wallet & Mint */}
       <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6 flex items-center justify-between">
         <h3 className="text-xl font-semibold text-gray-900">Mint a New SBT</h3>
-        <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-          <Wallet className="h-5 w-5 mr-2" />
-          Connect Wallet to Mint
-        </button>
+        {publicKey ? (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg font-mono border border-green-200">
+              <Wallet className="h-4 w-4 inline mr-1.5" />{shortKey(publicKey)}
+            </span>
+            <button
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              onClick={() => alert('SBT minting requires an active attestation pipeline batch. Run the Agent Demo first to generate attestations, then mint here.')}
+            >
+              Mint SBT
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => clickRef?.signIn()}
+            disabled={!ready}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+          >
+            <Wallet className="h-5 w-5 mr-2" />
+            {ready ? 'Connect Wallet to Mint' : 'Loading Wallet SDK…'}
+          </button>
+        )}
       </div>
 
       {/* Attestation List */}
