@@ -43,11 +43,11 @@ The scoring model is fully transparent. Every factor's weight and raw score are 
 | Factor | Weight | Logic |
 |---|---|---|
 | Issuer History | 25% | Does this entity have a reliable track record? |
-| Document Integrity | 20% | Is the hash consistent and the document unaltered? |
+| Debtor Rating | 20% | Counterparty track record and historical payment reliability |
 | Cross-Reference | 15% | Does the data corroborate against external sources? |
 | Amount Plausibility | 15% | Is the invoice amount within expected bounds? |
 | Temporal Consistency | 15% | Is the issue date fresh? Is the due date realistic? |
-| Network Reputation | 10% | What does on-chain wallet history show? |
+| Invoice Detail Level | 10% | Granularity and completeness of submitted line items |
 
 This isn't a black box. The composite trust score `S = Σ(wᵢ × sᵢ) / Σ(wᵢ)` is deterministic, auditable, and reproducible.
 

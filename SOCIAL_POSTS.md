@@ -31,11 +31,11 @@ RWA Sentinel is an autonomous AI oracle on Casper Network.
 
 It scores every asset across 6 independent factors:
 → Issuer history
-→ Document integrity
+→ Debtor rating
 → Cross-reference
 → Amount plausibility
 → Temporal consistency
-→ Network reputation
+→ Invoice detail level
 
 Composite score gets published on-chain as an attestation NFT. Expires in 24h. Auto-renewed.
 
@@ -83,7 +83,7 @@ RWA tokenization needs trustless trust infrastructure. This is it.
 
 Manual audits gate every invoice, bond, and receivable before it can go on-chain. The result: weeks of delay, five-figure costs, and trust concentrated in a single custodian. When that custodian fails, the tokens fail with it.
 
-We built **RWA Sentinel** to fix this — an autonomous AI oracle on Casper Network that replaces manual verification with a transparent 6-factor scoring pipeline. Every asset gets scored across issuer history, document integrity, cross-referencing, amount plausibility, temporal consistency, and network reputation. Scores above 65/100 get published on-chain as time-limited attestation NFTs. Challenged attestations go to DAO governance with economic consequences for misbehaving oracles.
+We built **RWA Sentinel** to fix this — an autonomous AI oracle on Casper Network that replaces manual verification with a transparent 6-factor scoring pipeline. Every asset gets scored across issuer history, debtor rating, cross-referencing, amount plausibility, temporal consistency, and invoice detail level. Scores above 65/100 get published on-chain as time-limited attestation NFTs. Challenged attestations go to DAO governance with economic consequences for misbehaving oracles.
 
 The Oracle Panel is live: **rwa-sentinel.xyz/portal**
 Smart contracts deployed on Casper testnet.

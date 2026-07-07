@@ -49,7 +49,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.0.0] — 2026-06-30
 
 ### Added
-- **6-factor scoring engine** — fully live: issuer history (25%), document integrity (20%), cross-reference (15%), amount plausibility (15%), temporal consistency (15%), network reputation (10%)
+- **6-factor scoring engine** — fully live: issuer history (25%), debtor rating (20%), cross-reference (15%), amount plausibility (15%), temporal consistency (15%), invoice detail level (10%)
 - **DAO vote on-chain** — `dao_invalidate` entry point active; FOR/AGAINST vote panel in Oracle Panel portal with toast notifications
 - **Oracle Panel portal** — live at rwa-sentinel.xyz/portal; overview cards (total scored, active attestations, avg trust score, expired), trust score table, DAO vote section
 - **Trust attestation contract deployed** — `attestation-store.wasm` on Casper testnet ([`53c9e877...`](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8))

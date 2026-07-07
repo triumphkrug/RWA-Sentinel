@@ -233,10 +233,34 @@ components:
     PipelineRequest:
       type: object
       properties:
-        assetId:
-          type: string
-        data:
-          type: object
+        invoices:
+          type: array
+          description: Optional — if omitted, demo invoices are generated automatically
+          items:
+            type: object
+            properties:
+              invoiceId:
+                type: string
+              issuer:
+                type: string
+              debtor:
+                type: string
+              amountCents:
+                type: integer
+              currencyCode:
+                type: string
+              issuedAt:
+                type: string
+                format: date-time
+              dueAt:
+                type: string
+                format: date-time
+              lineItems:
+                type: array
+                items:
+                  type: object
+              metadata:
+                type: object
     PipelineResponse:
       type: object
       properties:
