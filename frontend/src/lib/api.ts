@@ -301,7 +301,7 @@ async function fetcher<T>(
     method,
     headers: {} as Record<string, string>,
   };
-  if (data && (method === 'POST' || method === 'PUT')) {
+  if (data && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
     (config.headers as Record<string, string>)['Content-Type'] = 'application/json';
     config.body = JSON.stringify(data);
   }
@@ -370,7 +370,7 @@ export const getGovernanceProposals = async (): Promise<Proposal[]> => {
 };
 export const getGovernanceProposalById = (id: string) => fetcher<Proposal>(`/api/v1/governance/proposals/${id}`);
 export const postGovernanceExecute = (body: ExecuteRequest) => fetcher<{ message: string }>('/api/v1/governance/execute', 'POST', body);
-export const deleteGovernanceProposal = (proposalId: string) => fetcher<{ message: string }>(`/api/v1/governance/proposals/${proposalId}`, 'DELETE');
+export const deleteGovernanceProposal = (proposalId: string, requesterPublicKey: string) => fetcher<{ message: string }>(`/api/v1/governance/proposals/${proposalId}`, 'DELETE', { requesterPublicKey });
 
 // Slashing
 export const postSlashingReport = (body: ReportRequest) => fetcher<{ report_id: string }>('/api/v1/slashing/report', 'POST', body);
