@@ -375,3 +375,53 @@ and is committed to source — it is simply not live on-chain because this
 redeploy blocker prevents shipping *any* contract upgrade, not just this
 one. Stopping here per the one-attempt budget for this path this session;
 not spending further credits on it.
+
+## Update 5 (2026-07-07, later same day): tested the "rename the package-hash named key" theory — also disproved
+
+Hypothesis before this test: `storage::new_contract(entry_points, named_keys,
+Some("oracle_slashing_package_hash"), ...)` ties into the *account's* named
+keys — since the deployer account already has a named key called
+`oracle_slashing_package_hash` from the very first install, maybe the engine
+treats any new deploy with that same literal string as "add a version to the
+already-owned package" (an upgrade) regardless of the SDK-level
+`installOrUpgrade()` flag, which would explain why every retry looked
+identical to an upgrade even when we intended a fresh install.
+
+Test: renamed the named-key/package-hash-name/access-uref-name/contract-hash
+strings in `contracts/oracle-slashing/src/main.rs` to `..._v2` (a name this
+account's named keys have never held), rebuilt cleanly
+(`nightly-2025-02-04`, 98,204 B unstripped — sandbox reset mid-session, had
+to reinstall the whole rustup toolchain first, see below), and submitted a
+plain `SessionBuilder().installOrUpgrade()` transaction with **no
+`.contractHash()` at all** (as close to "this is definitely a fresh
+install" as the client-side API allows).
+
+Result: **still `ApiError::InvalidArgument [3]`**, tx
+`1ac51a7e7bf34145b3c94efaaca280b22517932ccdf04cffa0ccfb8e297b03f8`,
+`consumed_gas: 3,063,235` — same small-gas-then-abort signature as every
+other failure. Notably the on-chain deploy record reports `version_id: 2`
+even for this "renamed, should-be-brand-new" package, and
+`contract_package_hash: null` in the deploy result — i.e. the engine did not
+even get far enough to publish a discoverable package hash. **This
+disproves the named-key-rename theory**: it is not about the account
+already owning a same-named key.
+
+Updated understanding: the failure is **not** about (a) `CLType::Any`, (b)
+wasm size, (c) payment/pricing-mode, (d) legacy vs. v1 transaction format,
+(e) named-key collision on the *installer's* account, or now (f) whether the
+package-hash name string was ever used before by this account. Every
+"first-time success" this project has ever had (diag-minimal, governance-dao,
+oracle-slashing's original install) happened on **the very first
+attempted install of that specific project's very first contract on this
+node/account combination during a given session**, which is confounded with
+several other variables (fresh RPC session state, no dictionaries yet
+created, etc.) that haven't been isolated yet. Recommend for whoever picks
+this up next: try installing a **brand-new, never-before-touched contract
+name** (not just a renamed variant of an existing one) from the **same**
+account in the **same** session as a already-failed attempt, to check
+whether the block is per-account-cumulative (e.g. some hidden per-account
+counter/nonce/gas-price state) rather than per-package.
+
+Not spending further credits chasing this today per the one-attempt-per-session
+budget; real gas was spent (250 CSPR payment, ~3.06M gas) on this negative
+result, same as prior attempts.
