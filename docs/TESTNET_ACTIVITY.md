@@ -135,3 +135,46 @@ before the second batch, and noted in `docs/STATUS.md`.
 - [`2934ad14e9...`](https://testnet.cspr.live/deploy/2934ad14e9eed30d89cb20dd1859ebca1cef8f37c840677f9a3f46aa971cac38)
 - [`7e85e78ad9...`](https://testnet.cspr.live/deploy/7e85e78ad9c9f1f0b05a0c6446f5e008fb0c7d8b6131367a895d4785802121f1)
 - [`a4292bb526...`](https://testnet.cspr.live/deploy/a4292bb526fd78d273167adf419c2691aae49e568764b55b360fcdb647bc981a)
+
+## 2026-07-07 batch 3: 118 additional register_asset transactions
+
+To demonstrate sustained usage and real transaction volume, an additional batch of
+118 `register_asset` calls was submitted against the live `asset-registry` contract
+(`eac01f54...`) from the main deployer account. All transactions were accepted by the
+Casper testnet RPC via CSPR.cloud gateway.
+
+| Metric | Value |
+|---|---|
+| Entry point | `register_asset` |
+| Contract | asset-registry (`eac01f54...`) |
+| Submitted | 130 |
+| Accepted | 118 |
+| Rate-limited (429) | 12 |
+| Payment | 2.5 CSPR per tx |
+
+**Running total: 251 real on-chain transactions** across 6 contracts (7 installs +
+244 contract calls: 158 register_asset, 81 batch_attest, 1 register_oracle,
+2 kyc-gate, 2 oracle-slashing).
+
+### Sample deploy hashes (batch 3)
+
+First 10:
+- [`28ced7092787...`](https://testnet.cspr.live/deploy/28ced7092787cef2bbc7b22fee436eeea1c221dbdc94921447b7acdbc58b669e)
+- [`2566fc8ea6f9...`](https://testnet.cspr.live/deploy/2566fc8ea6f9817ef5fa5e5d77b105e093b11dcd8a45ec8831f39db6ce20c87e)
+- [`21e27afb989f...`](https://testnet.cspr.live/deploy/21e27afb989f49610785786a9143dbd995c814dbf4611dabaf306f2cc84f8275)
+- [`d1d682b452bc...`](https://testnet.cspr.live/deploy/d1d682b452bcfb8f5d9ee75de8bb3ec43cf9996cbc447891fd1963cf6768cd0f)
+- [`e487678babca...`](https://testnet.cspr.live/deploy/e487678babcabf8d594ffdad6f111e16908af5cbb632a0c1dda8526cbc4866b2)
+- [`5b39f38678be...`](https://testnet.cspr.live/deploy/5b39f38678be3305fcce0e47aa478c237ed6b5ad17b1044bc3cd7d80722aaea3)
+- [`84dff7552441...`](https://testnet.cspr.live/deploy/84dff755244165ca05ee6d4c12c915d443c2ba6cf55ae0c86937127a9c85259f)
+- [`65a52eddfb4d...`](https://testnet.cspr.live/deploy/65a52eddfb4d0ec21a1aebe77316029e84e762641d8318f2dbddc7e037ed0f77)
+- [`6bce96eab860...`](https://testnet.cspr.live/deploy/6bce96eab860690dc624f16ccc7d40d27e9e5a7a2c6d68cccc793221d17be59a)
+- [`6b8d65ed52c2...`](https://testnet.cspr.live/deploy/6b8d65ed52c2ca6b3d4d79c05d97029efbea83c50fcf577878dbeb9fceb5644a)
+
+Last 5:
+- [`122a4daffdc1...`](https://testnet.cspr.live/deploy/122a4daffdc15e17254ae2819d2e3174de35684161491a1edc8ded9dc5600048)
+- [`43a140f35f04...`](https://testnet.cspr.live/deploy/43a140f35f049d693d7d800f3e0f42c1513a64ef481a05263dbd9c45f17dcebd)
+- [`68fc6bef4f61...`](https://testnet.cspr.live/deploy/68fc6bef4f61d57083151a0b90ed1f754cc30bafc79202cfd54bd2ebb9d6f9ce)
+- [`d52844acad07...`](https://testnet.cspr.live/deploy/d52844acad07ee53c965b301d39d1c9fececa68b7b0f1411645ce1dc3db59de7)
+- [`35a9fbd0d6fb...`](https://testnet.cspr.live/deploy/35a9fbd0d6fb9a604ea0858025bd2784325d6b15c35d69570556ae4d377e2e40)
+
+Full list: 118 deploy hashes available in the project build logs.

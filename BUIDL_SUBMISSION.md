@@ -62,7 +62,7 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 ## Live Demo
 
 - **Oracle Portal:** [rwa-sentinel.xyz/portal](https://rwa-sentinel.xyz/portal) — 12 portal pages: Overview, Assets, Oracles (with slashing UI), Governance, SBTs, Contracts, Chain Explorer, Data Adapters, KYC Gate, Anomalies, Agent Demo, API Playground
-- **Smart Contracts on Casper testnet (6 deployed, 123+ transactions):**
+- **Smart Contracts on Casper testnet (6 deployed, 251+ transactions):**
   - Asset Registry: [`eac01f54…`](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3)
   - Attestation Store (v2, security-patched): [`cffc53be…`](https://testnet.cspr.live/contract/cffc53be1c57d4dc64a74ee1ba38c20b3f9a6d5a7e8c1b2d3f4a5b6c7d8e9f0a)
   - Governance DAO: [`154d32b5…`](https://testnet.cspr.live/contract/154d32b5e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3)
@@ -95,7 +95,7 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 ## What Makes It Unique
 
-1. **6 deployed smart contracts** — Most hackathon projects deploy 1-2 contracts. RWA Sentinel has a full contract ecosystem: asset registry, attestation store, governance DAO, oracle slashing, KYC gate, and stake deposit session code — all live on Casper testnet with 123+ on-chain transactions.
+1. **6 deployed smart contracts** — Most hackathon projects deploy 1-2 contracts. RWA Sentinel has a full contract ecosystem: asset registry, attestation store, governance DAO, oracle slashing, KYC gate, and stake deposit session code — all live on Casper testnet with 251+ on-chain transactions.
 
 2. **Trust oracle, not price oracle** — RWA Sentinel attests to the *validity and trustworthiness* of underlying assets, not market price. No comparable system on Casper combines transparent scoring + expiring attestations + challenge-with-stake.
 
@@ -115,6 +115,6 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 ## Team
 
-**triumphkrug** — Solo builder architecting trust infrastructure for the RWA space. Designed the 6-factor scoring model, built the autonomous TypeScript agent pipeline, wrote all 6 Casper smart contracts (asset-registry, attestation-store, governance-dao, oracle-slashing, kyc-gate, deposit-stake-session), developed the React portal with 12 interactive pages, implemented BLS12-381 threshold signatures, and deployed the full system to testnet with 123+ on-chain transactions. Background in decentralized systems and on-chain governance; focus on making RWA verification programmable and accountable.
+**triumphkrug** — Solo builder architecting trust infrastructure for the RWA space. Designed the 6-factor scoring model, built the autonomous TypeScript agent pipeline, wrote all 6 Casper smart contracts (asset-registry, attestation-store, governance-dao, oracle-slashing, kyc-gate, deposit-stake-session), developed the React portal with 12 interactive pages, implemented BLS12-381 threshold signatures, and deployed the full system to testnet with 251+ on-chain transactions. Background in decentralized systems and on-chain governance; focus on making RWA verification programmable and accountable.
 
 GitHub: [github.com/triumphkrug](https://github.com/triumphkrug)

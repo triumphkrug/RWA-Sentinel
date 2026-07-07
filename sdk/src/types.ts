@@ -32,19 +32,30 @@ export interface OracleScore {
   updatedAt: number;
 }
 
+/** Matches the 6-factor scoring pipeline in agent/src/validator/scoringFactors.ts */
 export interface ScoringFactors {
-  lei: number;
-  priceCorrelation: number;
-  compliance: number;
-  historyDepth: number;
+  issuerHistory: number;
+  documentIntegrity: number;
   crossReference: number;
+  amountPlausibility: number;
+  temporalConsistency: number;
+  networkReputation: number;
+}
+
+export interface ScoringWeights {
+  issuerHistory: number;       // 25%
+  documentIntegrity: number;   // 20%
+  crossReference: number;      // 15%
+  amountPlausibility: number;  // 15%
+  temporalConsistency: number; // 15%
+  networkReputation: number;   // 10%
 }
 
 export interface OracleQuery {
   assetId?: string;
   assetType?: string;
   minScore?: number;
-  dateRange?: { start: number; end: number };
+  dateRange?: { from: string; to: string };
 }
 
 export interface OracleResponse {
@@ -127,34 +138,39 @@ export interface OracleNode {
   latencyMs: number;
 }
 
-export interface ScoringWeights {
-  lei: number;
-  priceCorrelation: number;
-  compliance: number;
-  historyDepth: number;
-  crossReference: number;
+export interface ProtocolStats {
+  totalScored: number;
+  activeAttestations: number;
+  expiredAttestations: number;
+  avgTrustScore: number;
+  assetTypes: Record<string, number>;
 }
 
 export enum AttestationStatus {
-  PENDING,
-  APPROVED,
-  REJECTED,
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  EXPIRED = 'expired',
+  CHALLENGED = 'challenged',
+  INVALIDATED = 'invalidated',
 }
 
 export enum ProposalStatus {
-  PENDING,
-  APPROVED,
-  REJECTED,
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  EXECUTED = 'executed',
 }
 
 export enum SlashingStatus {
-  PENDING,
-  APPROVED,
-  REJECTED,
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  EXECUTED = 'executed',
 }
 
 export enum VoteType {
-  YES,
-  NO,
-  ABSTAIN,
+  FOR = 'for',
+  AGAINST = 'against',
+  ABSTAIN = 'abstain',
 }

@@ -63,6 +63,6 @@ The system features 6 deployed smart contracts, real BLS12-381 threshold signatu
 
 - [x] Original work
 - [x] Open-source on GitHub
-- [x] 6 smart contracts deployed on Casper testnet with 123+ on-chain transactions
+- [x] 6 smart contracts deployed on Casper testnet with 251+ on-chain transactions
 - [x] README with architecture docs
 - [x] Demo video — _TBD_
