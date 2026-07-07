@@ -477,3 +477,110 @@ payload. Findings, in order of usefulness:
 **Net effect**: no new fix, but the "wrong toolchain/ABI drift" theory is now
 the single leading untested hypothesis, is free to test locally (no gas), and
 should be tried before any further paid redeploy attempt.
+
+## Update 7 (2026-07-07, same day): nightly-2025-08-28 hypothesis tested and RULED OUT (compile-time, no gas spent)
+
+Installed `nightly-2025-08-28` locally and rebuilt `oracle-slashing` against it
+with no other changes (still crates.io `casper-contract = "5.1"` /
+`casper-types = "6.0"`, same as production). **Build fails to compile**:
+
+```
+error: `#[no_mangle]` cannot be used on internal language items
+ --> casper-contract-5.1.1/src/no_std_handlers.rs:5:1
+```
+
+Root cause: newer nightly compilers hardened lang-item mangling rules. The
+crates.io-published `casper-contract` 5.1.1 uses `#[no_mangle] pub fn panic(...)`
+in its no_std panic handler, which the new compiler now rejects outright.
+Checked casper-node's own **in-repo** (unpublished-to-crates.io) source for the
+same file (`smart_contracts/contract/src/no_std_handlers.rs` on `dev`): it
+already uses the correct `#[panic_handler]` attribute instead — i.e. the fix
+exists upstream but hasn't been republished to crates.io as a new
+`casper-contract` version yet (still 5.1.1, unchanged). No newer version
+available on crates.io to pick up the fix.
+
+**Conclusion**: `nightly-2025-08-28` is paired with casper-node's own in-repo
+git/path dependency on casper-contract/casper-types, not with the crates.io
+release we depend on — the two aren't a drop-in swappable pair. This
+hypothesis is now **ruled out** as impractical (would require switching our
+Cargo.toml to a git dependency on casper-node's contract crates, a much bigger
+change than a toolchain bump, this late pre-deadline). Reverted local default
+toolchain back to `nightly-2025-02-04`/`nightly-2025-02-01` (whichever was
+already installed and compiling fine) — no production change, no gas spent.
+
+Also reviewed 3 more official casper.network pages per request
+(`unboxing-casper-2-1`, `get-started-regular`, `/ai`): marketing/overview
+content only. Notable but tangential: testnet is now past **Casper 2.1**
+(faster 8s block finality + fee-burning), and Casper is now promoting **Odra**
+(a higher-level Rust smart-contract framework with AI-agent tooling support)
+as the recommended path for new contracts — but adopting Odra now would be a
+full rewrite, not attempted given the deadline. No page contained low-level
+install/ABI detail relevant to this bug.
+
+**Status**: all locally-testable, free hypotheses are now exhausted and
+either ruled out or inconclusive. Remaining paths are either (a) a live paid
+redeploy A/B test comparing minimal known-good vs. currently-failing binaries
+byte-for-byte, or (b) opening a support request with Casper
+Association/CSPR.cloud/Discord with the exact tx hash and RPC evidence
+gathered above, since it's on their execution engine's behavior rather than
+anything client-side we can diff further for free.
+
+## Update 8 (2026-07-07, same session): version-drift check across casper-network repos + opcode-validation experiment (inconclusive)
+
+Per request, checked `casper-network/ceps`, `casper-network/casper-node`,
+`casper-network/casper-wasm`, `casper-network/docs-redux` for recent activity
+that could signal a version mismatch:
+- `ceps` (RFCs repo): most recent merged CEP (as of 2026-07-02) is **CEP-97**,
+  a draft proposal to remove custom payment and set a 0.1 CSPR minimum
+  transaction cost — this is a **proposal**, not confirmed live on testnet;
+  doesn't match our observed 250 CSPR fixed-cost/refund=0 behavior directly,
+  and isn't dated/confirmed as deployed. Noted, not actionable yet.
+- `casper-wasm` (the actual Wasm interpreter fork casper-node depends on, via
+  `casper-wasm 1.0.0` / `casper-wasmi 1.0.0` in `execution_engine/Cargo.toml`):
+  confirmed it's built with only two non-MVP features enabled —
+  `sign_ext` and `call_indirect_overlong` — everything else (bulk-memory,
+  reference-types, multi-value, tail-call, simd, memory64, threads) is
+  presumably disabled/unsupported. This is a real, concrete lead: if our
+  Rust/LLVM codegen ever emits an unsupported opcode (e.g. bulk-memory
+  `memory.copy`/`memory.fill`, which newer LLVM can emit by default for
+  certain code patterns), install would fail exactly like we observe (revert
+  before any host calls, constant low gas — consistent with a validation-time
+  rejection).
+- Tried to verify directly: loaded our compiled `oracle-slashing.wasm` into
+  `wasmtime` (Python bindings) with reference-types/bulk-memory/multi-value/
+  simd/tail-call/memory64 all disabled to approximate casper-wasm's feature
+  set. Result: validation **failed**, but with a `wasmtime`-specific parse
+  error ("zero byte expected" in a `call_indirect` encoding inside a
+  `core::fmt::Display for u64` codegen'd function) that looks like a mismatch
+  between wasmtime's own encoding expectations for `call_indirect_overlong`
+  and casper-wasm's actual (different, custom fork) parser — **not reliable
+  evidence**, since wasmtime is not casper-wasm and the two don't necessarily
+  agree on how that specific extension is encoded/validated. Do not treat this
+  as a confirmed finding; it needs testing against casper-wasm itself
+  (e.g. building a tiny Rust harness against the `casper-wasm`/`casper-wasmi`
+  crates directly and running our binary through their actual validator) to
+  be conclusive. Not done in this session — flagged as the next concrete,
+  still-free thing to try if this is picked up again.
+- `docs-redux`: no signal, last push 2026-06-05, nothing wasm/install-related
+  found without a full docs build (out of scope for this pass).
+
+**Follow-up, same session**: built the suggested harness — a tiny Rust binary
+depending directly on `casper-wasm = "1.0.0"` (same crate/version
+`execution_engine/Cargo.toml` uses), calling
+`casper_wasm::deserialize_buffer::<Module>(&data)` on our actual failing
+`oracle-slashing.wasm`. **Result: `PARSE OK: 13 sections`** — casper-node's own
+Wasm library parses our binary without any error. This **conclusively rules
+out** the bulk-memory/unsupported-opcode theory using the real dependency
+(not an approximation) — our binaries are structurally valid Wasm modules by
+casper-node's own parser's standard. (Caveat: this only exercises structural
+parsing, not the execution engine's full preprocessing/instrumentation/gas
+metering pass, which happens deeper in casper-node and isn't a small
+standalone crate we can harness as easily — that remains untested.)
+
+**Net status after Updates 6-8**: every free, locally-testable theory
+(toolchain/nightly gap, wasm target, named-key collision, CLType::Any, wasm
+size, payment/pricing-mode, permission-check path, bulk-memory opcodes) has
+now been tested and ruled out. The remaining candidates all require either
+paid on-chain A/B testing or deeper instrumentation only possible with a
+running casper-node instance (e.g. local NCTL/CCTL devnet) or direct support
+from the Casper team — not achievable with further static/local analysis.
