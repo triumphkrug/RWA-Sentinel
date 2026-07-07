@@ -61,7 +61,7 @@ const Governance: React.FC = () => {
     const pubKey = walletKey || '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79';
     setActionError(null);
     try {
-      await postGovernanceVote({ proposalId, voterPublicKey: pubKey, support: choice });
+      await postGovernanceVote({ proposalId, voterPublicKey: pubKey, choice });
       await fetchProposals();
     } catch (err: any) {
       setActionError(err.message || 'Failed to vote');
