@@ -584,3 +584,50 @@ now been tested and ruled out. The remaining candidates all require either
 paid on-chain A/B testing or deeper instrumentation only possible with a
 running casper-node instance (e.g. local NCTL/CCTL devnet) or direct support
 from the Casper team — not achievable with further static/local analysis.
+
+## Update 9 (2026-07-07, ~11:10): casper-types version-gap verified but ruled out + testnet chainspec install/upgrade-lane cap found (new fact, not root cause)
+
+Per request, re-checked "latest versions in the repo" more precisely (previous check was
+casper-contract only) and re-read `docs.casper.network/condor/migration-guide` (exchange
+migration guide — SDK/node-operator focused, nothing about contract install/ABI, no new lead).
+
+**casper-types version gap — confirmed real, but ruled out as the cause:**
+- crates.io: `casper-types` latest published is **7.0.0** (2026-03-10). Our `Cargo.lock` pins
+  **6.1.0** (via our `casper-types = "6.0"` constraint).
+- casper-node `dev` branch (matches testnet protocol 2.2.2) now depends on `casper-types 7.0.0`
+  in its execution-engine Cargo.toml.
+- However, `casper-contract 5.1.1` (the latest published, which we already use) itself requires
+  `casper-types ^6.0.1` on crates.io — so we *can't* bump to 7.0.0 without a git-dependency swap
+  (same class of problem as the nightly-toolchain finding: crates.io hasn't caught up with the
+  node's `dev` branch yet).
+- Diffed the actual `6.1.0` vs `7.0.0` source (`crates.io` tarballs, `diff -rq`): only
+  `chainspec/*`, `crypto/asymmetric_key.rs`, `system/auction|mint/constants.rs`, and `key.rs`
+  differ. `key.rs`'s only change is a purely additive new variant (`Key::RewardsHandling`,
+  reward-accounting only). **`entry_points.rs`, `contracts.rs`, `addressable_entity.rs`,
+  `bytesrepr.rs` — everything touching contract-package/version creation and its wire format —
+  are byte-identical** between 6.1.0 and 7.0.0. Conclusion: **the version gap is real but not
+  the cause of our install failure** — nothing in the affected files is on our contract-install
+  code path.
+
+**New fact from testnet chainspec (not previously checked): `install_upgrade_lane` transaction
+cap.** Fetched `casper-node/dev`'s production `chainspec.toml`:
+```
+install_upgrade_lane = [2, 750_000, 2048, 1_000_000_000_000, 1]
+# [lane_id, max_serialized_len, max_args_len, gas_limit, max_tx_count_per_block]
+```
+The install/upgrade lane allows only **1 install/upgrade transaction per block, network-wide**
+(not per-account). Our wasm (~90KB) and args (empty) are well within the 750,000B/2048B limits,
+and our gas limit is within the 1000 CSPR cap — so this doesn't explain the `InvalidArgument`
+revert itself (a capacity limit would delay inclusion into a later block, not cause an executed
+transaction to revert with gas consumed). But it does mean the shared testnet lane could be
+contended if other hackathon teams are also submitting installs concurrently — worth being aware
+of, not a fix.
+
+Also checked `[wasm.v1]` memory/stack limits (`max_memory = 64` pages / 4MB, `max_stack_height =
+500`) against our compiled binary's actual memory section: our wasm declares an initial memory
+of **17 pages (~1.09MB)**, well under the 64-page cap. Ruled out.
+
+**Net status unchanged**: still no confirmed root cause. All free/local avenues checked across 9
+rounds are now exhausted. Fresh-account rate-limit test remains the only untested hypothesis,
+and it requires funding a new testnet account (faucet + real gas) — not done yet, pending
+explicit go-ahead given cost.
