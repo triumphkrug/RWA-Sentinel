@@ -15,6 +15,36 @@ log covers regular *contract calls*, which work fine).
 
 **Total real transactions submitted this session: 123** (82 successful + 41 reverted-but-real).
 
+## 2026-07-07 addendum: `oracle-slashing` (A1 fix) and `kyc-gate` (S4) go live + first real calls
+
+Following the redeploy-blocker resolution (see `WASM_INSTALL_DIAGNOSIS.md` Updates 10-11),
+`oracle-slashing` (with the A1 purse-slashing fix) and `kyc-gate` (new contract) were installed
+on-chain for the first time, from a second funded testnet account (the main deployer account's
+installs for these two specific contracts are still blocked pending further diagnosis/support —
+see the diagnosis doc). Both contracts, and the first real entry-point calls against `kyc-gate`,
+are confirmed live:
+
+| Contract | Address |
+|---|---|
+| `oracle-slashing` contract hash | `hash-fef80eef2a24c70e6822307b61539ea6f3fd5ba9365b4c0a8738ad326da921a3` |
+| `oracle-slashing` package hash | `hash-e9c16def2cab30e274858fe6c212ae21e1b0e0c7bd3226416924191665a505f6` |
+| `kyc-gate` contract hash | `hash-6e0dd2dc7673cf5c7c4e99ad5c956320a3f0f19db4cdb2293eab222611aa58d5` |
+| `kyc-gate` package hash | `hash-f05dd94e189779e87506609ef5afdc74d5da33bcf2c3780bc29cd117cabf3c8a` |
+
+`kyc-gate` real calls (both `error_message: null`):
+- `add_provider` — [`38baa0e6ba...`](https://testnet.cspr.live/deploy/38baa0e6ba026ba5a7c0f284274ab58f38b157c4f31cc6305249ee1bd2cdde72)
+- `ban_provider` — [`a32f0603809b...`](https://testnet.cspr.live/deploy/a32f0603809b445e171beef2b0f1e1ad2afcfc1427cc5ca11732999f418ed568)
+
+`oracle-slashing`'s `register_oracle` entry point (needs a `source_purse: URef` argument for the
+real CSPR stake transfer) was attempted twice from the fresh account and reverted both times with
+`Mint error: 4` (`InvalidAccessRights`, per `casper-types::system::mint::Error`) despite passing
+the account's own main purse URef with both `ReadAddWrite` and `ReadWrite` access-rights
+suffixes — **not yet resolved**, needs further investigation into how URef arguments are
+validated for direct `ContractCall`-target transactions (vs. session-wasm code that calls
+`account::get_main_purse()` itself) before more real gas is spent guessing. `report_violation`/
+`challenge_report`/`execute_slash` don't need a purse argument and are simpler follow-up
+candidates once an oracle is actually registered.
+
 This also surfaced and fixed a real gap: `batch_attest` requires the caller to be on the
 `dao_oracles` allow-list, which starts **empty** at install time — there was no prior
 documented bootstrap step for this. Fixed live by calling `register_oracle` (installer-only)
