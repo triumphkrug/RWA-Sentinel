@@ -120,9 +120,7 @@ const SBT: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-3">SBT Preview</h3>
           {selectedAttestation ? (
             <SBTCard
-              assetId={selectedAttestation.asset_id.length > 20
-                ? selectedAttestation.asset_id.slice(0, 20) + '…'
-                : selectedAttestation.asset_id}
+              assetId={selectedAttestation.asset_id}
               assetType={formatAssetType(selectedAttestation.asset_type)}
               issuer={selectedAttestation.identifier || 'On-chain Oracle'}
               trustScore={Math.round(selectedAttestation.score)}

@@ -18,6 +18,10 @@ const ICONS = {
   shield: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z',
 };
 
+/** Max visible characters for value fields before ellipsis */
+const MAX_VAL_LEN = 25;
+const ellipsis = (s: string) => s.length > MAX_VAL_LEN ? s.slice(0, MAX_VAL_LEN - 1) + '…' : s;
+
 const SBTCard: React.FC<SBTCardProps> = ({
   assetId,
   assetType,
@@ -34,15 +38,14 @@ const SBTCard: React.FC<SBTCardProps> = ({
     status === 'expired' ? '#9ca3af' :
     status === 'challenged' ? '#d97706' : '#6b7280';
 
-  // Gauge arc: 87/100 → dashoffset = totalLen * (1 - score/100)
   const arcLen = 198;
-  const dashOffset = arcLen * (1 - trustScore / 100);
+  const dashOffset = arcLen * (1 - Math.min(trustScore, 100) / 100);
 
   const rows: { icon: string; label: string; value: React.ReactNode }[] = [
-    { icon: ICONS.doc, label: 'Asset ID', value: assetId },
-    { icon: ICONS.shapes, label: 'Asset Type', value: assetType },
-    { icon: ICONS.bank, label: 'Issuer', value: issuer },
-    { icon: ICONS.calendar, label: 'Verification\nDate', value: verificationDate },
+    { icon: ICONS.doc, label: 'Asset ID', value: ellipsis(assetId) },
+    { icon: ICONS.shapes, label: 'Asset Type', value: ellipsis(assetType) },
+    { icon: ICONS.bank, label: 'Issuer', value: ellipsis(issuer) },
+    { icon: ICONS.calendar, label: 'Verification\nDate', value: ellipsis(verificationDate) },
     {
       icon: ICONS.shield,
       label: 'Status',
@@ -153,7 +156,7 @@ const SBTCard: React.FC<SBTCardProps> = ({
           Soulbound Attestation
         </div>
 
-        {/* Trust Score Gauge */}
+        {/* Trust Score Gauge — number only, no label text */}
         <div className="relative" style={{ width: 150, height: 82 }}>
           <svg width="150" height="82" viewBox="0 0 150 82">
             <path d="M 12 78 A 63 63 0 0 1 138 78" fill="none" stroke="#e5e7eb" strokeWidth="11" strokeLinecap="round" />
@@ -168,16 +171,13 @@ const SBTCard: React.FC<SBTCardProps> = ({
               style={{ transition: 'stroke-dashoffset 0.8s ease' }}
             />
           </svg>
-          <div className="absolute text-center" style={{ top: 22, left: '50%', transform: 'translateX(-50%)' }}>
-            <span style={{ display: 'block', fontSize: 7, fontWeight: 700, letterSpacing: 2.5, color: '#4a8c5c', textTransform: 'uppercase' }}>
-              Trust Score
-            </span>
-            <span style={{ fontSize: 36, fontWeight: 900, lineHeight: 1, color: scoreColor }}>{trustScore}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#9ca3af' }}>/100</span>
+          <div className="absolute text-center" style={{ top: 28, left: '50%', transform: 'translateX(-50%)' }}>
+            <span style={{ fontSize: 38, fontWeight: 900, lineHeight: 1, color: scoreColor }}>{trustScore}</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#9ca3af' }}>/100</span>
           </div>
         </div>
 
-        {/* Shield */}
+        {/* Shield checkmark */}
         <div style={{ margin: '-2px 0 4px' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill={arcColor}>
             <path d={ICONS.shield} />
@@ -214,8 +214,11 @@ const SBTCard: React.FC<SBTCardProps> = ({
               </span>
               {typeof row.value === 'string' ? (
                 <span
-                  className="ml-auto text-right whitespace-nowrap"
-                  style={{ fontSize: 12, fontWeight: 600, color: '#1a202c' }}
+                  className="ml-auto text-right"
+                  style={{
+                    fontSize: 12, fontWeight: 600, color: '#1a202c',
+                    maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}
                 >
                   {row.value}
                 </span>
