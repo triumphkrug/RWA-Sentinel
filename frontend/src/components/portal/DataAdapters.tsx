@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Database, Search, RefreshCw, CheckCircle, XCircle, Globe } from 'lucide-react'
+import { Database, Search, RefreshCw, CheckCircle, XCircle, Globe, Landmark, BarChart3, Building2 } from 'lucide-react'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -17,7 +17,7 @@ const adapters = [
     endpoint: '/api/v1/data/lei/',
     placeholder: '5493001KJTIIGC8Y1R12',
     paramLabel: 'LEI Code',
-    icon: '🏛️',
+    Icon: Landmark,
   },
   {
     name: 'CoinGecko Market Data',
@@ -25,7 +25,7 @@ const adapters = [
     endpoint: '/api/v1/data/price/',
     placeholder: 'bitcoin',
     paramLabel: 'Symbol',
-    icon: '📊',
+    Icon: BarChart3,
   },
   {
     name: 'OpenCorporates / Companies House',
@@ -33,7 +33,7 @@ const adapters = [
     endpoint: '/api/v1/data/company/gb/',
     placeholder: '00445790',
     paramLabel: 'Company ID (UK)',
-    icon: '🏢',
+    Icon: Building2,
   },
 ]
 
@@ -52,12 +52,12 @@ export default function DataAdapters() {
       const data = await res.json()
       setResults(prev => ({
         ...prev,
-        [adapter.name]: { source: adapter.name, status: 'success', data, latency: Date.now() - start },
+        [adapter.name]: { source: adapter.name, status: res.ok ? 'success' : 'error', data, latency: Date.now() - start },
       }))
     } catch (e) {
       setResults(prev => ({
         ...prev,
-        [adapter.name]: { source: adapter.name, status: 'error', data: (e as Error).message, latency: Date.now() - start },
+        [adapter.name]: { source: adapter.name, status: 'error', data: { error: (e as Error).message }, latency: Date.now() - start },
       }))
     } finally {
       setLoading(prev => ({ ...prev, [adapter.name]: false }))
@@ -85,9 +85,9 @@ export default function DataAdapters() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Database className="h-6 w-6 text-blue-600" /> Data Adapters
-        </h1>
+        </h2>
         <p className="text-gray-500 mt-1">
           Live external data sources used in the 6-factor scoring pipeline for cross-reference validation
         </p>
@@ -101,7 +101,9 @@ export default function DataAdapters() {
           return (
             <div key={adapter.name} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col">
               <div className="flex items-start gap-3 mb-3">
-                <span className="text-2xl">{adapter.icon}</span>
+                <div className="p-2 rounded-lg bg-blue-50 shrink-0">
+                  <adapter.Icon className="h-5 w-5 text-blue-600" />
+                </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">{adapter.name}</h3>
                   <p className="text-xs text-gray-500 mt-0.5">{adapter.description}</p>
@@ -148,12 +150,18 @@ export default function DataAdapters() {
         })}
       </div>
 
+      {/* Note about external APIs */}
+      <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 text-sm text-amber-800">
+        <p className="font-medium mb-1">External API Limitations</p>
+        <p>CoinGecko free tier has rate limits (10-30 req/min). OpenCorporates requires an API key for full access. These adapters are designed for cross-reference validation — individual query failures don't block the pipeline, they reduce the cross-reference score factor instead.</p>
+      </div>
+
       {/* Cache management */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Globe className="h-5 w-5 text-blue-600" /> Adapter Cache
-          </h2>
+          </h3>
           <div className="flex gap-2">
             <button
               onClick={fetchCacheStats}

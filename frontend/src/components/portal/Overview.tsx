@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  getHealth, getStats, getFactors, getExtensionCategories, getBridgeChains,
+  getHealth, getStats, getFactors, getExtensionCategories, getBridgeChains, getAttestations,
   HealthResponse, StatsResponse, FactorDefinition, AssetCategory, BridgeChain, ErrorResponse
 } from '../../lib/api';
 import {
   Loader2, CheckCircle, XCircle, TrendingUp, Scale, ShieldCheck,
-  Layers, Globe, Shield, BarChart3, Activity
+  Layers, Globe, Shield, BarChart3, Activity, Database
 } from 'lucide-react';
 
 const Overview: React.FC = () => {
@@ -14,6 +14,7 @@ const Overview: React.FC = () => {
   const [factors, setFactors] = useState<FactorDefinition[]>([]);
   const [categories, setCategories] = useState<AssetCategory[]>([]);
   const [bridgeChains, setBridgeChains] = useState<BridgeChain[]>([]);
+  const [recentAttestations, setRecentAttestations] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,12 +23,13 @@ const Overview: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const [healthRes, statsRes, factorsRes, categoriesRes, bridgeRes] = await Promise.allSettled([
+        const [healthRes, statsRes, factorsRes, categoriesRes, bridgeRes, attestRes] = await Promise.allSettled([
           getHealth(),
           getStats(),
           getFactors(),
           getExtensionCategories(),
           getBridgeChains(),
+          getAttestations({ limit: 5 }),
         ]);
 
         if (healthRes.status === 'fulfilled') setHealth(healthRes.value);
@@ -35,14 +37,13 @@ const Overview: React.FC = () => {
         if (factorsRes.status === 'fulfilled') setFactors((factorsRes.value as any).factors || []);
         if (categoriesRes.status === 'fulfilled') setCategories(categoriesRes.value.categories || []);
         if (bridgeRes.status === 'fulfilled') setBridgeChains(bridgeRes.value.chains || []);
+        if (attestRes.status === 'fulfilled') setRecentAttestations(attestRes.value.total || 0);
 
-        // Only set error if health and stats both failed
         if (healthRes.status === 'rejected' && statsRes.status === 'rejected') {
           setError('Failed to fetch overview data');
         }
       } catch (err: any) {
-        const errorRes: ErrorResponse = err;
-        setError(errorRes.message || 'Failed to fetch data');
+        setError(err.message || 'Failed to fetch data');
       } finally {
         setLoading(false);
       }
@@ -75,20 +76,18 @@ const Overview: React.FC = () => {
 
       {/* Health Status */}
       <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-5">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">System Health</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Activity className="h-5 w-5 text-blue-600" /> System Health
+        </h3>
         {health ? (
           <div className="flex flex-wrap items-center gap-4 text-sm">
-            {health.status === 'ok' ? (
-              <span className="inline-flex items-center gap-1 text-green-600 font-medium">
-                <CheckCircle className="h-5 w-5" /> {health.status.toUpperCase()}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-red-600 font-medium">
-                <XCircle className="h-5 w-5" /> {health.status.toUpperCase()}
-              </span>
-            )}
-            <span className="text-gray-500">v{health.version}</span>
-            <span className="text-gray-500">{new Date(health.timestamp).toLocaleString()}</span>
+            <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+              <CheckCircle className="h-5 w-5" /> {health.status.toUpperCase()}
+            </span>
+            <span className="text-gray-500">Uptime: {Math.floor(health.uptime / 3600)}h {Math.floor((health.uptime % 3600) / 60)}m</span>
+            <span className="text-gray-500">Chain: {health.chain}</span>
+            <span className="text-gray-500">DB: {health.db}</span>
+            <span className="text-gray-500">{Object.keys(health.contracts || {}).length} contracts linked</span>
           </div>
         ) : (
           <p className="text-gray-600">Health status not available.</p>
@@ -96,13 +95,13 @@ const Overview: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-5">
           <div className="flex items-center gap-2 text-blue-600 text-sm mb-2">
             <TrendingUp className="h-5 w-5" />
             <span className="font-medium text-gray-900">Total Scored Assets</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{stats?.total_scored_assets?.toLocaleString() || 'N/A'}</p>
+          <p className="text-3xl font-bold text-gray-900">{stats?.totalScored?.toLocaleString() || '0'}</p>
           <p className="text-xs text-gray-500 mt-1">Assets evaluated by RWA-Sentinel</p>
         </div>
 
@@ -111,7 +110,7 @@ const Overview: React.FC = () => {
             <ShieldCheck className="h-5 w-5" />
             <span className="font-medium text-gray-900">Active Attestations</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{stats?.active_attestations?.toLocaleString() || 'N/A'}</p>
+          <p className="text-3xl font-bold text-gray-900">{stats?.activeAttestations?.toLocaleString() || '0'}</p>
           <p className="text-xs text-gray-500 mt-1">Currently valid on-chain attestations</p>
         </div>
 
@@ -121,11 +120,37 @@ const Overview: React.FC = () => {
             <span className="font-medium text-gray-900">Average Trust Score</span>
           </div>
           <p className="text-3xl font-bold text-gray-900">
-            {stats?.average_trust_score ? stats.average_trust_score.toFixed(2) : 'N/A'}
+            {stats?.avgTrustScore ? stats.avgTrustScore.toFixed(1) : '0'}
           </p>
           <p className="text-xs text-gray-500 mt-1">Overall average across all assets</p>
         </div>
+
+        <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-5">
+          <div className="flex items-center gap-2 text-blue-600 text-sm mb-2">
+            <Database className="h-5 w-5" />
+            <span className="font-medium text-gray-900">Expired Attestations</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{stats?.expiredAttestations?.toLocaleString() || '0'}</p>
+          <p className="text-xs text-gray-500 mt-1">Requiring re-verification</p>
+        </div>
       </div>
+
+      {/* Asset Types Breakdown */}
+      {stats?.assetTypes && Object.keys(stats.assetTypes).length > 0 && (
+        <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-blue-600" /> Asset Types Distribution
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {Object.entries(stats.assetTypes).map(([type, count]) => (
+              <div key={type} className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-sm font-medium text-gray-900 capitalize">{type.replace(/-/g, ' ')}</p>
+                <p className="text-xl font-bold text-blue-600 mt-1">{count}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Scoring Factors */}
       {factors.length > 0 && (
@@ -136,9 +161,8 @@ const Overview: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {factors.map(f => (
               <div key={f.name} className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-sm font-medium text-gray-900">{f.name}</p>
-                <p className="text-xl font-bold text-blue-600 mt-1">{f.weight <= 1 ? (f.weight * 100).toFixed(0) : f.weight}%</p>
-                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{f.description}</p>
+                <p className="text-sm font-medium text-gray-900 capitalize">{f.name.replace(/([A-Z])/g, ' $1').trim()}</p>
+                <p className="text-xl font-bold text-blue-600 mt-1">{f.weight}%</p>
               </div>
             ))}
           </div>
@@ -151,7 +175,6 @@ const Overview: React.FC = () => {
           <Layers className="h-5 w-5 text-blue-600" /> Extensions & Integrations
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Asset Categories */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
             <div className="flex items-center gap-2 mb-2">
               <Layers className="h-4 w-4 text-blue-600" />
@@ -173,7 +196,6 @@ const Overview: React.FC = () => {
             )}
           </div>
 
-          {/* KYC Gate */}
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
             <div className="flex items-center gap-2 mb-2">
               <Shield className="h-4 w-4 text-green-600" />
@@ -189,7 +211,6 @@ const Overview: React.FC = () => {
             </div>
           </div>
 
-          {/* Cross-chain Bridge */}
           <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-4 border border-purple-200">
             <div className="flex items-center gap-2 mb-2">
               <Globe className="h-4 w-4 text-purple-600" />
@@ -208,27 +229,6 @@ const Overview: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-5">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <Activity className="h-5 w-5 text-blue-600" /> Recent Activity
-        </h3>
-        {stats?.last_pipeline_run ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-gray-500">Last pipeline run:</span>{' '}
-              <span className="font-medium">{new Date(stats.last_pipeline_run).toLocaleString()}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Runs in last 24h:</span>{' '}
-              <span className="font-medium">{stats.pipeline_runs_24h || 0}</span>
-            </div>
-          </div>
-        ) : (
-          <p className="text-gray-600 text-sm">No recent pipeline run data available.</p>
-        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
@@ -58,9 +58,11 @@ function Landing() {
   )
 }
 
-export default function App() {
+function AppContent() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const closeMobile = useCallback(() => setMobileOpen(false), [])
+  const location = useLocation()
+  const isPortal = location.pathname.startsWith('/portal')
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? 'hidden' : ''
@@ -70,7 +72,8 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
       <ScrollToTop />
-      <Navbar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+      {/* Hide landing navbar on portal pages — portal has its own sidebar */}
+      {!isPortal && <Navbar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />}
       <main className="flex-1" onClick={mobileOpen ? closeMobile : undefined}>
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -93,7 +96,11 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      <Footer />
+      {!isPortal && <Footer />}
     </div>
   )
+}
+
+export default function App() {
+  return <AppContent />
 }

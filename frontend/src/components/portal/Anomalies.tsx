@@ -281,17 +281,17 @@ const Anomalies: React.FC = () => {
           <div className="bg-green-50 rounded-lg p-4 border border-green-200">
             <p className="text-sm font-medium text-green-800">GLEIF LEI Registry</p>
             <p className="text-xs text-green-600 mt-1">Entity identity cross-check</p>
-            <p className="text-lg font-bold text-green-700 mt-2">✓ Active</p>
+            <p className="text-lg font-bold text-green-700 mt-2 flex items-center gap-1"><CheckCircle className="h-4 w-4" /> Active</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4 border border-green-200">
             <p className="text-sm font-medium text-green-800">CoinGecko Market Data</p>
             <p className="text-xs text-green-600 mt-1">Price deviation monitoring</p>
-            <p className="text-lg font-bold text-green-700 mt-2">✓ Active</p>
+            <p className="text-lg font-bold text-green-700 mt-2 flex items-center gap-1"><CheckCircle className="h-4 w-4" /> Active</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4 border border-green-200">
             <p className="text-sm font-medium text-green-800">Companies House</p>
             <p className="text-xs text-green-600 mt-1">Corporate registry validation</p>
-            <p className="text-lg font-bold text-green-700 mt-2">✓ Active</p>
+            <p className="text-lg font-bold text-green-700 mt-2 flex items-center gap-1"><CheckCircle className="h-4 w-4" /> Active</p>
           </div>
         </div>
       </div>

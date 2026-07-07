@@ -161,6 +161,12 @@ export default function KYCGate() {
                 </div>
               )}
             </div>
+            <p className="text-xs text-gray-500 mt-3">
+              {result.kycVerified
+                ? 'This account has a KYC record in the on-chain registry. The +15 trust score bonus is applied during pipeline scoring.'
+                : 'No KYC record found in the on-chain kyc_registry dict. The -10 penalty is a risk adjustment applied during pipeline scoring to incentivize KYC verification. This is expected for accounts that haven\'t registered with a KYC provider.'
+              }
+            </p>
           </div>
         )}
 
@@ -284,7 +290,7 @@ export default function KYCGate() {
 
       {/* Reference */}
       <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">📚 Reference Implementation</h3>
+        <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2"><FileCheck className="h-5 w-5" /> Reference Implementation</h3>
         <p className="text-sm text-blue-800">
           This contract follows the pattern from{' '}
           <a

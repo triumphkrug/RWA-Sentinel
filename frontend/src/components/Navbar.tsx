@@ -9,15 +9,7 @@ interface Props {
 
 const navLinks = [
   { href: '/#home', label: 'Home' },
-  { href: '/#pipeline', label: 'Pipeline' },
-  { href: '/#factors', label: 'Trust Score' },
-  { href: '/#use-cases', label: 'Use Cases' },
-  { href: '/#developers', label: 'Developers' },
-  { href: '/#faq', label: 'FAQ' },
-]
-
-const portalLinks = [
-  { href: '/#home', label: 'Home' },
+  { href: '/#why', label: 'Why' },
   { href: '/#pipeline', label: 'Pipeline' },
   { href: '/#factors', label: 'Trust Score' },
   { href: '/#use-cases', label: 'Use Cases' },
@@ -43,9 +35,9 @@ function smoothScrollToSection(sectionId: string) {
 
 export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
   const [scrolled, setScrolled] = useState(false)
+  const [activeSection, setActiveSection] = useState('home')
   const location = useLocation()
   const navigate = useNavigate()
-  const isPortal = location.pathname === '/portal'
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault()
@@ -70,7 +62,27 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
     return () => window.removeEventListener('scroll', handler)
   }, [])
 
-  const activeLinks = isPortal ? portalLinks : navLinks
+  // Track active section via IntersectionObserver
+  useEffect(() => {
+    if (location.pathname !== '/') return
+    const sectionIds = navLinks.map(l => l.href.split('#')[1]).filter(Boolean)
+    const observers: IntersectionObserver[] = []
+
+    sectionIds.forEach(id => {
+      const el = document.getElementById(id)
+      if (!el) return
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) setActiveSection(id)
+        },
+        { rootMargin: '-30% 0px -60% 0px', threshold: 0 }
+      )
+      observer.observe(el)
+      observers.push(observer)
+    })
+
+    return () => observers.forEach(o => o.disconnect())
+  }, [location.pathname])
 
   return (
     <>
@@ -83,21 +95,30 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
 
           {/* Desktop links */}
           <div className="hidden lg:flex items-center gap-6">
-            {activeLinks.map(l => (
-              <a
-                key={l.href}
-                href={l.href}
-                onClick={e => handleNavClick(e, l.href)}
-                className={`text-sm font-medium transition-colors ${scrolled ? 'text-gray-600 hover:text-blue-600' : 'text-gray-700 hover:text-blue-600'}`}
-              >
-                {l.label}
-              </a>
-            ))}
-            {!isPortal && (
-              <a href="/portal" className="ml-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-                Launch Oracle
-              </a>
-            )}
+            {navLinks.map(l => {
+              const sectionId = l.href.split('#')[1] || ''
+              const isActive = activeSection === sectionId
+              return (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  onClick={e => handleNavClick(e, l.href)}
+                  className={`text-sm font-medium transition-colors relative ${
+                    isActive
+                      ? 'text-blue-600'
+                      : scrolled ? 'text-gray-600 hover:text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                  }`}
+                >
+                  {l.label}
+                  {isActive && (
+                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
+                  )}
+                </a>
+              )
+            })}
+            <a href="/portal" className="ml-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+              Launch Oracle
+            </a>
           </div>
 
           {/* Mobile toggle */}
@@ -107,7 +128,7 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
         </div>
       </nav>
 
-      {/* Mobile sidebar – right */}
+      {/* Mobile sidebar */}
       {mobileOpen && (
         <div className="fixed inset-0 z-[55] lg:hidden" onClick={() => setMobileOpen(false)}>
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
@@ -115,7 +136,6 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
             className="absolute top-0 right-0 bottom-0 w-72 bg-white shadow-2xl flex flex-col animate-slide-in-right"
             onClick={e => e.stopPropagation()}
           >
-            {/* Close */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <span className="font-bold text-gray-900 text-sm">Menu</span>
               <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
@@ -123,22 +143,28 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
               </button>
             </div>
 
-            {/* Nav links */}
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <div className="space-y-1 mb-6">
-                {navLinks.map(l => (
-                  <a
-                    key={l.href}
-                    href={l.href}
-                    onClick={e => handleNavClick(e, l.href)}
-                    className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                  >
-                    {l.label}
-                  </a>
-                ))}
+                {navLinks.map(l => {
+                  const sectionId = l.href.split('#')[1] || ''
+                  const isActive = activeSection === sectionId
+                  return (
+                    <a
+                      key={l.href}
+                      href={l.href}
+                      onClick={e => handleNavClick(e, l.href)}
+                      className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                      }`}
+                    >
+                      {l.label}
+                    </a>
+                  )
+                })}
               </div>
 
-              {/* External links – visually separated */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">External</p>
                 {extLinks.map(l => (
@@ -157,7 +183,6 @@ export default function Navbar({ mobileOpen, setMobileOpen }: Props) {
               </div>
             </div>
 
-            {/* Launch App button at bottom */}
             <div className="px-5 py-4 border-t border-gray-100">
               <a
                 href="/portal"
