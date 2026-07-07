@@ -277,8 +277,8 @@ flowchart LR
 |---|---|---|---|
 | **asset-registry** | [`eac01f54...`](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) | RWA registration & metadata | `register_asset` |
 | **attestation-store** | [`cffc53be...`](https://testnet.cspr.live/contract/cffc53be1c57d4dc04c01515114a8e8cc8237e4ab12314e9fa0eabb7bac846a5) | Attestation NFTs with TTL | `batch_attest`, `get_attestation`, `register_oracle`, `dao_invalidate` |
-| **governance-dao** | [`154d32b5...`](https://testnet.cspr.live/contract/154d32b56aa334a5f454b90292c829f994db24e998cf8a702c88c0b8034ceec4) | Proposal/vote governance | `create_proposal`, `vote`, `execute_proposal` |
-| **oracle-slashing** | [`d061c8eb...`](https://testnet.cspr.live/contract/d061c8eb9dc567bf7c812477530386a75ad07c32144bcc72db7343e63908301d) | Stake-and-slash enforcement | `report_violation`, `challenge_report`, `validate_evidence`, `execute_slash` |
+| **governance-dao** | [`154d32b5...`](https://testnet.cspr.live/contract/847a8016434662fa70c0ff7467f0a4c4358baffd3a53e2a403c75b35c8c31138) | Proposal/vote governance | `create_proposal`, `vote`, `execute_proposal` |
+| **oracle-slashing** | [`d061c8eb...`](https://testnet.cspr.live/contract/cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df) | Stake-and-slash enforcement | `report_violation`, `challenge_report`, `validate_evidence`, `execute_slash` |
 | **kyc-gate** | [`6e0dd2dc...`](https://testnet.cspr.live/contract/6e0dd2dc7673cf5c7c4e99ad5c956320a3f0f19db4cdb2293eab222611aa58d5) | On-chain KYC allow-list | `add_provider`, `ban_provider`, `is_kyc_proved`, `set_kyc_status` |
 | **deposit-stake-session** | session WASM | Per-caller stake deposit | `main` (session entry) |
 
