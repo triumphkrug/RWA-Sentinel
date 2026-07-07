@@ -13,21 +13,20 @@ npm install @rwa-sentinel/sdk
 ```typescript
 import { SentinelClient } from '@rwa-sentinel/sdk'
 
-const sentinel = new SentinelClient({
-  endpoint: 'https://rwa-sentinel-api.onrender.com'
-})
+const sentinel = new SentinelClient('https://rwa-sentinel-api.onrender.com')
 
 // Check API health
 const health = await sentinel.health()
 
-// Run scoring pipeline
-const result = await sentinel.runPipeline({ lei: '5493001KJTIIGC8Y1R12' })
-
-// Get all scored assets
-const scores = await sentinel.getScores()
+// Register and score an asset
+const asset = await sentinel.registerAsset({
+  assetType: 'invoice',
+  metadata: '{"vendor":"Acme","total":15000}',
+  owner: 'account-hash-abc...',
+})
 
 // List attestations
-const attestations = await sentinel.listAttestations({ limit: 10, status: 'attested' })
+const attestations = await sentinel.listAttestations()
 ```
 
 ## API Reference (9 methods)
@@ -69,10 +68,7 @@ Stake CSPR tokens as an oracle via the deposit-stake-session WASM.
 ## Configuration
 
 ```typescript
-const sentinel = new SentinelClient({
-  endpoint: 'https://rwa-sentinel-api.onrender.com', // API base URL
-  timeout: 30000, // Request timeout in ms (default: 30s)
-})
+const sentinel = new SentinelClient('https://rwa-sentinel-api.onrender.com', 'optional-api-key')
 ```
 
 ## Error Handling

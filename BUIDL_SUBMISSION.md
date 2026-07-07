@@ -49,11 +49,11 @@ RWA Sentinel replaces manual audits with an automated 6-factor AI scoring pipeli
 | Factor | Weight |
 |---|---|
 | Issuer History | 25% |
-| Document Integrity | 20% |
+| Debtor Rating | 20% |
 | Cross-Reference | 15% |
 | Amount Plausibility | 15% |
 | Temporal Consistency | 15% |
-| Network Reputation | 10% |
+| Invoice Detail Level | 10% |
 
 The composite score, factor hashes, and evidence hashes are all written on-chain — a fully auditable trail without exposing sensitive asset data.
 

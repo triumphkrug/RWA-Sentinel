@@ -1,7 +1,6 @@
 /**
  * CSPR.click SDK integration for RWA-Sentinel.
  * Provides wallet connect via Casper Wallet, Ledger, or MetaMask Snap.
- * Based on ae402.xyz working implementation.
  */
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
