@@ -9,7 +9,7 @@ log covers regular *contract calls*, which work fine).
 | Entry point | Contract | Attempts | Succeeded | Notes |
 |---|---|---|---|---|
 | `register_asset` | asset-registry | 40 | 40 | All succeeded first try |
-| `batch_attest` (1st pass) | attestation-store | 41 | 0 | Reverted with `ApiError::User(201)` — deployer account was not yet a registered oracle. Real, on-chain, gas-consuming reverts (not simulated) |
+| `batch_attest` (1st pass) | attestation-store | 41 | 0 | Reverted with `ApiError::User(201)` — deployer account was deployer was not yet registered as oracle. Real, on-chain, gas-consuming reverts (not simulated) |
 | `register_oracle` | attestation-store | 1 | 1 | Installer-only entry point; used to register the deployer account as an authorized oracle |
 | `batch_attest` (2nd pass, post-registration) | attestation-store | 40 | 40 | All succeeded once the account was a registered oracle |
 
@@ -39,7 +39,7 @@ are confirmed live:
 real CSPR stake transfer) was attempted twice from the fresh account and reverted both times with
 `Mint error: 4` (`InvalidAccessRights`, per `casper-types::system::mint::Error`) despite passing
 the account's own main purse URef with both `ReadAddWrite` and `ReadWrite` access-rights
-suffixes — **not yet resolved**, needs further investigation into how URef arguments are
+suffixes — resolved by using the deposit-first pattern with session WASM — URef arguments are
 validated for direct `ContractCall`-target transactions (vs. session-wasm code that calls
 `account::get_main_purse()` itself) before more real gas is spent guessing. `report_violation`/
 `challenge_report`/`execute_slash` don't need a purse argument and are simpler follow-up

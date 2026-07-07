@@ -21,7 +21,7 @@ async function main(): Promise<void> {
 
   // Step 2: Initialize pipeline components
   const collector = new InvoiceCollector({ batchSize: config.batchSize });
-  const scorer = new LocalScorer({ trustThreshold: 60 });
+  const scorer = new LocalScorer({ trustThreshold: 65 });
   const crossRef = new CrossRefChecker();
   const publisher = new CasperPublisher({
     nodeUrl: config.nodeUrl,

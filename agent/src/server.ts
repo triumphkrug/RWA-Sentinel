@@ -32,7 +32,7 @@ import { computeMerkleRoot } from './data/merkleProvenance.js';
 
 const config = loadConfig();
 const collector = new InvoiceCollector({ batchSize: config.batchSize });
-const scorer = new LocalScorer({ trustThreshold: 60 });
+const scorer = new LocalScorer({ trustThreshold: 65 });
 const dataAdapterService = new DataAdapterService({ cacheTtlMinutes: 15 });
 // Real external cross-reference (GLEIF LEI lookup, see F4 in
 // docs/COMPLIANCE_AUDIT_SPECA_LITE.md) alongside the existing local sanity

@@ -129,11 +129,11 @@ flowchart TD
     subgraph B["6-Factor AI Scoring Pipeline"]
         direction TB
         B1["Issuer History 25%"] --> SCORE["Composite Trust Score"]
-        B2["Document Integrity 20%"] --> SCORE
+        B2["Debtor Rating 20%"] --> SCORE
         B3["Cross-Reference 15%"] --> SCORE
         B4["Amount Plausibility 15%"] --> SCORE
         B5["Temporal Consistency 15%"] --> SCORE
-        B6["Network Reputation 10%"] --> SCORE
+        B6["Invoice Detail Level 10%"] --> SCORE
     end
 
     SCORE --> C{Score ≥ 65?}
@@ -218,11 +218,11 @@ Each asset is independently evaluated across six weighted factors. The composite
 | # | Factor | Weight | What It Measures |
 |---|---|---|---|
 | 1 | **Issuer History** | 25% | Track record and reliability of the invoicing entity |
-| 2 | **Document Integrity** | 20% | Hash consistency and tamper-evidence of submitted document |
+| 2 | **Debtor Rating** | 20% | Counterparty track record and historical payment reliability |
 | 3 | **Cross-Reference** | 15% | Corroboration against external data sources (GLEIF, CoinGecko) |
 | 4 | **Amount Plausibility** | 15% | Whether amount falls within expected bounds for asset class |
 | 5 | **Temporal Consistency** | 15% | Freshness of issue date; validity of due date proximity |
-| 6 | **Network Reputation** | 10% | On-chain wallet history and prior attestation record |
+| 6 | **Invoice Detail Level** | 10% | Granularity and completeness of submitted line items |
 
 ### Scoring Data Flow
 

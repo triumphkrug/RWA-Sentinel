@@ -5,7 +5,6 @@
 export interface WalletState {
   connected: boolean
   publicKey: string | null
-  simulated: boolean
 }
 
 export function shortKey(key: string): string {
