@@ -3,6 +3,7 @@ import { getAttestations, Attestation, ErrorResponse } from '../../lib/api';
 import { useClickRef } from '../../lib/click';
 import { shortKey } from '../../lib/wallet';
 import { Loader2, XCircle, Award, CheckCircle, Link, Wallet } from 'lucide-react';
+import SBTCard from './SBTCard';
 
 const EXPLORER_BASE_URL = 'https://testnet.cspr.live';
 
@@ -13,31 +14,27 @@ const SBT: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [hashToVerify, setHashToVerify] = useState('');
   const [verificationResult, setVerificationResult] = useState<string | null>(null);
+  const [selectedAttestation, setSelectedAttestation] = useState<Attestation | null>(null);
 
   useEffect(() => {
     const fetchAttestations = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getAttestations({ limit: 100 }); // Fetch a reasonable number
+        const data = await getAttestations({ limit: 100 });
         setAttestations(data.attestations);
+        if (data.attestations.length > 0) {
+          setSelectedAttestation(data.attestations[0]);
+        }
       } catch (err: any) {
         const errorRes: ErrorResponse = err;
         setError(errorRes.message || 'Failed to fetch attestations');
-        console.error('Error fetching attestations:', err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchAttestations();
   }, []);
-
-  const getScoreGradientBorder = (score: number) => {
-    if (score >= 80) return 'border-gradient-green'; // Custom class for green gradient
-    if (score >= 60) return 'border-gradient-amber'; // Custom class for amber gradient
-    return 'border-gradient-red'; // Custom class for red gradient
-  };
 
   const handleVerifyHash = () => {
     if (!hashToVerify) {
@@ -52,11 +49,21 @@ const SBT: React.FC = () => {
     }
   };
 
+  const getStatusType = (status: string): 'verified' | 'expired' | 'challenged' | 'pending' => {
+    if (status === 'valid' || status === 'active') return 'verified';
+    if (status === 'expired') return 'expired';
+    if (status === 'challenged' || status === 'invalidated') return 'challenged';
+    return 'pending';
+  };
+
+  const formatAssetType = (type: string): string =>
+    type.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <p className="ml-3 text-gray-600">Loading Soulbound Tokens (Attestations)...</p>
+        <p className="ml-3 text-gray-600">Loading Soulbound Tokens...</p>
       </div>
     );
   }
@@ -74,8 +81,9 @@ const SBT: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold text-gray-900">Soulbound Tokens (SBTs)</h2>
       <p className="text-gray-700">
-        RWA-Sentinel issues Soulbound Tokens (SBTs) as on-chain attestations of real-world asset verification.
+        RWA-Sentinel issues Soulbound Tokens as on-chain attestations of real-world asset verification.
         These non-transferable tokens represent the trust score and verification status of an asset at a given time.
+        Click any attestation below to preview its SBT card.
       </p>
 
       {/* Wallet & Mint */}
@@ -87,7 +95,7 @@ const SBT: React.FC = () => {
               <Wallet className="h-4 w-4 inline mr-1.5" />{shortKey(publicKey)}
             </span>
             <button
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
               onClick={() => alert('SBT minting requires an active attestation pipeline batch. Run the Agent Demo first to generate attestations, then mint here.')}
             >
               Mint SBT
@@ -97,7 +105,7 @@ const SBT: React.FC = () => {
           <button
             onClick={() => clickRef?.signIn()}
             disabled={!ready}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
           >
             <Wallet className="h-5 w-5 mr-2" />
             {ready ? 'Connect Wallet to Mint' : 'Loading Wallet SDK…'}
@@ -105,69 +113,92 @@ const SBT: React.FC = () => {
         )}
       </div>
 
-      {/* Attestation List */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-gray-900">Recent Attestations (SBTs)</h3>
-        {attestations.length === 0 ? (
-          <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6 text-center text-gray-600">
-            <p>No attestations found yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {attestations.map((attestation) => (
-              <div
-                key={attestation.id}
-                className={`relative bg-white p-6 rounded-lg shadow-sm border-2 ${getScoreGradientBorder(attestation.score)}`}
-                style={{
-                  '--gradient-green-start': '#10B981', // green-500
-                  '--gradient-green-end': '#059669',   // green-600
-                  '--gradient-amber-start': '#F59E0B', // amber-500
-                  '--gradient-amber-end': '#D97706',   // amber-600
-                  '--gradient-red-start': '#EF4444',   // red-500
-                  '--gradient-red-end': '#DC2626',     // red-600
-                } as React.CSSProperties} // Type assertion for custom CSS properties
-              >
-                <div className="flex items-center mb-3">
-                  <Award className="h-6 w-6 text-blue-600 mr-3" />
-                  <h4 className="text-lg font-semibold text-gray-900">SBT for {attestation.identifier}</h4>
-                </div>
-                <p className="text-sm text-gray-600 mb-2">
-                  Asset ID: <span className="font-medium">{attestation.asset_id.substring(0, 10)}...</span>
-                </p>
-                <p className="text-sm text-gray-600 mb-2">
-                  Type: <span className="font-medium">{attestation.asset_type}</span>
-                </p>
-                <p className="text-sm text-gray-600 mb-2">
-                  Score: <span className={`font-bold text-lg ${getScoreGradientBorder(attestation.score).replace('border-gradient-', 'text-')}`}>
-                    {attestation.score.toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-sm text-gray-600 mb-2">
-                  Status: <span className="font-medium capitalize">{attestation.status}</span>
-                </p>
-                <p className="text-xs text-gray-500 mb-1">
-                  Issued: {new Date(attestation.timestamp).toLocaleDateString()} | Expires: {new Date(attestation.expires_at).toLocaleDateString()}
-                </p>
-                {attestation.holder_did && (
-                  <p className="text-xs text-gray-500 mb-3 font-mono truncate" title={attestation.holder_did}>
-                    Soulbound to: {attestation.holder_did}
-                  </p>
-                )}
-                <a
-                  href={`${EXPLORER_BASE_URL}/deploy/${attestation.casper_block_hash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+      {/* SBT Card Preview + Attestation List */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Dynamic SBT Card */}
+        <div className="lg:col-span-1 flex flex-col items-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">SBT Preview</h3>
+          {selectedAttestation ? (
+            <SBTCard
+              assetId={selectedAttestation.asset_id.length > 20
+                ? selectedAttestation.asset_id.slice(0, 20) + '…'
+                : selectedAttestation.asset_id}
+              assetType={formatAssetType(selectedAttestation.asset_type)}
+              issuer={selectedAttestation.identifier || 'On-chain Oracle'}
+              trustScore={Math.round(selectedAttestation.score)}
+              verificationDate={new Date(selectedAttestation.timestamp).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+              })}
+              status={getStatusType(selectedAttestation.status)}
+            />
+          ) : (
+            <div className="w-[320px] h-[480px] bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+              No attestation selected
+            </div>
+          )}
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            Click an attestation to preview its SBT
+          </p>
+        </div>
+
+        {/* Attestation List */}
+        <div className="lg:col-span-2 space-y-3">
+          <h3 className="text-lg font-semibold text-gray-900">Recent Attestations</h3>
+          {attestations.length === 0 ? (
+            <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6 text-center text-gray-600">
+              <p>No attestations found yet. Run the Agent Demo to generate attestations.</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+              {attestations.map((attestation) => (
+                <button
+                  key={attestation.id}
+                  onClick={() => setSelectedAttestation(attestation)}
+                  className={`w-full text-left bg-white p-4 rounded-lg border-2 transition-all hover:shadow-md ${
+                    selectedAttestation?.id === attestation.id
+                      ? 'border-blue-500 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
                 >
-                  View on Casper Explorer <Link className="ml-1 h-4 w-4" />
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Award className={`h-5 w-5 ${
+                        attestation.score >= 80 ? 'text-green-500' :
+                        attestation.score >= 60 ? 'text-amber-500' : 'text-red-500'
+                      }`} />
+                      <span className="font-medium text-gray-900 text-sm">
+                        {attestation.identifier || attestation.asset_id.slice(0, 16) + '…'}
+                      </span>
+                    </div>
+                    <span className={`text-lg font-bold ${
+                      attestation.score >= 80 ? 'text-green-600' :
+                      attestation.score >= 60 ? 'text-amber-600' : 'text-red-600'
+                    }`}>
+                      {Math.round(attestation.score)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-gray-500">
+                      {formatAssetType(attestation.asset_type)} · {new Date(attestation.timestamp).toLocaleDateString()}
+                    </span>
+                    <a
+                      href={`${EXPLORER_BASE_URL}/deploy/${attestation.casper_block_hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-700"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Link className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Hash Verification Section */}
+      {/* Hash Verification */}
       <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Verify Attestation Hash</h3>
         <p className="text-gray-700 mb-4">
@@ -183,7 +214,7 @@ const SBT: React.FC = () => {
           />
           <button
             onClick={handleVerifyHash}
-            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
           >
             <CheckCircle className="h-5 w-5 mr-2" />
             Verify Hash
@@ -196,28 +227,6 @@ const SBT: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Custom CSS for gradient borders */}
-      <style>{`
-        .border-gradient-green {
-          border-image: linear-gradient(to right, var(--gradient-green-start), var(--gradient-green-end)) 1;
-        }
-        .border-gradient-amber {
-          border-image: linear-gradient(to right, var(--gradient-amber-start), var(--gradient-amber-end)) 1;
-        }
-        .border-gradient-red {
-          border-image: linear-gradient(to right, var(--gradient-red-start), var(--gradient-red-end)) 1;
-        }
-        .text-border-gradient-green {
-          color: var(--gradient-green-end);
-        }
-        .text-border-gradient-amber {
-          color: var(--gradient-amber-end);
-        }
-        .text-border-gradient-red {
-          color: var(--gradient-red-end);
-        }
-      `}</style>
     </div>
   );
 };
