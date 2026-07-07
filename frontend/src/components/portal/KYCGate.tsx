@@ -1,4 +1,6 @@
-import { Shield, CheckCircle, ExternalLink, Lock, Users, FileCheck } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Shield, CheckCircle, XCircle, ExternalLink, Lock, Users, FileCheck, Search, Loader2, ArrowRight, Layers } from 'lucide-react'
+import { postKycCheck, KycCheckResult, getExtensionCategories, AssetCategory, ErrorResponse } from '../../lib/api'
 
 const CONTRACT_HASH = '6e0dd2dce99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3'
 
@@ -21,6 +23,18 @@ const entryPoints = [
     desc: 'Check if an account has passed KYC with any registered provider. Returns boolean.',
     params: ['account: AccountHash', 'provider_index: u64 (optional)'],
   },
+  {
+    name: 'set_kyc_status',
+    access: 'Provider only',
+    desc: 'Set KYC verification status for an account. Called by registered provider contracts.',
+    params: ['account: AccountHash', 'status: bool'],
+  },
+  {
+    name: 'ban_provider',
+    access: 'Installer only',
+    desc: 'Permanently ban a provider, revoking all KYC approvals issued by them.',
+    params: ['provider_hash: ContractHash'],
+  },
 ]
 
 const designPrinciples = [
@@ -41,12 +55,39 @@ const designPrinciples = [
   },
   {
     icon: FileCheck,
-    title: 'Integration Ready',
-    desc: 'Designed to be called by asset-registry before registering new asset issuers. Wiring planned for next deployment cycle.',
+    title: 'Pipeline Integration',
+    desc: 'KYC status is checked during scoring pipeline runs. Verified submitters receive a +15 trust score bonus; unverified submitters incur a -10 penalty.',
   },
 ]
 
 export default function KYCGate() {
+  const [publicKey, setPublicKey] = useState('')
+  const [checking, setChecking] = useState(false)
+  const [result, setResult] = useState<KycCheckResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [categories, setCategories] = useState<AssetCategory[]>([])
+
+  useEffect(() => {
+    getExtensionCategories()
+      .then(data => setCategories(data.categories || []))
+      .catch(() => {})
+  }, [])
+
+  const handleCheck = async () => {
+    if (!publicKey.trim()) return
+    setChecking(true)
+    setResult(null)
+    setError(null)
+    try {
+      const res = await postKycCheck(publicKey.trim())
+      setResult(res)
+    } catch (err) {
+      setError((err as ErrorResponse).message || 'KYC check failed')
+    } finally {
+      setChecking(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -54,8 +95,80 @@ export default function KYCGate() {
           <Shield className="h-6 w-6 text-blue-600" /> KYC Gate
         </h1>
         <p className="text-gray-500 mt-1">
-          On-chain compliance proxy for KYC verification — based on the official Casper ecosystem KYC proxy contract pattern
+          On-chain compliance proxy for KYC verification — integrated into the scoring pipeline
         </p>
+      </div>
+
+      {/* Live KYC Check */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Search className="h-5 w-5 text-blue-600" />
+          Live KYC Status Check
+        </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Query the on-chain <code className="bg-gray-100 px-1 rounded">kyc_registry</code> dict to check if a public key has KYC verification.
+          This is the same check the scoring pipeline runs automatically.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            value={publicKey}
+            onChange={(e) => setPublicKey(e.target.value)}
+            placeholder="Enter Casper public key (e.g., 0197cedb...)"
+            className="flex-grow p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+          />
+          <button
+            onClick={handleCheck}
+            disabled={checking || !publicKey.trim()}
+            className="inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {checking ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Checking...</>
+            ) : (
+              <><Search className="h-4 w-4 mr-2" /> Check KYC</>
+            )}
+          </button>
+        </div>
+
+        {result && (
+          <div className={`mt-4 p-4 rounded-lg border ${
+            result.kycVerified 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-amber-50 border-amber-200'
+          }`}>
+            <div className="flex items-center gap-2 mb-2">
+              {result.kycVerified ? (
+                <><CheckCircle className="h-5 w-5 text-green-600" /><span className="font-semibold text-green-800">KYC Verified</span></>
+              ) : (
+                <><XCircle className="h-5 w-5 text-amber-600" /><span className="font-semibold text-amber-800">Not Verified</span></>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-gray-500">KYC Level:</span>{' '}
+                <span className="font-medium">{result.kycLevel}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">Score Adjustment:</span>{' '}
+                <span className={`font-medium ${result.scoreAdjustment > 0 ? 'text-green-700' : result.scoreAdjustment < 0 ? 'text-red-600' : 'text-gray-700'}`}>
+                  {result.scoreAdjustment > 0 ? '+' : ''}{result.scoreAdjustment}
+                </span>
+              </div>
+              {result.verifiedAt && (
+                <div className="col-span-2">
+                  <span className="text-gray-500">Verified At:</span>{' '}
+                  <span className="font-medium">{result.verifiedAt}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+            {error}
+          </div>
+        )}
       </div>
 
       {/* Contract info */}
@@ -79,6 +192,47 @@ export default function KYCGate() {
           <p className="font-mono text-sm text-gray-800 break-all">{CONTRACT_HASH}</p>
         </div>
       </div>
+
+      {/* Pipeline integration info */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+        <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+          <ArrowRight className="h-5 w-5" /> Pipeline Integration
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="bg-white/80 rounded-lg p-3">
+            <p className="font-medium text-blue-800 mb-1">Step 1: Invoice Ingestion</p>
+            <p className="text-blue-700">Pipeline receives invoice with <code className="bg-white px-1 rounded">submitterPublicKey</code></p>
+          </div>
+          <div className="bg-white/80 rounded-lg p-3">
+            <p className="font-medium text-blue-800 mb-1">Step 2: On-Chain Lookup</p>
+            <p className="text-blue-700">Queries <code className="bg-white px-1 rounded">kyc_registry</code> dict via CSPR.cloud API</p>
+          </div>
+          <div className="bg-white/80 rounded-lg p-3">
+            <p className="font-medium text-blue-800 mb-1">Step 3: Score Adjustment</p>
+            <p className="text-blue-700">Verified: <span className="text-green-700 font-semibold">+15</span> · Unverified: <span className="text-red-600 font-semibold">-10</span> trust score</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Asset Categories */}
+      {categories.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Layers className="h-5 w-5 text-blue-600" /> Asset Categories
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">10 asset types with tailored scoring weight profiles</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-px bg-gray-100">
+            {categories.map(cat => (
+              <div key={cat.id} className="bg-white p-4">
+                <p className="font-medium text-gray-900 text-sm">{cat.name}</p>
+                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{cat.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Design principles */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
