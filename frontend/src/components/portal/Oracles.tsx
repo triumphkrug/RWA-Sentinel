@@ -273,6 +273,9 @@ const Oracles: React.FC = () => {
         <p className="text-xs text-gray-500 mt-3">
           These actions interact with the oracle-slashing contract on Casper testnet. Challenge periods and severity levels are enforced on-chain.
         </p>
+        <p className="text-xs text-gray-400 mt-1">
+          🔑 Your wallet public key identifies you as the challenger, validator, or executor in slashing records. On-chain transactions are relayed by the backend's deployer key on your behalf.
+        </p>
       </div>
 
       {/* Action Modals */}
@@ -312,7 +315,7 @@ const Oracles: React.FC = () => {
             <input type="text" value={formData.reason || ''} onChange={e => setFormData(p => ({ ...p, reason: e.target.value }))}
               placeholder="Scoring was legitimate" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
           </div>
-          <p className="text-xs text-gray-500">Challenging as: {walletKey ? walletKey.substring(0, 16) + '…' : 'anonymous (connect wallet)'}</p>
+          <p className="text-xs text-gray-500">Challenging as: {walletKey ? walletKey.substring(0, 16) + '…' : 'anonymous (connect wallet for identity tracking)'}</p>
           <button onClick={handleSubmitAction} disabled={submitting || !formData.report_id || !formData.reason}
             className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Swords className="h-4 w-4" />} Submit Challenge
@@ -354,7 +357,7 @@ const Oracles: React.FC = () => {
             <input type="text" value={formData.report_id || ''} onChange={e => setFormData(p => ({ ...p, report_id: e.target.value }))}
               placeholder="Paste report ID" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500" />
           </div>
-          <p className="text-xs text-gray-500">Executing as: {walletKey ? walletKey.substring(0, 16) + '…' : 'anonymous (connect wallet)'}</p>
+          <p className="text-xs text-gray-500">Executing as: {walletKey ? walletKey.substring(0, 16) + '…' : 'anonymous (connect wallet for identity tracking)'}</p>
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
             <strong>Warning:</strong> This will execute the slash penalty on-chain. The oracle's stake will be reduced by the slashing penalty percentage.
           </div>

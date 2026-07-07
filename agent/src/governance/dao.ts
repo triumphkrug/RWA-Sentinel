@@ -234,16 +234,23 @@ export class GovernanceService {
   }
 
   /**
-   * Deletes a proposal by its ID (admin/demo action).
+   * Deletes a proposal by its ID. Only the original proposer may delete.
    * @param proposalId The ID of the proposal.
-   * @returns true if deleted, false if not found.
+   * @param requesterPublicKey The public key of the requester (must match proposer).
+   * @returns true if deleted.
+   * @throws Error if not found or requester is not the proposer.
    */
-  deleteProposal(proposalId: string): boolean {
-    const existed = this.proposals.delete(proposalId);
-    if (existed) {
-      console.log(`[governance] Proposal ${proposalId} deleted.`);
+  deleteProposal(proposalId: string, requesterPublicKey: string): boolean {
+    const proposal = this.proposals.get(proposalId);
+    if (!proposal) {
+      throw new Error(`Proposal ${proposalId} not found.`);
     }
-    return existed;
+    if (proposal.proposerPublicKey !== requesterPublicKey) {
+      throw new Error(`Only the proposer can delete this proposal.`);
+    }
+    this.proposals.delete(proposalId);
+    console.log(`[governance] Proposal ${proposalId} deleted by ${requesterPublicKey}.`);
+    return true;
   }
 
   /**
@@ -428,12 +435,18 @@ const governanceRoutes: FastifyPluginAsync<{
   });
 
   fastify.delete('/governance/proposals/:id', async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const deleted = governanceService.deleteProposal(id);
-    if (!deleted) {
-      return reply.status(404).send({ error: `Proposal ${id} not found` });
+    try {
+      const { id } = request.params as { id: string };
+      const { requesterPublicKey } = (request.body as { requesterPublicKey?: string }) || {};
+      if (!requesterPublicKey) {
+        return reply.status(400).send({ error: 'requesterPublicKey is required' });
+      }
+      governanceService.deleteProposal(id, requesterPublicKey);
+      return reply.status(200).send({ message: `Proposal ${id} deleted` });
+    } catch (error) {
+      const status = (error instanceof Error && error.message.includes('not found')) ? 404 : 403;
+      return reply.status(status).send({ error: error instanceof Error ? error.message : 'Failed to delete proposal' });
     }
-    return reply.status(200).send({ message: `Proposal ${id} deleted` });
   });
 
   fastify.post('/governance/execute', async (request, reply) => {

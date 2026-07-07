@@ -91,9 +91,13 @@ const Governance: React.FC = () => {
   };
 
   const handleDelete = async (proposalId: string) => {
+    if (!walletKey) {
+      setActionError('Connect your wallet to delete a proposal');
+      return;
+    }
     setActionError(null);
     try {
-      await deleteGovernanceProposal(proposalId);
+      await deleteGovernanceProposal(proposalId, walletKey);
       await fetchProposals();
     } catch (err: any) {
       setActionError(err.message || 'Failed to delete proposal');
@@ -157,7 +161,8 @@ const Governance: React.FC = () => {
 
       <PageInfo title="How does Governance DAO work?">
         <p>The Governance DAO allows registered oracle accounts to propose, vote on, and execute parameter changes to the RWA-Sentinel system. Proposals go through a <strong>48-hour voting period</strong> with a 51% quorum threshold. Supported proposal types: parameter changes (e.g., scoring weights), contract upgrades, and treasury spends.</p>
-        <p className="mt-1">Each proposal is created both off-chain (for the demo UI) and on-chain via the <code>governance-dao</code> Casper smart contract. Votes are weighted by stake — registered oracle accounts have higher voting power. Connect your wallet or use a known deployer key to create proposals.</p>
+        <p className="mt-1">Each proposal is created both off-chain (for the demo UI) and on-chain via the <code>governance-dao</code> Casper smart contract. Votes are weighted by stake — registered oracle accounts have higher voting power.</p>
+        <p className="mt-2 text-xs text-gray-500"><strong>🔑 Why connect a wallet?</strong> Your wallet's public key identifies you as the proposer, voter, or executor. It determines your on-chain stake weight, prevents double-voting, and ensures only you can delete your own proposals. On-chain transactions are relayed by the backend's deployer key on your behalf.</p>
       </PageInfo>
 
       {actionError && (
@@ -295,13 +300,15 @@ const Governance: React.FC = () => {
                     <Play className="h-3.5 w-3.5" /> Execute
                   </button>
                 )}
-                <button
-                  onClick={() => handleDelete(proposal.id)}
-                  className="inline-flex items-center gap-1 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 ml-auto"
-                  title="Delete proposal"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Delete
-                </button>
+                {walletKey && walletKey === proposal.proposerPublicKey && (
+                  <button
+                    onClick={() => handleDelete(proposal.id)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 ml-auto"
+                    title="Delete your proposal"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  </button>
+                )}
               </div>
 
               {/* Dates */}

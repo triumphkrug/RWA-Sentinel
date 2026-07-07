@@ -217,6 +217,9 @@ const SBT: React.FC = () => {
         {!publicKey && (
           <p className="text-xs text-gray-400 mt-2">Connect your wallet in the sidebar first.</p>
         )}
+        <p className="text-xs text-gray-400 mt-2">
+          🔑 Your wallet public key is the SBT recipient address — the token is minted to your account on-chain. The transaction is relayed by the backend's deployer key.
+        </p>
       </div>
 
       {/* Hash Verification */}
