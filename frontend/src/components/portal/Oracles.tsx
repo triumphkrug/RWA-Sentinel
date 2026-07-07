@@ -225,7 +225,15 @@ const Oracles: React.FC = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {slashingReports.map((report) => (
                   <tr key={report.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm font-mono text-gray-900">{report.id.substring(0, 8)}…</td>
+                    <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(report.id); showToast(`Copied: ${report.id}`, 'info'); }}
+                        className="hover:text-blue-600 hover:underline cursor-pointer transition-colors"
+                        title={`Click to copy: ${report.id}`}
+                      >
+                        {report.id.substring(0, 8)}…
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-sm font-mono text-gray-700">{report.oracleId.substring(0, 8)}…</td>
                     <td className="px-4 py-3 text-sm font-mono text-gray-700">{report.reporterPublicKey.substring(0, 8)}…</td>
                     <td className="px-4 py-3 text-sm font-mono text-gray-700 max-w-xs truncate">{report.evidenceHash.substring(0, 12)}…</td>
