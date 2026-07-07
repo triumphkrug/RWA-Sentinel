@@ -27,6 +27,37 @@ Last verified against actual deployed contract source: 2026-07-07.
   already exists and works correctly); documenting so future sessions/agents don't waste calls
   rediscovering it. Any production onboarding flow should call `register_oracle` for each real
   oracle right after install.
+- **`oracle-slashing.report_violation` will always revert as currently deployed (found 2026-07-07
+  via AI-assisted code review, confirmed by reading source).** `call()` inserts the report counter
+  as named key `"report_count"`, but `get_report_counter()`/`set_report_counter()` read/write the
+  constant `REPORT_COUNTER_KEY = "report_counter"` — a one-character name mismatch (`report_count`
+  vs. `report_counter`). `report_violation` calls `get_report_counter()` unconditionally, which
+  will `unwrap_or_revert()` on the missing named key. Trivial one-line fix (`call()` should insert
+  under `"report_counter"`, or the constant should read `"report_count"`) but needs a recompile +
+  redeploy, which is still blocked on the main account (see the redeploy blocker above) and the
+  fresh test account is nearly out of CSPR after this session's testing. Not yet fixed on-chain.
+  `read_fee_bps()`/`FEE_BPS_KEY` has the same class of bug (never inserted into `named_keys` in
+  `call()` at all) but is currently dead code — not called by any entry point yet, so it's latent,
+  not user-facing today.
+- **`attestation-store.slash_oracle` sends slashed stake directly to the installer's own account
+  (found 2026-07-07 via AI-assisted code review, confirmed by reading source) — this is a real
+  unilateral-withdraw path and violates the project's own A1/no-unilateral-withdraw invariant.**
+  Unlike `oracle-slashing.execute_slash` (which always moves funds to a fixed `fee_purse`, never
+  to a caller-controlled account — already verified safe), `attestation-store.slash_oracle` is
+  installer-gated but then calls `system::transfer_from_purse_to_account(stake_purse, installer,
+  ...)` — i.e. the same key that deploys/installs the contract can call this on any staked oracle
+  and receive the slashed CSPR directly, with no DAO approval, multi-sig, or timelock. Needs a
+  fix (route to a treasury purse or require DAO/multi-sig approval) before this can be called safe
+  by the project's own stated security bar. Not yet fixed.
+- **`attestation-store.dao_invalidate` does not verify any real cryptographic signatures (found
+  2026-07-07 via AI-assisted code review, confirmed by reading source).** It takes `oracle_sigs:
+  Vec<String>` and only checks whether each string is present in the (public) `dao_oracles`
+  address list — i.e. it treats an oracle's own public address string as if it were that oracle's
+  signature. Any caller who knows the registered oracle addresses (public data) can pass those
+  same strings as "signatures" and satisfy the DAO threshold without any oracle actually signing
+  anything. Needs real signature verification (e.g. `runtime::verify_signature` over a
+  canonical message) before the DAO-invalidation flow can be considered a genuine multi-party
+  control. Not yet fixed.
 - **`oracle-slashing.register_oracle` still cannot be called with a real stake (open, 2026-07-07).**
   The entry point takes a `source_purse: URef` arg to move a real CSPR stake via
   `system::transfer_from_purse_to_purse`. Three real on-chain attempts all reverted with
