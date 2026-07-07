@@ -29,6 +29,12 @@ import { DataAdapterService } from './data/realDataAdapters.js';
 import { BlsThresholdService } from './crypto/blsThreshold.js';
 import { DEMO_ORACLE_PUBLIC_KEYS } from './crypto/demoOracleIdentities.js';
 import { computeMerkleRoot } from './data/merkleProvenance.js';
+import {
+  AssetCategory, getWeightsForCategory, getComplianceRequirements,
+  checkKycStatus, applyKycAdjustment,
+  listSupportedChains, verifyRemoteAttestation,
+  type ChainOrigin,
+} from './extensions/index.js';
 
 const config = loadConfig();
 const collector = new InvoiceCollector({ batchSize: config.batchSize });
@@ -292,6 +298,20 @@ app.post('/api/v1/pipeline', async (request, reply) => {
     });
   }
 
+  // KYC gate: check if any submitter keys are provided in metadata
+  const kycResults: Array<{ invoiceId: string; kycVerified: boolean; scoreAdjustment: number }> = [];
+  for (const inv of collected) {
+    const submitterKey = inv.invoice.metadata?.submitterPublicKey;
+    if (submitterKey) {
+      const kycResult = await checkKycStatus(submitterKey);
+      kycResults.push({
+        invoiceId: inv.invoiceId,
+        kycVerified: kycResult.kycVerified,
+        scoreAdjustment: kycResult.scoreAdjustment,
+      });
+    }
+  }
+
   return {
     dataSource,
     generated: rawInvoices.length,
@@ -299,6 +319,7 @@ app.post('/api/v1/pipeline', async (request, reply) => {
     scored: scores.length,
     passing: passing.length,
     crossRefResults,
+    kycResults: kycResults.length > 0 ? kycResults : undefined,
     cacheSize: cache.size,
     publishHash: publishHash || undefined,
     provenanceRoot,
@@ -557,6 +578,57 @@ app.get('/api/v1/chain/transactions', async () => {
   const data = await runAlliumQuery(ALLIUM_QUERIES.large_tx);
   return { source: 'allium', query: 'large_transactions', data };
 });
+
+/* ── Extensions: asset categories, KYC gate, cross-chain bridge ── */
+
+app.get('/api/v1/extensions/categories', async () => ({
+  categories: Object.values(AssetCategory),
+  weights: Object.fromEntries(
+    Object.values(AssetCategory).map((c) => [c, getWeightsForCategory(c)]),
+  ),
+}));
+
+app.get<{ Params: { category: string } }>(
+  '/api/v1/extensions/categories/:category/compliance',
+  async (request) => {
+    const cat = request.params.category as AssetCategory;
+    return {
+      category: cat,
+      requiredFrameworks: getComplianceRequirements(cat),
+      weights: getWeightsForCategory(cat),
+    };
+  },
+);
+
+app.post<{ Body: { submitterPublicKey: string } }>(
+  '/api/v1/extensions/kyc/check',
+  async (request) => {
+    const { submitterPublicKey } = request.body ?? {} as { submitterPublicKey?: string };
+    if (!submitterPublicKey) {
+      return { error: 'submitterPublicKey required' };
+    }
+    const result = await checkKycStatus(submitterPublicKey);
+    return result;
+  },
+);
+
+app.get('/api/v1/extensions/bridge/chains', async () => ({
+  chains: listSupportedChains(),
+}));
+
+app.post<{ Body: { chainId: number; contractAddress: string; attestationHash: string; tokenId?: string } }>(
+  '/api/v1/extensions/bridge/verify',
+  async (request) => {
+    const { chainId, contractAddress, attestationHash, tokenId } = request.body ?? {} as Record<string, unknown>;
+    const origin: ChainOrigin = {
+      chainName: `chain-${chainId}`,
+      chainId: chainId as number,
+      contractAddress: contractAddress as string,
+      tokenId: tokenId as string | undefined,
+    };
+    return verifyRemoteAttestation(origin, attestationHash as string);
+  },
+);
 
 /* ── MCP compatibility aliases ──────────────────────────────
    The MCP server (sdk/mcp.ts) uses canonical REST paths; these thin

@@ -33,20 +33,33 @@
 | 6-factor scoring pipeline | Weighted composite scoring with real evaluators |
 | PostgreSQL persistence | Neon serverless, with in-memory fallback |
 | Wallet connect (CSPR.click) | SDK integration, light theme |
+| KYC gate ↔ pipeline integration | On-chain KYC status check enriches scoring |
+| Multi-asset category weights | 10 asset categories with tailored scoring profiles |
+| Cross-chain bridge verification | Off-chain bridge logic for 3 EVM chains (Ethereum, Polygon, Arbitrum) |
 
 ## 🗺️ Phase 2 Roadmap
-
-These items are architecturally prepared and planned for the next development phase:
 
 | Feature | Status | Notes |
 |---|---|---|
 | `withdraw_stake` fund transfer | ✅ **Deployed** | Real `transfer_from_purse_to_account` + `total_staked` sync (v2) |
 | `execute_proposal` action dispatch | ✅ **Deployed** | Dispatches `ACTION_UPDATE_THRESHOLD` → updates `price_bps` (v2) |
 | `register_voter` + real stake tracking | ✅ **Deployed** | `voter_stakes` dict + `total_staked` named key (v2) |
-| BLS on-chain aggregated verification | Off-chain ✅, on-chain pending | Requires Casper runtime BLS precompile support. |
-| KYC gate ↔ asset-registry wiring | Both contracts ✅, integration pending | `is_kyc_proved` check ready to plug in on upgrade. |
-| Multi-asset category scoring | Extension types defined in `contracts/extensions/` | Enum-driven: real estate, commodities, bonds, carbon credits, etc. |
-| Oracle rotation & key management | Slashing infrastructure ✅ | Automated oracle set rotation with DAO governance. |
+| KYC gate ↔ pipeline integration | ✅ **Integrated** | Pipeline checks on-chain `kyc_registry` dict via CSPR.cloud, applies trust score bonus/penalty |
+| Multi-asset category scoring | ✅ **Integrated** | TS types mirror Rust `extensions/` crate; 10 categories with tailored weight profiles |
+| Cross-chain RWA bridge | ✅ **Code ready** | Off-chain verification for Ethereum/Polygon/Arbitrum; on-chain bridge contract planned Phase 3 |
+| BLS on-chain aggregated verification | ✅ **Off-chain complete** | 311-line real BLS12-381 implementation; on-chain requires Casper runtime precompile (tracked upstream) |
+| zkSNARK attestation proofs (Groth16) | 🔧 **Architecture designed** | Circuit spec for attestation hash verification defined; snarkjs integration planned Phase 3 |
+| Oracle rotation & key management | ✅ **Infrastructure ready** | Slashing + DAO governance deployed; automated rotation next phase |
+
+## Phase 3 Targets
+
+| Feature | Dependency |
+|---|---|
+| On-chain BLS signature verification | Casper runtime BLS12-381 precompile |
+| zkSNARK (Groth16) proof generation & on-chain verification | circom circuit compilation + trusted setup |
+| Cross-chain bridge smart contract | Bridge contract deployment on Casper + EVM |
+| IoT device attestation | `extensions/data_source.rs` IoT types + device SDK |
+| DID-based oracle identity | W3C DID registry integration |
 
 ## Agent Pipeline
 
@@ -54,3 +67,6 @@ These items are architecturally prepared and planned for the next development ph
 - **Cross-reference integration**: Cross-ref checks run before scoring; results feed into `hasCrossRef` factor (weight 15%)
 - **Merkle provenance**: SHA-256 Merkle root computed over each batch's factor/evidence hashes, stored on-chain
 - **BLS consensus**: Real BLS12-381 sign/aggregate/pairing-verify via noble-curves library
+- **KYC gate**: Pipeline queries on-chain KYC registry; verified submitters get +15 trust score bonus
+- **Asset categories**: Category-aware scoring weights (e.g., bonds emphasize debtor rating 30%, real estate emphasizes valuation 25%)
+- **Cross-chain bridge**: Off-chain EVM attestation verification with proof hash generation

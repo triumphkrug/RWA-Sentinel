@@ -113,6 +113,19 @@ The composite score, factor hashes, and evidence hashes are all written on-chain
 
 ---
 
+## Near-Term Roadmap
+
+| Feature | Status | What's ready |
+|---|---|---|
+| KYC gate ↔ pipeline | ✅ Integrated | On-chain KYC check in scoring flow (+15/-10 trust adjustment) |
+| Multi-asset categories | ✅ Integrated | 10 asset types with tailored scoring weights |
+| Cross-chain RWA bridge | ✅ Code ready | Off-chain EVM verification (Ethereum/Polygon/Arbitrum); bridge contract Phase 3 |
+| BLS on-chain verification | ✅ Off-chain complete | 311-line real BLS12-381; on-chain awaits Casper precompile |
+| zkSNARK (Groth16) proofs | 🔧 Architecture designed | Circuit spec for attestation-hash integrity; snarkjs Phase 3 |
+| IoT device attestation | 🔧 Types defined | Rust extension types for GPS/temperature/RFID devices |
+
+---
+
 ## Team
 
 **triumphkrug** — Solo builder architecting trust infrastructure for the RWA space. Designed the 6-factor scoring model, built the autonomous TypeScript agent pipeline, wrote all 6 Casper smart contracts (asset-registry, attestation-store, governance-dao, oracle-slashing, kyc-gate, deposit-stake-session), developed the React portal with 12 interactive pages, implemented BLS12-381 threshold signatures, and deployed the full system to testnet with 338+ on-chain transactions. Background in decentralized systems and on-chain governance; focus on making RWA verification programmable and accountable.

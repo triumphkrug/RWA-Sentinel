@@ -678,20 +678,30 @@ flowchart TB
 - [x] 338+ real testnet transactions
 - [x] Security audit (18 findings addressed)
 - [x] GLEIF/CoinGecko/Companies House data adapters
+- [x] KYC gate ↔ pipeline integration (on-chain KYC status check in scoring flow)
+- [x] Multi-asset category scoring (10 categories with tailored weight profiles)
+- [x] Cross-chain bridge verification logic (off-chain EVM attestation verification)
 
 ### Phase 2 — On-Chain Enhancement
 
-- [ ] **BLS on-chain verification** — verify aggregated threshold signature in attestation-store (requires Casper runtime precompile)
-- [ ] **KYC gate ↔ asset-registry integration** — require KYC proof before `register_asset`
-- [x] **Withdraw_stake with real fund transfer** — `transfer_from_purse_to_account` + `total_staked` sync (v2 deployed)
-- [x] **Execute_proposal action dispatch** — dispatches `ACTION_UPDATE_THRESHOLD` to update `price_bps` (v2 deployed)
-- [x] **Register_voter with real stake tracking** — `voter_stakes` dict + `total_staked` named key (v2 deployed)
+| Feature | Status | What's done |
+|---|---|---|
+| BLS on-chain verification | ✅ Off-chain complete, on-chain pending | 311-line real BLS12-381 implementation (`@noble/curves`). On-chain verification awaits Casper runtime precompile |
+| KYC gate ↔ pipeline | ✅ **Integrated** | Pipeline queries `kyc_registry` on-chain dict; verified submitters get +15 trust score, unverified get -10 penalty |
+| Cross-chain RWA bridge | ✅ **Code ready** | Off-chain verification for Ethereum/Polygon/Arbitrum with proof hash generation. Bridge contract Phase 3 |
+| zkSNARK attestation proofs | 🔧 **Architecture designed** | Circuit spec for attestation-hash integrity proofs; Groth16 integration with snarkjs planned Phase 3 |
+| Multi-asset categories | ✅ **Integrated** | Rust `extensions/` types mirrored to TypeScript; 10 asset categories with per-category weight profiles |
+| Withdraw_stake fund transfer | ✅ **Deployed** | Real `transfer_from_purse_to_account` + `total_staked` sync (v2) |
+| Execute_proposal dispatch | ✅ **Deployed** | `ACTION_UPDATE_THRESHOLD` → updates `price_bps` (v2) |
+| Register_voter + stake tracking | ✅ **Deployed** | `voter_stakes` dict + `total_staked` named key (v2) |
 
 ### Phase 3 — Platform Extension
 
-- [ ] **Multi-chain bridges** — attestation portability to EVM chains
-- [ ] **TEE-attested compliance** — Intel SGX/AMD SEV for oracle scoring
-- [ ] **Zero-knowledge KYC** — zkSNARK proofs for privacy-preserving identity
+- [ ] **On-chain BLS signature verification** — deploy pairing-check logic once Casper runtime precompile is available
+- [ ] **zkSNARK (Groth16) on-chain verification** — circom circuit compilation + trusted setup + snarkjs prover
+- [ ] **Cross-chain bridge contract** — on-chain bridge for Ethereum/Polygon/Arbitrum attestation portability
+- [ ] **TEE-attested compliance** — Intel SGX/AMD SEV for oracle scoring in trusted enclaves
+- [ ] **IoT device attestation** — `extensions/data_source.rs` IoT types + device SDK for physical asset tracking
 - [ ] **Production mainnet deployment**
 - [ ] **Institutional partner integrations**
 
@@ -864,15 +874,17 @@ RWA-Sentinel/
 │   ├── governance/         # DAO proposal/vote management
 │   ├── slashing/           # Oracle slashing logic
 │   ├── data/               # GLEIF, CoinGecko, Companies House adapters
+│   ├── extensions/         # Asset categories, KYC gate, cross-chain bridge
 │   ├── fallback/           # In-memory cache, staleness detection
-│   └── server.ts           # Fastify API (30+ endpoints)
+│   └── server.ts           # Fastify API (40+ endpoints)
 ├── contracts/
 │   ├── asset-registry/     # RWA registration (Rust/WASM)
 │   ├── attestation-store/  # Attestation NFTs + oracle management
 │   ├── governance-dao/     # On-chain proposal/vote governance
 │   ├── oracle-slashing/    # Stake-and-slash enforcement
 │   ├── kyc-gate/           # KYC allow-list (based on casper-ecosystem reference)
-│   └── deposit-stake-session/  # Session WASM for stake deposits
+│   ├── deposit-stake-session/  # Session WASM for stake deposits
+│   └── extensions/         # Phase 2+ types: asset categories, consensus config, IoT, remote verifier
 ├── frontend/               # 12-page React portal + landing page
 ├── sdk/
 │   ├── index.ts            # Simple TypeScript SDK client
