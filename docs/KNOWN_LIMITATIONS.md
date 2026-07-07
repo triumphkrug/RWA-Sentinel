@@ -11,9 +11,22 @@ Last verified against actual deployed contract source: 2026-07-07.
   dictionaries, and the 4 counters/config urefs). `register_oracle` and `execute_slash` both
   call `runtime::get_key(STAKE_PURSE)`/`get_key(FEE_PURSE)` and `.unwrap_or_revert()` — so as
   currently deployed, both entry points will revert on any real invocation. The real-funds
-  slashing/staking mechanism is not reachable on-chain in the current build. Needs: add
-  `system::create_purse()` calls for both purses in `call()`, insert them into `named_keys`,
-  redeploy.
+  slashing/staking mechanism is not reachable on-chain in the current build.
+  **Fix written and compiled (2026-07-07)**: `call()` now creates both purses via
+  `system::create_purse()` and inserts them into `named_keys`. Not yet live on-chain — blocked
+  on the same install-or-upgrade redeploy issue described below (confirmed to affect this
+  contract too, even though it has no `CLType::Any` — see
+  [docs/WASM_INSTALL_DIAGNOSIS.md](WASM_INSTALL_DIAGNOSIS.md) Update 4). Redeploy once that
+  path is unblocked.
+- **`attestation-store.batch_attest` requires a registered oracle, and the allow-list starts
+  empty.** `dao_oracles` is initialized as an empty `Vec` at install time; there was no
+  documented bootstrap step to register the first oracle. Discovered live on 2026-07-07 while
+  building transaction volume (see [docs/TESTNET_ACTIVITY.md](TESTNET_ACTIVITY.md)) — 41 calls
+  reverted with `ApiError::User(201)` before the deployer account was registered via
+  `register_oracle` (installer-only). Fixed operationally (not a code bug — `register_oracle`
+  already exists and works correctly); documenting so future sessions/agents don't waste calls
+  rediscovering it. Any production onboarding flow should call `register_oracle` for each real
+  oracle right after install.
 - **`oracle-slashing.withdraw_stake` never moves real funds.** Access control is correct (only
   the oracle's registered owner can call it, capped to their own remaining stake), but the
   function only decrements the internal dictionary record — it never calls

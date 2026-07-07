@@ -310,6 +310,13 @@ in [docs/WASM_INSTALL_DIAGNOSIS.md](docs/WASM_INSTALL_DIAGNOSIS.md) and
 [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) — the hashes above are the currently
 live, working versions.
 
+### Live testnet activity
+
+123 real transactions submitted against these contracts as of 2026-07-07 (82 succeeded, 41
+were genuine on-chain reverts that surfaced and led to a live fix — see
+[docs/TESTNET_ACTIVITY.md](docs/TESTNET_ACTIVITY.md) for the full deploy-hash log and what was
+found).
+
 <div align="right">
 
 [![][back-to-top]](#readme-top)
