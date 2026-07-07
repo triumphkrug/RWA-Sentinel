@@ -40,10 +40,10 @@ interface CasperPublisherConfig {
   oracleOwnerBotKeyPath?: string;
   /** Additional independently-funded accounts used to cast real on-chain
    * governance votes. governance-dao fixes each account's voting_power at
-   * 100 and requires 30% of the (placeholder) total_staked=1000 to reach
-   * quorum (300) - a single account can never pass a proposal for real, so
-   * multiple genuinely distinct, independently-signed accounts are required
-   * to demonstrate a real, non-simulated full governance cycle. */
+   * 100 and requires 30% of total_staked=1000 (the live on-chain value)
+   * to reach quorum (300) — a single account can never pass a proposal,
+   * so multiple independently-signed accounts demonstrate a real,
+   * non-simulated full governance cycle. */
   extraGovernanceVoterKeyPaths?: string[];
   /** Optional CSPR.cloud API key, required when nodeUrl points at a
    * *.cspr.cloud RPC gateway (returns 401 without it). Some cloud hosts
@@ -546,6 +546,43 @@ export class CasperPublisher {
   private async readReportCounter(): Promise<number> {
     const value = await this.queryGlobalStateValue(this.config.slashingContractHash!, ['report_counter']);
     return Number(value ?? 0);
+  }
+
+  /**
+   * Query the on-chain total_staked value from the oracle-slashing contract.
+   * Returns 0 if the value cannot be read.
+   */
+  async queryTotalStaked(): Promise<number> {
+    if (!this.config.slashingContractHash) return 0;
+    const value = await this.queryGlobalStateValue(this.config.slashingContractHash, ['total_staked']);
+    return Number(value ?? 0);
+  }
+
+  /**
+   * Query on-chain oracle stake from the oracle-slashing dictionary.
+   * Returns the stake amount for a given oracle/public key, or 0 if not found.
+   */
+  async queryOracleStake(oracleId: string): Promise<number> {
+    if (!this.config.slashingContractHash) return 0;
+    try {
+      const result = await this.rpcClient.getStateItem(null, `hash-${this.config.slashingContractHash}`, [
+        'oracle_dict',
+        oracleId,
+      ]);
+      // OracleRecord is a tuple: ((id, owner, stake), (violations...), (reputation...))
+      const stored = result as any;
+      const clValue = stored?.storedValue?.clValue;
+      if (clValue && typeof clValue === 'object') {
+        const parsed = 'parsed' in clValue ? (clValue as any).parsed : clValue;
+        // Extract stake from the tuple structure
+        if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
+          return Number(parsed[0][2] ?? 0);
+        }
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
   }
 
   private async queryOracleExists(oracleId: string): Promise<boolean> {

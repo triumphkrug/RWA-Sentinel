@@ -1,5 +1,9 @@
 /**
  * Local AI scoring model using weighted factor analysis.
+ *
+ * Tracks per-session issuer/debtor history counts to approximate on-chain
+ * reputation. Cross-reference results can be injected per-invoice via
+ * scoreInvoiceWithCrossRef() for full factor coverage.
  */
 
 import { createHash } from 'node:crypto';
@@ -24,8 +28,9 @@ export class LocalScorer {
 
   /**
    * Score a single collected invoice against all registered factors.
+   * @param crossRefPassed Optional cross-reference result to wire into scoring.
    */
-  scoreInvoice(collected: CollectedInvoice): ScoringResult {
+  scoreInvoice(collected: CollectedInvoice, crossRefPassed?: boolean): ScoringResult {
     // Step 1: Build factor context from invoice data
     const invoice = collected.invoice;
     const now = new Date();
@@ -36,7 +41,7 @@ export class LocalScorer {
       daysSinceIssued: this.daysBetween(invoice.issuedAt, now),
       daysUntilDue: this.daysBetween(now, invoice.dueAt),
       lineItemCount: invoice.lineItems.length,
-      hasCrossRef: false,
+      hasCrossRef: crossRefPassed ?? false,
     };
 
     // Step 2: Evaluate each factor
@@ -70,10 +75,15 @@ export class LocalScorer {
 
   /**
    * Score a batch of collected invoices.
+   * @param crossRefResults Optional map of invoiceId → crossRefPassed.
    */
-  scoreBatch(collected: CollectedInvoice[]): ScoringResult[] {
-    // Step 1: Score each invoice independently
-    return collected.map((inv) => this.scoreInvoice(inv));
+  scoreBatch(
+    collected: CollectedInvoice[],
+    crossRefResults?: Map<string, boolean>,
+  ): ScoringResult[] {
+    return collected.map((inv) =>
+      this.scoreInvoice(inv, crossRefResults?.get(inv.invoiceId)),
+    );
   }
 
   private hashFactors(factors: ScoringFactor[]): string {
