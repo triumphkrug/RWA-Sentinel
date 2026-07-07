@@ -1,5 +1,28 @@
 # Known Limitations
 
+Last verified against actual deployed contract source: 2026-07-07 (session 2).
+
+## Deployment Status Update (2026-07-07, session 2)
+
+Three new contract deployments completed on fresh accounts (main deployer account
+has a per-account install blocker — see WASM_INSTALL_DIAGNOSIS.md):
+
+| Contract | Hash | Account | Status |
+|---|---|---|---|
+| attestation-store (A1 fixes) | `hash-cffc53be1c57d4dc04c01515114a8e8cc8237e4ab12314e9fa0eabb7bac846a5` | 2nd account (ed25519) | ✅ Live |
+| oracle-slashing (redesigned register_oracle) | `hash-d061c8eb9dc567bf7c812477530386a75ad07c32144bcc72db7343e63908301d` | 3rd account (ed25519) | ✅ Live |
+| Previous attestation-store | `hash-53c9e877...` | main account | Still live (A1 bugs) |
+| Previous oracle-slashing | `hash-fef80eef...` | 2nd account | Still live (old code) |
+
+**Fixes deployed:**
+1. `attestation-store.slash_oracle` — no longer transfers slashed funds to installer.
+   Funds stay in stake_purse (A1 no-unilateral-withdraw invariant now holds).
+2. `attestation-store.dao_invalidate` — caller must be a registered oracle or installer.
+   Prevents public address replay attacks.
+3. `oracle-slashing` — register_oracle redesigned (deposit-first, no URef arg),
+   stake_purse/fee_purse created at install, report_counter key mismatch fixed.
+
+
 Last verified against actual deployed contract source: 2026-07-07.
 
 ## Smart Contracts
