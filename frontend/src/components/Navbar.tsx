@@ -9,10 +9,10 @@ interface Props {
 
 const navLinks = [
   { href: '/#home', label: 'Home' },
-  { href: '/#why', label: 'Why' },
   { href: '/#pipeline', label: 'Pipeline' },
   { href: '/#factors', label: 'Trust Score' },
   { href: '/#use-cases', label: 'Use Cases' },
+  { href: '/#why', label: 'Why' },
   { href: '/#developers', label: 'Developers' },
   { href: '/#faq', label: 'FAQ' },
 ]

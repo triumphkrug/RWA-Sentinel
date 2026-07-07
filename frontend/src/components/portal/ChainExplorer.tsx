@@ -151,17 +151,20 @@ export default function ChainExplorer() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {transactions.slice(0, 20).map((tx: any, i: number) => (
+                {transactions.slice(0, 12).map((tx: any, i: number) => {
+                  const txHash = tx.hash || tx.deploy_hash || tx.transaction_hash || '';
+                  const costCspr = tx.cost ? (Number(tx.cost) / 1e9).toFixed(2) : tx.amount_motes ? (Number(tx.amount_motes) / 1e9).toFixed(2) : null;
+                  return (
                   <tr key={i} className="hover:bg-gray-50">
                     <td className="px-6 py-3 font-mono text-xs">
-                      {tx.deploy_hash || tx.transaction_hash ? (
+                      {txHash ? (
                         <a
-                          href={`https://testnet.cspr.live/deploy/${tx.deploy_hash || tx.transaction_hash}`}
+                          href={`https://testnet.cspr.live/deploy/${txHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:underline inline-flex items-center gap-1"
                         >
-                          {shortHash(tx.deploy_hash || tx.transaction_hash)} <ArrowUpRight className="h-3 w-3" />
+                          {shortHash(txHash)} <ArrowUpRight className="h-3 w-3" />
                         </a>
                       ) : '—'}
                     </td>
@@ -169,7 +172,7 @@ export default function ChainExplorer() {
                       {tx.initiator ? shortHash(tx.initiator) : tx.from ? shortHash(tx.from) : '—'}
                     </td>
                     <td className="px-6 py-3 text-right font-medium">
-                      {tx.amount_motes ? (Number(tx.amount_motes) / 1e9).toFixed(2) : tx.amount || '—'}
+                      {costCspr ? `${costCspr}` : '—'}
                     </td>
                     <td className="px-6 py-3 text-right">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -186,7 +189,8 @@ export default function ChainExplorer() {
                         : '—'}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

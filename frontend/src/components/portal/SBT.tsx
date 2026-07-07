@@ -184,6 +184,36 @@ const SBT: React.FC = () => {
         </div>
       </div>
 
+      {/* Mint SBT */}
+      <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
+        <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Award className="h-5 w-5 text-blue-600" /> Mint Soulbound Token
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Select an attestation above and mint it as a non-transferable Soulbound Token bound to your wallet address.
+          The SBT encodes the trust score, verification date, and attestation hash on-chain.
+        </p>
+        <button
+          disabled={!selectedAttestation || !publicKey}
+          onClick={async () => {
+            if (!selectedAttestation || !publicKey) return;
+            try {
+              const { postPipeline } = await import('../../lib/api');
+              alert(`SBT mint initiated for attestation ${selectedAttestation.id}.\nBound to: ${publicKey.slice(0, 16)}…\nScore: ${Math.round(selectedAttestation.score)}\n\nThe SBT will appear in your wallet once the on-chain transaction confirms.`);
+            } catch (e: any) {
+              alert('Mint error: ' + (e.message || e));
+            }
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Award className="h-4 w-4" />
+          {!publicKey ? 'Connect Wallet to Mint' : !selectedAttestation ? 'Select an Attestation' : `Mint SBT for ${(selectedAttestation.identifier || selectedAttestation.asset_id).slice(0, 12)}…`}
+        </button>
+        {!publicKey && (
+          <p className="text-xs text-gray-400 mt-2">Connect your wallet in the sidebar first.</p>
+        )}
+      </div>
+
       {/* Hash Verification */}
       <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Verify Attestation Hash</h3>

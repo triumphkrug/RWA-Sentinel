@@ -57,33 +57,78 @@ const Oracles: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Oracle Network Status</h2>
+      <h2 className="text-2xl font-bold text-gray-900">Oracle Network</h2>
+      <p className="text-gray-600">
+        RWA-Sentinel uses a decentralized oracle network with BLS threshold cryptography for multi-party attestation signing.
+        Oracles independently verify asset data and sign attestations. The slashing mechanism enforces honest behavior.
+      </p>
 
-      {/* Oracle Consensus Overview */}
+      {/* How it works */}
+      <div className="bg-blue-50 rounded-xl border border-blue-200 p-5">
+        <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+          <Shield className="h-5 w-5" /> How Oracle Consensus Works
+        </h3>
+        <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
+          <li><span className="font-medium">Data submission:</span> An asset enters the pipeline and the scoring engine produces a trust score with 6 factors.</li>
+          <li><span className="font-medium">Consensus init:</span> The backend calls <code className="bg-white/80 px-1 rounded">/api/v1/consensus/init</code> with the attestation ID and a hash of the scored data.</li>
+          <li><span className="font-medium">BLS signing:</span> Each of 5 oracles independently signs the message hash using BLS12-381. Partial signatures are submitted via <code className="bg-white/80 px-1 rounded">/api/v1/consensus/submit</code>.</li>
+          <li><span className="font-medium">Threshold reached:</span> Once 3 of 5 oracles have signed (3-of-5 threshold), the aggregate signature is finalized and the attestation is anchored on-chain.</li>
+          <li><span className="font-medium">Accountability:</span> If an oracle provides fraudulent data, anyone can file a slashing report. The oracle's stake is at risk.</li>
+        </ol>
+      </div>
+
+      {/* Oracle Consensus Stats */}
       <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Shield className="h-5 w-5 text-blue-600" /> BLS Threshold Consensus
+          <Shield className="h-5 w-5 text-blue-600" /> Consensus Status
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-blue-50 rounded-lg p-4 text-center">
-            <p className="text-sm text-blue-700 font-medium">Consensus Model</p>
+            <p className="text-sm text-blue-700 font-medium">Model</p>
             <p className="text-2xl font-bold text-blue-900 mt-1">3-of-5</p>
-            <p className="text-xs text-blue-600 mt-1">BLS12-381 multi-signature</p>
+            <p className="text-xs text-blue-600 mt-1">BLS12-381 threshold</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4 text-center">
             <p className="text-sm text-green-700 font-medium">Active Oracles</p>
             <p className="text-2xl font-bold text-green-900 mt-1">5</p>
-            <p className="text-xs text-green-600 mt-1">All participating in consensus</p>
+            <p className="text-xs text-green-600 mt-1">All participating</p>
           </div>
           <div className="bg-amber-50 rounded-lg p-4 text-center">
             <p className="text-sm text-amber-700 font-medium">Avg Latency</p>
             <p className="text-2xl font-bold text-amber-900 mt-1">~2s</p>
-            <p className="text-xs text-amber-600 mt-1">Per attestation round</p>
+            <p className="text-xs text-amber-600 mt-1">Per consensus round</p>
+          </div>
+          <div className="bg-purple-50 rounded-lg p-4 text-center">
+            <p className="text-sm text-purple-700 font-medium">Min Stake</p>
+            <p className="text-2xl font-bold text-purple-900 mt-1">1,000 CSPR</p>
+            <p className="text-xs text-purple-600 mt-1">Per oracle node</p>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-3">
-          Consensus is initialized per-attestation via POST /api/v1/consensus/init with attestationId and messageHash. Use the API Playground to test.
-        </p>
+      </div>
+
+      {/* Oracle Lifecycle Diagram */}
+      <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Oracle Lifecycle</h3>
+        <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+          {[
+            { label: 'Register & Stake', color: 'bg-blue-100 text-blue-700' },
+            { label: 'Receive Data', color: 'bg-indigo-100 text-indigo-700' },
+            { label: 'Sign (BLS)', color: 'bg-purple-100 text-purple-700' },
+            { label: '3/5 Threshold', color: 'bg-green-100 text-green-700' },
+            { label: 'Attest On-Chain', color: 'bg-emerald-100 text-emerald-700' },
+          ].map((step, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <span className="text-gray-300">→</span>}
+              <span className={`px-3 py-1.5 rounded-full font-medium ${step.color}`}>{step.label}</span>
+            </React.Fragment>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center justify-center gap-2 text-sm">
+          <span className="text-gray-300">↳</span>
+          <span className="px-3 py-1.5 rounded-full font-medium bg-red-100 text-red-700">Misconduct?</span>
+          <span className="text-gray-300">→</span>
+          <span className="px-3 py-1.5 rounded-full font-medium bg-orange-100 text-orange-700">Report → Challenge → Slash</span>
+        </div>
       </div>
 
       {/* Slashing Reports */}

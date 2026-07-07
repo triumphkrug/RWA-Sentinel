@@ -120,7 +120,8 @@ const Anomalies: React.FC = () => {
             Anomaly Detection
           </h2>
           <p className="text-gray-500 mt-1">
-            Real-time anomaly detection across attestation data, scoring patterns, and cross-reference validation
+            Monitors real attestation data for scoring anomalies, low-trust outliers, and challenged/slashed attestations.
+            The AI detector analyzes patterns across all scored assets. Attestation list shows live data from the backend.
           </p>
         </div>
         <button

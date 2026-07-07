@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
-interface Props { children: React.ReactNode; }
+interface Props { children: React.ReactNode; resetKey?: string; }
 interface State { hasError: boolean; error: string; }
 
 class ErrorBoundary extends React.Component<Props, State> {
@@ -12,6 +12,13 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error: error.message };
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    // Reset error state when route changes (resetKey changes)
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, error: '' });
+    }
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
@@ -26,10 +33,10 @@ class ErrorBoundary extends React.Component<Props, State> {
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Something went wrong</h2>
           <p className="text-gray-500 mb-4 max-w-md">{this.state.error}</p>
           <button
-            onClick={() => { this.setState({ hasError: false, error: '' }); window.location.reload(); }}
+            onClick={() => this.setState({ hasError: false, error: '' })}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
           >
-            <RefreshCcw className="h-4 w-4" /> Reload
+            <RefreshCcw className="h-4 w-4" /> Try Again
           </button>
         </div>
       );

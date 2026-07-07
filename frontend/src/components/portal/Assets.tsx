@@ -37,7 +37,8 @@ const Assets: React.FC = () => {
     setFilteredAssets(filtered);
   }, [assets, minScoreFilter]);
 
-  const toggleExpand = (assetId: string) => {
+  const toggleExpand = (assetId: string | undefined) => {
+    if (!assetId) return;
     setExpandedAssetId(expandedAssetId === assetId ? null : assetId);
   };
 
@@ -118,20 +119,20 @@ const Assets: React.FC = () => {
               {filteredAssets.map((asset) => (
                 <React.Fragment key={asset.asset_id}>
                   <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {asset.asset_id.substring(0, 8)}...
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 font-mono">
+                      {(asset.asset_id || '').substring(0, 12)}{asset.asset_id?.length > 12 ? '…' : ''}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {asset.identifier}
+                      {asset.identifier || asset.asset_id || '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {asset.asset_type}
+                      {asset.asset_type || '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`font-bold ${getScoreColor(asset.score)}`}>{asset.score.toFixed(2)}</span>
+                      <span className={`font-bold ${getScoreColor(asset.score)}`}>{(asset.score ?? 0).toFixed(1)}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {new Date(asset.timestamp).toLocaleDateString()}
+                      {asset.timestamp ? new Date(asset.timestamp).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
@@ -151,12 +152,12 @@ const Assets: React.FC = () => {
                       <td colSpan={6} className="px-6 py-4 bg-gray-50 text-sm text-gray-700">
                         <h4 className="font-semibold mb-2">Score Factors:</h4>
                         <ul className="list-disc list-inside space-y-1">
-                          {asset.factors.map((factor, index) => (
+                          {(asset.factors || []).map((factor, index) => (
                             <li key={index}>
                               <span className="font-medium">{factor.name}:</span>{' '}
-                              <span className={getScoreColor(factor.score)}>{factor.score.toFixed(2)}</span>{' '}
-                              (Weight: {factor.weight.toFixed(2)})
-                              {factor.details && <span className="text-gray-500 ml-2"> - {factor.details}</span>}
+                              <span className={getScoreColor(factor.score ?? 0)}>{(factor.score ?? 0).toFixed(1)}</span>{' '}
+                              (Weight: {factor.weight ?? 0}%)
+                              {factor.details && <span className="text-gray-500 ml-2"> — {factor.details}</span>}
                             </li>
                           ))}
                         </ul>

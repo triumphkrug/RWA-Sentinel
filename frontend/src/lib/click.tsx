@@ -1,28 +1,25 @@
 /**
  * CSPR.click SDK integration for RWA-Sentinel.
  * Provides wallet connect via Casper Wallet, Ledger, or MetaMask Snap.
- * Adapted from ae402.xyz implementation.
+ * Based on ae402.xyz working implementation.
  */
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { CONTENT_MODE, WALLET_KEYS } from '@make-software/csprclick-core-types'
+import type { AccountType, CsprClickInitOptions, ICSPRClickSDK } from '@make-software/csprclick-core-types'
+import type { ClickUIOptions } from '@make-software/csprclick-core-types/clickui'
 
 declare global {
   interface Window {
-    clickUIOptions: Record<string, unknown>
-    clickSDKOptions: Record<string, unknown>
-    csprclick?: {
-      signIn: () => void
-      signOut: () => void
-      getActiveAccountAsync: (opts?: { withBalance?: boolean }) => Promise<{ public_key?: string } | null>
-      on: (event: string, handler: (data: unknown) => void) => void
-      send: (deploy: unknown, senderKey: string) => Promise<{ deployHash: string }>
-    }
+    clickUIOptions: ClickUIOptions
+    clickSDKOptions: CsprClickInitOptions
+    csprclick?: ICSPRClickSDK
   }
 }
 
+// Registered at console.cspr.build for rwa-sentinel.xyz
 const CSPRCLICK_APP_ID = (import.meta.env.VITE_CSPRCLICK_APP_ID as string | undefined) || '7c8101bb-03b8-4223-a6dd-9b7ce09e'
 
-// Light theme for RWA-Sentinel's white UI, no top bar
 window.clickUIOptions = {
   uiContainer: 'csprclick-ui',
   rootAppElement: '#root',
@@ -34,48 +31,39 @@ window.clickUIOptions = {
 window.clickSDKOptions = {
   appName: 'RWA-Sentinel',
   appId: CSPRCLICK_APP_ID,
-  providers: ['CasperWallet', 'Ledger', 'MetaMaskSnap'],
-  contentMode: 'iframe',
+  providers: [WALLET_KEYS.CASPER_WALLET, WALLET_KEYS.LEDGER, WALLET_KEYS.METAMASK_SNAP],
+  contentMode: CONTENT_MODE.IFRAME,
 }
 
 type ClickContextState = {
   publicKey: string | undefined
   provider: string | undefined
-  clickRef: typeof window.csprclick | undefined
+  clickRef: ICSPRClickSDK | undefined
   ready: boolean
 }
 
-type AccountChangedEvent = { account?: { public_key?: string; provider?: string } }
+type AccountChangedEvent = { account?: AccountType }
 
 const ClickContext = createContext<ClickContextState | undefined>(undefined)
 
 export const ClickProvider = ({ children }: { children: ReactNode }) => {
-  const [publicKey, setPublicKey] = useState<string | undefined>()
-  const [provider, setProvider] = useState<string | undefined>()
-  const [clickRef, setClickRef] = useState<typeof window.csprclick | undefined>()
+  const [connectedAccount, setConnectedAccount] = useState<AccountType | undefined>()
+  const [clickRef, setClickRef] = useState<ICSPRClickSDK | undefined>()
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    const checkActiveAccount = async (ref: NonNullable<typeof window.csprclick>) => {
+    const checkActiveAccount = async (ref: ICSPRClickSDK) => {
       try {
         const account = await ref.getActiveAccountAsync({ withBalance: false })
-        if (account?.public_key) {
-          setPublicKey(account.public_key)
-        }
-      } catch {
-        setPublicKey(undefined)
+        setConnectedAccount(account?.public_key ? account : undefined)
+      } catch (error) {
+        console.error('CSPR.click: failed to get active account', error)
+        setConnectedAccount(undefined)
       }
     }
 
-    const handleAccountChanged = (event: unknown) => {
-      const e = event as AccountChangedEvent
-      if (e.account?.public_key) {
-        setPublicKey(e.account.public_key)
-        setProvider(e.account.provider)
-      } else {
-        setPublicKey(undefined)
-        setProvider(undefined)
-      }
+    const handleAccountChanged = (event: AccountChangedEvent) => {
+      setConnectedAccount(event.account?.public_key ? event.account : undefined)
     }
 
     const handleSdkLoaded = () => {
@@ -86,8 +74,8 @@ export const ClickProvider = ({ children }: { children: ReactNode }) => {
       ref.on('csprclick:signed_in', handleAccountChanged)
       ref.on('csprclick:switched_account', handleAccountChanged)
       ref.on('csprclick:unsolicited_account_change', handleAccountChanged)
-      ref.on('csprclick:signed_out', () => { setPublicKey(undefined); setProvider(undefined) })
-      ref.on('csprclick:disconnected', () => { setPublicKey(undefined); setProvider(undefined) })
+      ref.on('csprclick:signed_out', () => setConnectedAccount(undefined))
+      ref.on('csprclick:disconnected', () => setConnectedAccount(undefined))
       checkActiveAccount(ref)
     }
 
@@ -106,7 +94,9 @@ export const ClickProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   return (
-    <ClickContext.Provider value={{ publicKey, provider, clickRef, ready }}>
+    <ClickContext.Provider
+      value={{ publicKey: connectedAccount?.public_key, provider: connectedAccount?.provider, clickRef, ready }}
+    >
       {children}
     </ClickContext.Provider>
   )
