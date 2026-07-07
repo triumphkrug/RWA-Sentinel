@@ -680,3 +680,44 @@ version gaps) but the actual fix was operational, not a code change.
 calls (if any) and the app's env-configured contract hashes need to point at the right
 account/hash per contract. Update backend config with these two new hashes, then re-verify the
 full pipeline against them before considering this closed.
+
+## Update 11 (2026-07-07, ~11:35): confirmed the block is specific to the MAIN deployer account, not balance, not named keys — direct control tests
+
+Per requester's explicit ask ("контракты должны быть с основного аккаунта... если не хватает
+токенов — пополню"), ran direct control tests to nail down exactly what's different about the
+main deployer account (`02029f26...`) before accepting the fresh-account workaround as final.
+
+1. **Checked main account's actual CSPR balance**: 2,872.6 CSPR available — nowhere near
+   insufficient. Topping up more CSPR will not fix this; balance was never the constraint (every
+   failed attempt's `cost` field shows the full requested payment was charged/available).
+2. **Retried `oracle-slashing.wasm` (identical binary that just succeeded on the fresh account)
+   from the main account, using the exact same script/call pattern** (`SessionBuilder()
+   .installOrUpgrade().runtimeArgs(Args.fromMap({}))`, same payment, same chain) — **failed
+   identically**: `ApiError::InvalidArgument [3]`, 2,924,710 gas consumed (the same constant
+   figure as every historical attempt), 5 effects (balance-hold only). This rules out "the old
+   session's deploy scripts had a subtle bug" — it's the same working code, same wasm, different
+   signer, different outcome.
+3. **Retried `governance-dao.wasm` (90,923 B) from the main account** — also failed identically
+   (`InvalidArgument`, 2,641,810 gas consumed, 5 effects).
+4. **Retried `oracle-slashing.wasm` with named keys renamed to a fresh `_v3` suffix** (never used
+   anywhere before, via the modern `SessionBuilder`/TransactionV1 path, not the legacy `Deploy`
+   path Update 5 used) **from the main account — still failed identically.** This further rules
+   out named-key collision as the mechanism (Update 5 already ruled this out via legacy Deploy;
+   this confirms it independently via the modern transaction path too).
+
+**Conclusion, now with strong direct A/B evidence** (same wasm/script/payment, only the signer
+account differs): the block is a property of the **main deployer account's on-chain state**
+specifically — not balance, not the wasm, not named keys, not the transaction format/SDK call
+pattern. Exact internal mechanism inside casper-node still not identified (candidates:
+per-account attempt-count throttle from history, some account-level flag set after repeated
+failed installs, or something else state-level not visible via the RPC surface explored so far).
+
+**Practical implication**: keeping every contract literally on one account is not achievable
+right now without first understanding/clearing whatever this account-level condition is — that
+requires either (a) Casper team/Discord support (this is now a tight, reproducible A/B bug
+report: identical transaction succeeds from a fresh account, fails identically from this specific
+funded account), or (b) waiting to see if it's time/era-based and self-clears, neither of which
+is verifiable before the deadline. The working, verified-live path today is: `asset-registry` /
+`attestation-store` / original `governance-dao` stay on the main account (already there, already
+working for regular calls); `oracle-slashing` (A1 fix) and `kyc-gate` (S4) are live on a second,
+newly-funded account (see Update 10) until the main account's condition is understood/resolved.
