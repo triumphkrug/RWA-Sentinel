@@ -12,19 +12,61 @@ interface Endpoint {
 }
 
 const endpoints: Endpoint[] = [
+  // --- Core ---
   { name: 'Get Health', method: 'GET', path: '/health', description: 'Check API health status.' },
   { name: 'Get Stats', method: 'GET', path: '/api/v1/stats', description: 'Retrieve overall portal statistics.' },
+  { name: 'Get Factors', method: 'GET', path: '/api/v1/factors', description: 'List the 6 scoring factors with weights.' },
+  { name: 'Get Cache Stats', method: 'GET', path: '/api/v1/cache/stats', description: 'View scoring cache statistics.' },
+
+  // --- Pipeline ---
+  { name: 'Run Pipeline', method: 'POST', path: '/api/v1/pipeline', body: { lei: '5493001KJTIIGC8Y1R12' }, description: 'Run the full RWA scoring pipeline end-to-end.' },
   { name: 'Get Scores', method: 'GET', path: '/api/v1/scores', description: 'List all asset trust scores.' },
+
+  // --- Attestations ---
   { name: 'Get Attestations', method: 'GET', path: '/api/v1/attestations', params: { page: 1, limit: 10, status: 'attested' }, description: 'List attestations with optional filters.' },
   { name: 'Get Attestation by ID', method: 'GET', path: '/api/v1/attestations/:id', params: { id: 'example_attestation_id' }, description: 'Retrieve a single attestation by ID.' },
-  { name: 'Post Pipeline Run', method: 'POST', path: '/api/v1/pipeline', body: { lei: '5493001KJTIIGC8Y1R12' }, description: 'Initiate a new RWA scoring pipeline.' },
-  { name: 'Get LEI Data', method: 'GET', path: '/api/v1/data/lei/:lei', params: { lei: '5493001KJTIIGC8Y1R12' }, description: 'Fetch Legal Entity Identifier (LEI) data.' },
-  { name: 'Get Company Data', method: 'GET', path: '/api/v1/data/company/:jurisdiction/:id', params: { jurisdiction: 'US', id: 'DELAWARE' }, description: 'Fetch company registration data.' },
+  { name: 'Verify Attestation', method: 'GET', path: '/api/v1/attestations/:tokenId/verify', params: { tokenId: 'example_token' }, description: 'Verify an attestation token on-chain.' },
+
+  // --- Data Adapters ---
+  { name: 'Get LEI Data', method: 'GET', path: '/api/v1/data/lei/:lei', params: { lei: '5493001KJTIIGC8Y1R12' }, description: 'Fetch Legal Entity Identifier (LEI) data from GLEIF.' },
+  { name: 'Get Price Data', method: 'GET', path: '/api/v1/data/price/:symbol', params: { symbol: 'bitcoin' }, description: 'Fetch asset price data from CoinGecko.' },
+  { name: 'Get Company Data', method: 'GET', path: '/api/v1/data/company/:jurisdiction/:id', params: { jurisdiction: 'gb', id: '00000006' }, description: 'Fetch company registration data from Companies House.' },
+
+  // --- Governance ---
   { name: 'Get Governance Proposals', method: 'GET', path: '/api/v1/governance/proposals', description: 'List all DAO governance proposals.' },
-  { name: 'Post Governance Propose', method: 'POST', path: '/api/v1/governance/propose', body: { title: 'Test Proposal', description: 'This is a test proposal.', duration_days: 3 }, description: 'Create a new governance proposal.' },
+  { name: 'Create Proposal', method: 'POST', path: '/api/v1/governance/propose', body: { title: 'Test Proposal', description: 'Adjust scoring threshold', duration_days: 3 }, description: 'Create a new governance proposal.' },
+  { name: 'Vote on Proposal', method: 'POST', path: '/api/v1/governance/vote', body: { proposal_id: 'example', support: true, weight: 100 }, description: 'Vote on an active proposal.' },
+  { name: 'Execute Proposal', method: 'POST', path: '/api/v1/governance/execute', body: { proposal_id: 'example' }, description: 'Execute a passed proposal.' },
+
+  // --- Slashing ---
   { name: 'Get Slashing Reports', method: 'GET', path: '/api/v1/slashing/reports', description: 'List all oracle slashing reports.' },
-  { name: 'Get Chain Overview', method: 'GET', path: '/api/v1/chain/overview', description: 'Get a high-level overview of the Casper chain activity.' },
-  // Add more endpoints as needed, following the pattern
+  { name: 'Report Violation', method: 'POST', path: '/api/v1/slashing/report', body: { oracle_id: 'oracle-1', evidence: 'score manipulation', severity: 3 }, description: 'Report an oracle violation.' },
+  { name: 'Challenge Report', method: 'POST', path: '/api/v1/slashing/challenge', body: { report_id: 'example', counter_evidence: 'legitimate scoring' }, description: 'Challenge a slashing report.' },
+
+  // --- Chain Explorer ---
+  { name: 'Chain Overview', method: 'GET', path: '/api/v1/chain/overview', description: 'High-level overview of Casper chain activity.' },
+  { name: 'Chain Activity', method: 'GET', path: '/api/v1/chain/activity', description: 'Recent chain activity feed.' },
+  { name: 'Chain Transactions', method: 'GET', path: '/api/v1/chain/transactions', description: 'List on-chain transactions.' },
+
+  // --- BLS Consensus ---
+  { name: 'Init Consensus', method: 'POST', path: '/api/v1/consensus/init', description: 'Initialize BLS 3-of-5 threshold consensus round.' },
+
+  // --- Extensions ---
+  { name: 'Asset Categories', method: 'GET', path: '/api/v1/extensions/categories', description: 'List all 10 asset categories with scoring weight profiles.' },
+  { name: 'KYC Check', method: 'POST', path: '/api/v1/extensions/kyc/check', body: { submitterPublicKey: '0197cedb...' }, description: 'Check on-chain KYC status for a public key.' },
+  { name: 'Bridge Chains', method: 'GET', path: '/api/v1/extensions/bridge/chains', description: 'List supported cross-chain bridge networks.' },
+  { name: 'Bridge Verify', method: 'POST', path: '/api/v1/extensions/bridge/verify', body: { chainId: 1, contractAddress: '0x742d35Cc...', attestationHash: 'abc123...' }, description: 'Verify a cross-chain attestation.' },
+
+  // --- Anomaly Detection ---
+  { name: 'Detect Anomalies', method: 'POST', path: '/api/v1/anomalies/detect', body: {}, description: 'Run AI anomaly detection across all attestations.' },
+
+  // --- Documents ---
+  { name: 'Verify Document', method: 'POST', path: '/api/v1/documents/verify', body: { hash: 'sha256...' }, description: 'Verify a document hash against stored records.' },
+  { name: 'Submit Document', method: 'POST', path: '/api/v1/documents', body: { content: 'document data', metadata: {} }, description: 'Submit a new document for verification.' },
+  { name: 'Document Status', method: 'GET', path: '/api/v1/documents/:hash/status', params: { hash: 'example_hash' }, description: 'Get verification status of a document.' },
+
+  // --- Asset History ---
+  { name: 'Asset History', method: 'GET', path: '/api/v1/assets/:assetId/history', params: { assetId: 'asset-001' }, description: 'Get scoring history for a specific asset.' },
 ];
 
 const Playground: React.FC = () => {

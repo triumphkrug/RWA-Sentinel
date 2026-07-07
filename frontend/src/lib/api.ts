@@ -360,3 +360,75 @@ export const getChainTransactions = (params?: { page?: number; limit?: number })
   const qs = q.toString();
   return fetcher<Transaction[]>(`/api/v1/chain/transactions${qs ? '?' + qs : ''}`);
 };
+
+// --- Extension Types ---
+
+export interface AssetCategory {
+  id: string;
+  name: string;
+  description: string;
+  weights: Record<string, number>;
+}
+
+export interface KycCheckResult {
+  publicKey: string;
+  kycVerified: boolean;
+  verifiedAt: string | null;
+  kycLevel: string;
+  scoreAdjustment: number;
+}
+
+export interface BridgeChain {
+  chainId: number;
+  name: string;
+  bridgeContract: string;
+  supported: boolean;
+}
+
+export interface BridgeVerifyResult {
+  valid: boolean;
+  chainName: string;
+  proofHash: string;
+  attestationHash: string;
+}
+
+export interface AnomalyDetectResult {
+  anomalies: Array<{ assetId: string; type: string; severity: string; details: string }>;
+}
+
+export interface FactorDefinition {
+  name: string;
+  weight: number;
+  description: string;
+}
+
+// --- Extension API ---
+
+export const getExtensionCategories = () => fetcher<{ categories: AssetCategory[] }>('/api/v1/extensions/categories');
+export const getCategoryCompliance = (category: string) => fetcher<any>(`/api/v1/extensions/categories/${category}/compliance`);
+export const postKycCheck = (submitterPublicKey: string) => fetcher<KycCheckResult>('/api/v1/extensions/kyc/check', 'POST', { submitterPublicKey });
+export const getBridgeChains = () => fetcher<{ chains: BridgeChain[] }>('/api/v1/extensions/bridge/chains');
+export const postBridgeVerify = (body: { chainId: number; contractAddress: string; attestationHash: string; tokenId?: string }) =>
+  fetcher<BridgeVerifyResult>('/api/v1/extensions/bridge/verify', 'POST', body);
+
+// --- Anomaly API ---
+
+export const postAnomalyDetect = (body?: { assetIds?: string[] }) => fetcher<AnomalyDetectResult>('/api/v1/anomalies/detect', 'POST', body || {});
+export const getAnomalyReport = (assetId: string, period?: string) => {
+  const q = period ? `?period=${period}` : '';
+  return fetcher<any>(`/api/v1/anomalies/${assetId}/report${q}`);
+};
+
+// --- Factors API ---
+
+export const getFactors = () => fetcher<{ factors: FactorDefinition[] }>('/api/v1/factors');
+
+// --- Document API ---
+
+export const postDocumentVerify = (body: { hash: string; metadata?: Record<string, unknown> }) => fetcher<any>('/api/v1/documents/verify', 'POST', body);
+export const postDocument = (body: { content: string; metadata?: Record<string, unknown> }) => fetcher<any>('/api/v1/documents', 'POST', body);
+export const getDocumentStatus = (hash: string) => fetcher<any>(`/api/v1/documents/${hash}/status`);
+
+// --- Asset History ---
+
+export const getAssetHistory = (assetId: string) => fetcher<any>(`/api/v1/assets/${assetId}/history`);
