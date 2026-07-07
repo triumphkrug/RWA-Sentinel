@@ -185,45 +185,47 @@ export interface ExecuteRequest {
 }
 
 // --- Slashing API Types ---
-export type ReportStatus = 'pending' | 'challenged' | 'validated' | 'executed' | 'dismissed';
+export type ReportStatus = 'pending' | 'challenged' | 'validated' | 'invalidated' | 'slashed' | 'resolved';
 
 export interface SlashingReport {
   id: string;
-  reporter: string;
-  oracle_id: string;
-  reason: string;
+  oracleId: string;
+  attestationId: string;
+  reporterPublicKey: string;
+  evidenceHash: string;
   status: ReportStatus;
-  timestamp: string;
-  challenge_deadline?: string;
-  validation_deadline?: string;
-  metadata?: Record<string, any>;
+  createdAt: string;
+  challengePeriodEndsAt: string;
+  challengerPublicKey: string | null;
+  challengerStakeAmount: number;
+  validationResult: 'pending' | 'valid' | 'invalid' | null;
+  slashingAmount: number;
+  rewardAmount: number;
+  onChainReportId?: string;
+  onChainReportTxHash?: string;
+  onChainExecuteTxHash?: string;
 }
 
 export interface ReportRequest {
-  oracle_id: string;
-  reason: string;
-  evidence?: string;
-  /* Backend also accepts: oracleId, attestationId, reporterPublicKey, evidenceHash */
+  oracleId: string;
+  attestationId: string;
+  reporterPublicKey: string;
+  evidenceHash: string;
 }
 
 export interface ChallengeRequest {
-  report_id: string;
-  challenger: string;
-  reason: string;
-  evidence?: string;
-  /* Backend also accepts: reportId, challengerPublicKey, challengeStakeAmount */
+  reportId: string;
+  challengerPublicKey: string;
+  challengeStakeAmount: number;
 }
 
 export interface ValidateRequest {
-  report_id: string;
-  validator: string;
-  valid: boolean;
-  evidence?: string;
+  reportId: string;
+  isValid: boolean;
 }
 
 export interface SlashingExecuteRequest {
-  report_id: string;
-  executor: string;
+  reportId: string;
 }
 
 // --- Consensus API Types ---
