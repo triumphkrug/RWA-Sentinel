@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
   getGovernanceProposals, postGovernancePropose, postGovernanceVote, postGovernanceExecute,
+  deleteGovernanceProposal,
   Proposal, ErrorResponse
 } from '../../lib/api';
 import { useClickRef } from '../../lib/click';
-import { Loader2, XCircle, Gavel, Plus, ThumbsUp, ThumbsDown, Play, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Loader2, XCircle, Gavel, Plus, ThumbsUp, ThumbsDown, Play, CheckCircle, Clock, AlertCircle, Trash2, Wallet } from 'lucide-react';
 import PageInfo from './PageInfo';
 
 const Governance: React.FC = () => {
@@ -34,18 +35,21 @@ const Governance: React.FC = () => {
   useEffect(() => { fetchProposals(); }, []);
 
   const handlePropose = async () => {
+    if (!walletKey) {
+      setActionError('Connect your wallet to create a proposal');
+      return;
+    }
     if (!formDesc.trim()) {
       setActionError('Description is required');
       return;
     }
-    const pubKey = walletKey || '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79';
     setSubmitting(true);
     setActionError(null);
     try {
       await postGovernancePropose({
         type: formType,
         description: formDesc.trim(),
-        proposerPublicKey: pubKey,
+        proposerPublicKey: walletKey,
         executionData: {},
       });
       setFormDesc('');
@@ -59,10 +63,13 @@ const Governance: React.FC = () => {
   };
 
   const handleVote = async (proposalId: string, choice: 'for' | 'against') => {
-    const pubKey = walletKey || '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79';
+    if (!walletKey) {
+      setActionError('Connect your wallet to vote');
+      return;
+    }
     setActionError(null);
     try {
-      await postGovernanceVote({ proposalId, voterPublicKey: pubKey, choice });
+      await postGovernanceVote({ proposalId, voterPublicKey: walletKey, choice });
       await fetchProposals();
     } catch (err: any) {
       setActionError(err.message || 'Failed to vote');
@@ -70,13 +77,26 @@ const Governance: React.FC = () => {
   };
 
   const handleExecute = async (proposalId: string) => {
-    const pubKey = walletKey || '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79';
+    if (!walletKey) {
+      setActionError('Connect your wallet to execute proposals');
+      return;
+    }
     setActionError(null);
     try {
-      await postGovernanceExecute({ proposalId, executorPublicKey: pubKey });
+      await postGovernanceExecute({ proposalId, executorPublicKey: walletKey });
       await fetchProposals();
     } catch (err: any) {
       setActionError(err.message || 'Failed to execute');
+    }
+  };
+
+  const handleDelete = async (proposalId: string) => {
+    setActionError(null);
+    try {
+      await deleteGovernanceProposal(proposalId);
+      await fetchProposals();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to delete proposal');
     }
   };
 
@@ -117,11 +137,23 @@ const Governance: React.FC = () => {
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          disabled={!walletKey}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={!walletKey ? 'Connect wallet first' : 'Create a new proposal'}
         >
           <Plus className="h-4 w-4" /> New Proposal
         </button>
       </div>
+
+      {!walletKey && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
+          <Wallet className="h-5 w-5 text-amber-600 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">Wallet not connected</p>
+            <p className="text-xs text-amber-600 mt-0.5">Connect your Casper wallet in the sidebar to create proposals, vote, and execute governance actions.</p>
+          </div>
+        </div>
+      )}
 
       <PageInfo title="How does Governance DAO work?">
         <p>The Governance DAO allows registered oracle accounts to propose, vote on, and execute parameter changes to the RWA-Sentinel system. Proposals go through a <strong>48-hour voting period</strong> with a 51% quorum threshold. Supported proposal types: parameter changes (e.g., scoring weights), contract upgrades, and treasury spends.</p>
@@ -142,7 +174,7 @@ const Governance: React.FC = () => {
       {showForm && (
         <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Create New Proposal</h3>
-          <p className="text-sm text-gray-500 mb-4">Requires a connected wallet with registered oracle account (min stake: 1,000 CSPR). Known deployer accounts are pre-authorized.</p>
+          <p className="text-sm text-gray-500 mb-4">Your connected wallet public key will be used as the proposer identity. Known oracle accounts have higher voting power.</p>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Proposal Type</label>
@@ -183,9 +215,7 @@ const Governance: React.FC = () => {
               </button>
             </div>
             <p className="text-xs text-gray-500">
-              {walletKey
-                ? `Proposing as: ${walletKey.substring(0, 12)}...`
-                : 'Connect your wallet to propose with your account, or the default deployer key will be used.'}
+              Proposing as: <code className="bg-gray-100 px-1 rounded font-mono">{walletKey?.substring(0, 16)}…</code>
             </p>
           </div>
         </div>
@@ -234,18 +264,22 @@ const Governance: React.FC = () => {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {(proposal.status === 'voting' || proposal.status === 'pending') && (
                   <>
                     <button
                       onClick={() => handleVote(proposal.id, 'for')}
-                      className="inline-flex items-center gap-1 rounded-lg bg-green-50 border border-green-200 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100"
+                      disabled={!walletKey}
+                      className="inline-flex items-center gap-1 rounded-lg bg-green-50 border border-green-200 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={!walletKey ? 'Connect wallet to vote' : 'Vote For'}
                     >
                       <ThumbsUp className="h-3.5 w-3.5" /> Vote For
                     </button>
                     <button
                       onClick={() => handleVote(proposal.id, 'against')}
-                      className="inline-flex items-center gap-1 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+                      disabled={!walletKey}
+                      className="inline-flex items-center gap-1 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={!walletKey ? 'Connect wallet to vote' : 'Vote Against'}
                     >
                       <ThumbsDown className="h-3.5 w-3.5" /> Vote Against
                     </button>
@@ -254,11 +288,20 @@ const Governance: React.FC = () => {
                 {proposal.status === 'approved' && (
                   <button
                     onClick={() => handleExecute(proposal.id)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-purple-50 border border-purple-200 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                    disabled={!walletKey}
+                    className="inline-flex items-center gap-1 rounded-lg bg-purple-50 border border-purple-200 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={!walletKey ? 'Connect wallet to execute' : 'Execute proposal'}
                   >
                     <Play className="h-3.5 w-3.5" /> Execute
                   </button>
                 )}
+                <button
+                  onClick={() => handleDelete(proposal.id)}
+                  className="inline-flex items-center gap-1 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 ml-auto"
+                  title="Delete proposal"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                </button>
               </div>
 
               {/* Dates */}

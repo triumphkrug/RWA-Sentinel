@@ -234,6 +234,19 @@ export class GovernanceService {
   }
 
   /**
+   * Deletes a proposal by its ID (admin/demo action).
+   * @param proposalId The ID of the proposal.
+   * @returns true if deleted, false if not found.
+   */
+  deleteProposal(proposalId: string): boolean {
+    const existed = this.proposals.delete(proposalId);
+    if (existed) {
+      console.log(`[governance] Proposal ${proposalId} deleted.`);
+    }
+    return existed;
+  }
+
+  /**
    * Retrieves a proposal by its ID.
    * @param proposalId The ID of the proposal.
    * @returns The proposal, or null if not found.
@@ -412,6 +425,15 @@ const governanceRoutes: FastifyPluginAsync<{
       votingEndsAt: proposal.votingEndsAt.toISOString(),
       voters: undefined,
     });
+  });
+
+  fastify.delete('/governance/proposals/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const deleted = governanceService.deleteProposal(id);
+    if (!deleted) {
+      return reply.status(404).send({ error: `Proposal ${id} not found` });
+    }
+    return reply.status(200).send({ message: `Proposal ${id} deleted` });
   });
 
   fastify.post('/governance/execute', async (request, reply) => {

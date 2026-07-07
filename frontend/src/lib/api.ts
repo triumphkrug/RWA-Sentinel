@@ -293,7 +293,7 @@ export interface FactorDefinition {
 
 async function fetcher<T>(
   endpoint: string,
-  method: 'GET' | 'POST' | 'PUT' = 'GET',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
   data?: any
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
@@ -370,6 +370,7 @@ export const getGovernanceProposals = async (): Promise<Proposal[]> => {
 };
 export const getGovernanceProposalById = (id: string) => fetcher<Proposal>(`/api/v1/governance/proposals/${id}`);
 export const postGovernanceExecute = (body: ExecuteRequest) => fetcher<{ message: string }>('/api/v1/governance/execute', 'POST', body);
+export const deleteGovernanceProposal = (proposalId: string) => fetcher<{ message: string }>(`/api/v1/governance/proposals/${proposalId}`, 'DELETE');
 
 // Slashing
 export const postSlashingReport = (body: ReportRequest) => fetcher<{ report_id: string }>('/api/v1/slashing/report', 'POST', body);
