@@ -20,9 +20,10 @@
 
 - [ ] Oracle slashing with challenge period (48h dispute, severity levels)
 - [ ] GovernanceDAO full implementation — proposal → voting → execution lifecycle
-- [ ] BLS threshold oracle signatures (3-of-5 multi-oracle consensus)
-- [ ] Real data adapters (GLEIF LEI, OpenCorporates, CoinGecko, property registries)
-- [ ] On-chain data provenance with MerkleRoot of input data
+- [x] BLS threshold oracle signatures (3-of-5 multi-oracle consensus) — off-chain crypto service (`agent/src/crypto/blsThreshold.ts`, real BLS12-381 sign/aggregate/pairing-verify, `/api/v1/consensus/*`)
+  - [ ] Remaining: wire the on-chain `attestation-store` contract to require/verify the aggregated threshold signature instead of accepting single-oracle attestation
+- [x] Real data adapters (GLEIF LEI, CoinGecko, OpenCorporates) — `agent/src/data/realDataAdapters.ts`, real `fetch()` calls to the live public APIs, wired into `CrossRefChecker.gleifSource` and its own `/api/v1` routes. Property registries not yet covered.
+- [x] On-chain data provenance with MerkleRoot of input data — `agent/src/data/merkleProvenance.ts`, `computeMerkleRoot()` is called in the main scoring pipeline (`server.ts`) over each batch's `factorsHash`/`evidenceHash`
 - [ ] Soulbound attestation tokens (SBT) with DID-binding
 - [ ] zkAttestation (Groth16) — prove score > threshold without revealing data
 - [ ] Anomaly detection (time-series) — price feed manipulation alerts
