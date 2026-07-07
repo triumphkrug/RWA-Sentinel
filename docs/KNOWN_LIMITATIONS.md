@@ -27,6 +27,33 @@ Last verified against actual deployed contract source: 2026-07-07.
   already exists and works correctly); documenting so future sessions/agents don't waste calls
   rediscovering it. Any production onboarding flow should call `register_oracle` for each real
   oracle right after install.
+- **`oracle-slashing.register_oracle` still cannot be called with a real stake (open, 2026-07-07).**
+  The entry point takes a `source_purse: URef` arg to move a real CSPR stake via
+  `system::transfer_from_purse_to_purse`. Three real on-chain attempts all reverted with
+  `Mint error: 4` (`InvalidAccessRights`):
+  1. Direct `ContractCallBuilder` transaction (no session code), passing the caller's own main
+     purse URef as `source_purse` with `ReadAddWrite` access bits.
+  2. Same, with `ReadWrite` access bits instead.
+  3. A purpose-built session-wasm (`contracts/register-oracle-session/`, compiles cleanly) that
+     obtains the purse via `account::get_main_purse()` inside the session and calls
+     `runtime::call_contract(..., "register_oracle", ...)` — the textbook-correct pattern per
+     Casper's own docs (`writing-session-code.md`'s `transfer-to-purse` example) — still reverted
+     identically.
+  Traced through `casper-node`'s actual source (`execution_engine/src/runtime/mod.rs`
+  `execute_contract`, `types/src/runtime_footprint.rs` `extract_access_rights`,
+  `types/src/access_rights.rs` `ContextAccessRights`) to confirm the theoretical access-rights
+  extension/attenuation/validation chain *should* work for this exact pattern — the root cause
+  inside the live node's actual behavior was not pinned down further; testing stopped once the
+  fresh test account's balance was mostly consumed (all these are non-refunding transactions —
+  `refund` is always `0` on this network/SDK combination even on revert, so failed real-gas
+  attempts are not cheap to iterate on). Not solved as of this writing.
+  **Practical workaround not yet built**: redesign `register_oracle` to not need a purse arg at
+  all — caller sends a plain native transfer to the contract's already-queryable `stake_purse`
+  address first, then calls a stateless `register_oracle(oracle_id, stake_amount)` that just
+  records the claim (same trust model many Casper MVPs use for staking flows). This needs a
+  contract source change + redeploy, which costs ~90-100 CSPR per install and is blocked by the
+  same per-account redeploy issue as everything else on the main deployer account (works from a
+  freshly funded account only).
 - **`oracle-slashing.withdraw_stake` never moves real funds.** Access control is correct (only
   the oracle's registered owner can call it, capped to their own remaining stake), but the
   function only decrements the internal dictionary record — it never calls
