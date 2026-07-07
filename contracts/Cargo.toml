@@ -5,6 +5,7 @@ members = [
     "governance-dao",
     "oracle-slashing",
     "kyc-gate",
+    "register-oracle-session",
     "tests",
 ]
 resolver = "2"

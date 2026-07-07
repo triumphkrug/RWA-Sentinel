@@ -1,0 +1,18 @@
+[package]
+name = "register-oracle-session"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+casper-contract = "5.1"
+casper-types = "6.0"
+
+[[bin]]
+name = "register-oracle-session"
+path = "src/main.rs"
+
+[features]
+
+[profile.release]
+codegen-units = 1
+lto = true
