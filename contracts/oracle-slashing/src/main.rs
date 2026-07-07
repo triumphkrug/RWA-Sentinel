@@ -508,6 +508,13 @@ pub extern "C" fn call() {
         EntryPointPayment::Caller,
     ));
 
+    // NOTE (2026-07-07): tried renaming these named-key strings to `_v2` to test
+    // whether the redeploy blocker was caused by the deployer account already owning
+    // a same-named package key from the original install. Result: identical
+    // `ApiError::InvalidArgument` failure even with a never-before-used name -
+    // disproved that theory. See docs/WASM_INSTALL_DIAGNOSIS.md Update 5. Reverted to
+    // the original names since the rename had no effect and would only confuse a
+    // future redeploy attempt.
     let (contract_hash, _version) = storage::new_contract(
         entry_points,
         Some(named_keys),
