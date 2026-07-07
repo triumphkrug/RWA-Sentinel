@@ -40,7 +40,7 @@ const CONTRACTS: Record<string, ContractInfo> = {
     ],
   },
   'Governance DAO': {
-    hash: '154d32b56aa334a5f454b90292c829f994db24e998cf8a702c88c0b8034ceec4',
+    hash: '847a8016434662fa70c0ff7467f0a4c4358baffd3a53e2a403c75b35c8c31138',
     description:
       'Decentralized governance for protocol parameters. Supports proposal creation, stake-weighted voting, and on-chain execution with quorum enforcement.',
     icon: <Scale className="h-7 w-7 text-violet-600" />,
@@ -54,7 +54,7 @@ const CONTRACTS: Record<string, ContractInfo> = {
     ],
   },
   'Oracle Slashing': {
-    hash: 'd061c8eb9dc567bf7c812477530386a75ad07c32144bcc72db7343e63908301d',
+    hash: 'cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df',
     description:
       'Manages oracle stake deposits, violation reporting, and permissionless slashing. Uses deposit-first registration pattern with on-chain balance verification.',
     icon: <Eye className="h-7 w-7 text-amber-600" />,
