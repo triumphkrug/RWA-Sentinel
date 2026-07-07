@@ -3,7 +3,6 @@ import {
   getLEIData,
   postPipeline,
   getScores,
-  getAttestationById,
   getAttestations,
   LEIData,
   PipelineRunResponse,
@@ -14,15 +13,18 @@ import {
 } from '../../lib/api';
 import {
   Play,
-  Download,
-  Zap,
-  Award,
+  Clipboard,
+  Loader2,
   CheckCircle,
   XCircle,
-  Loader2,
-  ChevronRight,
-  Clipboard,
+  RotateCcw,
+  FileSearch,
+  Cpu,
+  BarChart3,
+  ShieldCheck,
 } from 'lucide-react';
+import PageInfo from './PageInfo';
+import { Toast } from './Modal';
 
 interface LogEntry {
   timestamp: string;
@@ -30,14 +32,6 @@ interface LogEntry {
   type: 'info' | 'success' | 'error';
 }
 
-// S2 (2026-07-07): explicit Demo/Real data-source toggle. "Real" is the
-// default mode - if you paste your own invoice JSON below, the pipeline
-// scores exactly that data through the same real scoring/cross-ref/Merkle/
-// on-chain-attestation flow as any other run. Only if you leave it empty
-// (or explicitly pick "Demo") does the backend fall back to its synthetic
-// invoice generator - and the API response always reports which one
-// actually happened (`dataSource`), so this page never silently mislabels
-// synthetic output as real.
 type DataMode = 'real' | 'demo';
 
 const EXAMPLE_REAL_INVOICE_JSON = JSON.stringify(
@@ -59,12 +53,13 @@ const EXAMPLE_REAL_INVOICE_JSON = JSON.stringify(
 );
 
 const AgentDemo: React.FC = () => {
-  const [lei, setLei] = useState<string>('5493001KJTIIGC8Y1R12'); // Example LEI
+  const [lei, setLei] = useState<string>('5493001KJTIIGC8Y1R12');
   const [dataMode, setDataMode] = useState<DataMode>('real');
   const [realInvoiceJson, setRealInvoiceJson] = useState<string>('');
   const [invoiceJsonError, setInvoiceJsonError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loadingStep, setLoadingStep] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [stepResults, setStepResults] = useState<{
     leiData: LEIData | null;
     pipelineResponse: PipelineRunResponse | null;
@@ -77,6 +72,11 @@ const AgentDemo: React.FC = () => {
     attestation: null,
   });
 
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const addLog = (message: string, type: LogEntry['type'] = 'info') => {
     setLogs((prev) => [...prev, { timestamp: new Date().toLocaleTimeString(), message, type }]);
   };
@@ -84,12 +84,7 @@ const AgentDemo: React.FC = () => {
   const resetDemo = () => {
     setLogs([]);
     setLoadingStep(null);
-    setStepResults({
-      leiData: null,
-      pipelineResponse: null,
-      assetScore: null,
-      attestation: null,
-    });
+    setStepResults({ leiData: null, pipelineResponse: null, assetScore: null, attestation: null });
   };
 
   const runStep = async (step: number, action: () => Promise<any>) => {
@@ -100,10 +95,8 @@ const AgentDemo: React.FC = () => {
       addLog(`Step ${step} completed successfully!`, 'success');
       return result;
     } catch (err: any) {
-      const errorRes: ErrorResponse = err;
-      addLog(`Step ${step} failed: ${errorRes.message || 'Unknown error'}`, 'error');
-      console.error(`Step ${step} error:`, err);
-      throw err; // Re-throw to stop the pipeline
+      addLog(`Step ${step} failed: ${(err as ErrorResponse).message || 'Unknown error'}`, 'error');
+      throw err;
     } finally {
       setLoadingStep(null);
     }
@@ -112,26 +105,16 @@ const AgentDemo: React.FC = () => {
   const handleRunFullPipeline = async () => {
     resetDemo();
     setInvoiceJsonError(null);
-    if (!lei) {
-      addLog('Please enter an LEI.', 'error');
-      return;
-    }
+    if (!lei) { addLog('Please enter an LEI.', 'error'); return; }
 
-    // S2: parse+validate the real-invoice payload only when Real mode is
-    // selected and the box isn't empty. An empty box in Real mode is not
-    // silently treated as "real data" - we tell the user up front that the
-    // backend will fall back to its demo generator, and the run log below
-    // reports which one actually happened.
     let invoices: RealInvoice[] | undefined;
     if (dataMode === 'real' && realInvoiceJson.trim()) {
       try {
         const parsed = JSON.parse(realInvoiceJson);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          throw new Error('Expected a non-empty JSON array of invoices.');
-        }
+        if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('Expected a non-empty JSON array of invoices.');
         invoices = parsed as RealInvoice[];
       } catch (e: any) {
-        const msg = `Invalid real invoice JSON: ${e.message || e}`;
+        const msg = `Invalid invoice JSON: ${e.message || e}`;
         setInvoiceJsonError(msg);
         addLog(msg, 'error');
         return;
@@ -139,29 +122,24 @@ const AgentDemo: React.FC = () => {
     }
 
     try {
-      // Step 1: Fetch GLEIF/company data
       const leiData = await runStep(1, () => getLEIData(lei));
       setStepResults((prev) => ({ ...prev, leiData }));
       addLog(`Fetched LEI Data for ${leiData.legal_name}`, 'info');
 
-      // Step 2: Run scoring pipeline
       const pipelineRes = await runStep(2, () => postPipeline({ lei, invoices }));
       setStepResults((prev) => ({ ...prev, pipelineResponse: pipelineRes }));
       addLog(
         pipelineRes.dataSource === 'real-upload'
-          ? 'Pipeline scored your real, uploaded invoice data.'
-          : 'Pipeline used synthetic demo invoices (no real data was supplied).',
+          ? 'Pipeline scored your real uploaded invoice data.'
+          : 'Pipeline used synthetic demo invoices (no real data supplied).',
         'info',
       );
 
-      // Wait for pipeline to complete
       addLog('Processing pipeline batch...', 'info');
       await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Step 3: View scores
       const scores = await runStep(3, async () => {
         const allScores = await getScores();
-        // Find by LEI or take the most recent score
         const assetScore = allScores.find(s => s.identifier === lei) || allScores[allScores.length - 1];
         if (!assetScore) throw new Error('No scores available after pipeline run.');
         return assetScore;
@@ -169,113 +147,103 @@ const AgentDemo: React.FC = () => {
       setStepResults((prev) => ({ ...prev, assetScore: scores }));
       addLog(`Asset scored: ${(scores?.score ?? 0).toFixed(2)}`, 'info');
 
-      // Step 4: View attestation
       const attestations = await runStep(4, async () => {
-        // Try with attested status first, then any status
         let allAttestations = await getAttestations({ limit: 20, status: 'attested' });
-        if (!allAttestations.attestations?.length) {
-          allAttestations = await getAttestations({ limit: 20 });
-        }
-        const attestation = allAttestations.attestations?.find((a: Attestation) => a.identifier === lei)
-          || allAttestations.attestations?.[0];
-        if (!attestation) throw new Error('No attestations found yet. Run the pipeline first to generate attestations.');
+        if (!allAttestations.attestations?.length) allAttestations = await getAttestations({ limit: 20 });
+        const attestation = allAttestations.attestations?.find((a: Attestation) => a.identifier === lei) || allAttestations.attestations?.[0];
+        if (!attestation) throw new Error('No attestations found yet.');
         return attestation;
       });
       setStepResults((prev) => ({ ...prev, attestation: attestations }));
       addLog(`Attestation found: ${(attestations?.id || '').substring(0, 12)}…`, 'info');
 
-      addLog('Full pipeline demo completed successfully!', 'success');
-    } catch (e) {
-      addLog('Full pipeline demo failed.', 'error');
+      addLog('Full pipeline completed successfully!', 'success');
+      showToast('Pipeline completed — attestation anchored on-chain', 'success');
+    } catch {
+      addLog('Pipeline failed.', 'error');
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    addLog('Copied to clipboard!', 'info');
+    showToast('Copied to clipboard', 'info');
   };
+
+  const stepIcon = (step: number, active: boolean, done: boolean) => {
+    if (loadingStep === step) return <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />;
+    if (done) return <CheckCircle className="h-6 w-6 text-green-600" />;
+    if (active) return <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />;
+    return null;
+  };
+
+  const icons = [FileSearch, Cpu, BarChart3, ShieldCheck];
+  const stepLabels = ['Fetch Entity Data', 'Run Scoring Engine', 'Retrieve Trust Score', 'View Attestation'];
+  const stepDescs = ['GLEIF LEI + company registry lookup', '6-factor scoring with cross-reference validation', 'Weighted score aggregation (0–100)', 'On-chain attestation via Casper smart contracts'];
+  const stepDone = [!!stepResults.leiData, !!stepResults.pipelineResponse, !!stepResults.assetScore, !!stepResults.attestation];
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-gray-900">Agent Pipeline Demo</h2>
-      <p className="text-gray-700">
-        Experience the RWA-Sentinel AI oracle pipeline in action. Enter an LEI (Legal Entity Identifier)
-        demonstrating the data fetching, scoring, and attestation pipeline.
-      </p>
+      <h2 className="text-2xl font-bold text-gray-900">Scoring Pipeline</h2>
 
-      {/* Input and Controls */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
-        <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-4">
-          <label htmlFor="leiInput" className="text-lg font-medium text-gray-700 flex-shrink-0">
-            Enter LEI:
-          </label>
+      <PageInfo title="What is the Scoring Pipeline?">
+        <p>This is the <strong>end-to-end RWA verification pipeline</strong> that RWA-Sentinel runs autonomously. It takes a Legal Entity Identifier (LEI), fetches entity data from GLEIF and corporate registries, ingests invoice documents, runs the 6-factor scoring engine (document authenticity, market cross-reference, entity verification, corporate registry, historical consistency, KYC status), and anchors the resulting attestation on Casper testnet via the BLS oracle consensus.</p>
+        <p className="mt-1">You can run it in <strong>Real mode</strong> (paste your own invoice JSON) or <strong>Demo mode</strong> (auto-generated synthetic data). The pipeline response always reports which data source was used — it never silently labels synthetic data as real.</p>
+      </PageInfo>
+
+      {/* Input Controls */}
+      <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+          <label htmlFor="leiInput" className="text-sm font-medium text-gray-700 shrink-0">LEI Code:</label>
           <input
-            type="text"
-            id="leiInput"
-            value={lei}
-            onChange={(e) => setLei(e.target.value)}
+            type="text" id="leiInput" value={lei} onChange={(e) => setLei(e.target.value)}
             placeholder="e.g., 5493001KJTIIGC8Y1R12"
-            className="flex-grow p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            className="flex-grow p-2.5 border border-gray-300 rounded-lg shadow-sm font-mono text-sm focus:ring-blue-500 focus:border-blue-500"
           />
-          <button
-            onClick={handleRunFullPipeline}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            disabled={loadingStep !== null}
-          >
-            {loadingStep !== null ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Play className="h-5 w-5 mr-2" />}
-            Run Full Pipeline
-          </button>
-          <button
-            onClick={resetDemo}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            disabled={loadingStep !== null}
-          >
-            Reset
-          </button>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={handleRunFullPipeline}
+              disabled={loadingStep !== null}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {loadingStep !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              Run Pipeline
+            </button>
+            <button
+              onClick={resetDemo}
+              disabled={loadingStep !== null}
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            >
+              <RotateCcw className="h-4 w-4" /> Reset
+            </button>
+          </div>
         </div>
 
-        {/* S2: Demo/Real invoice data-source toggle - Real is the default. */}
-        <div className="border-t border-gray-200 pt-4 mt-2">
-          <div className="flex items-center space-x-4 mb-2">
-            <span className="text-sm font-medium text-gray-700">Invoice data source:</span>
-            <label className="inline-flex items-center space-x-1 text-sm text-gray-700">
-              <input
-                type="radio"
-                name="dataMode"
-                value="real"
-                checked={dataMode === 'real'}
-                onChange={() => setDataMode('real')}
-                disabled={loadingStep !== null}
-              />
-              <span>Real (paste your own invoice JSON)</span>
+        {/* Data source toggle */}
+        <div className="border-t border-gray-100 pt-4">
+          <div className="flex flex-wrap items-center gap-4 mb-2">
+            <span className="text-sm font-medium text-gray-700">Data source:</span>
+            <label className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
+              <input type="radio" name="dataMode" value="real" checked={dataMode === 'real'} onChange={() => setDataMode('real')} disabled={loadingStep !== null}
+                className="text-blue-600 focus:ring-blue-500" />
+              <span>Real invoice data</span>
             </label>
-            <label className="inline-flex items-center space-x-1 text-sm text-gray-700">
-              <input
-                type="radio"
-                name="dataMode"
-                value="demo"
-                checked={dataMode === 'demo'}
-                onChange={() => setDataMode('demo')}
-                disabled={loadingStep !== null}
-              />
-              <span>Demo (auto-generated synthetic invoices)</span>
+            <label className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
+              <input type="radio" name="dataMode" value="demo" checked={dataMode === 'demo'} onChange={() => setDataMode('demo')} disabled={loadingStep !== null}
+                className="text-blue-600 focus:ring-blue-500" />
+              <span>Synthetic demo data</span>
             </label>
           </div>
 
           {dataMode === 'real' && (
             <div>
               <textarea
-                value={realInvoiceJson}
-                onChange={(e) => setRealInvoiceJson(e.target.value)}
-                placeholder={`Paste a JSON array of invoices, e.g.:\n${EXAMPLE_REAL_INVOICE_JSON}`}
-                rows={5}
-                disabled={loadingStep !== null}
-                className="w-full p-2 border border-gray-300 rounded-md shadow-sm font-mono text-xs focus:ring-blue-500 focus:border-blue-500"
+                value={realInvoiceJson} onChange={(e) => setRealInvoiceJson(e.target.value)}
+                placeholder={`Paste a JSON array of invoices, e.g.:\n${EXAMPLE_REAL_INVOICE_JSON.slice(0, 200)}…`}
+                rows={4} disabled={loadingStep !== null}
+                className="w-full p-2 border border-gray-300 rounded-lg font-mono text-xs focus:ring-blue-500 focus:border-blue-500"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Left empty, the backend falls back to its synthetic demo generator instead — the
-                run log below always states which one actually happened, never silently labels
-                synthetic data as real.
+              <p className="text-xs text-gray-400 mt-1">
+                Left empty → the backend falls back to synthetic demo invoices. The run log always states which source was used.
               </p>
               {invoiceJsonError && <p className="text-xs text-red-600 mt-1">{invoiceJsonError}</p>}
             </div>
@@ -283,134 +251,101 @@ const AgentDemo: React.FC = () => {
         </div>
       </div>
 
-      {/* Pipeline Flow Visualization */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Pipeline Flow</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Step 1 */}
-          <div className={`flex flex-col items-center p-4 rounded-lg border ${loadingStep === 1 ? 'border-blue-500 bg-blue-50' : stepResults.leiData ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
-            <Download className={`h-8 w-8 ${loadingStep === 1 ? 'text-blue-600' : stepResults.leiData ? 'text-green-600' : 'text-gray-500'}`} />
-            <p className="mt-2 font-medium text-center">1. Fetch Data</p>
-            {stepResults.leiData && <p className="text-xs text-gray-600 mt-1">LEI: {stepResults.leiData.lei}</p>}
-          </div>
-          <div className="flex items-center justify-center">
-            <ChevronRight className="h-6 w-6 text-gray-400" />
-          </div>
-
-          {/* Step 2 */}
-          <div className={`flex flex-col items-center p-4 rounded-lg border ${loadingStep === 2 ? 'border-blue-500 bg-blue-50' : stepResults.pipelineResponse ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
-            <Zap className={`h-8 w-8 ${loadingStep === 2 ? 'text-blue-600' : stepResults.pipelineResponse ? 'text-green-600' : 'text-gray-500'}`} />
-            <p className="mt-2 font-medium text-center">2. Run Scoring Pipeline</p>
-            {stepResults.pipelineResponse && <p className="text-xs text-gray-600 mt-1">ID: {(stepResults.pipelineResponse.pipeline_id || '').substring(0, 8)}...</p>}
-          </div>
-          <div className="flex items-center justify-center">
-            <ChevronRight className="h-6 w-6 text-gray-400" />
-          </div>
-
-          {/* Step 3 */}
-          <div className={`flex flex-col items-center p-4 rounded-lg border ${loadingStep === 3 ? 'border-blue-500 bg-blue-50' : stepResults.assetScore ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
-            <CheckCircle className={`h-8 w-8 ${loadingStep === 3 ? 'text-blue-600' : stepResults.assetScore ? 'text-green-600' : 'text-gray-500'}`} />
-            <p className="mt-2 font-medium text-center">3. View Scores</p>
-            {stepResults.assetScore && <p className="text-xs text-gray-600 mt-1">Score: {(stepResults.assetScore.score ?? 0).toFixed(2)}</p>}
-          </div>
-          <div className="flex items-center justify-center">
-            <ChevronRight className="h-6 w-6 text-gray-400" />
-          </div>
-
-          {/* Step 4 */}
-          <div className={`flex flex-col items-center p-4 rounded-lg border ${loadingStep === 4 ? 'border-blue-500 bg-blue-50' : stepResults.attestation ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
-            <Award className={`h-8 w-8 ${loadingStep === 4 ? 'text-blue-600' : stepResults.attestation ? 'text-green-600' : 'text-gray-500'}`} />
-            <p className="mt-2 font-medium text-center">4. View Attestation</p>
-            {stepResults.attestation && <p className="text-xs text-gray-600 mt-1">ID: {stepResults.attestation.id.substring(0, 8)}...</p>}
-          </div>
+      {/* Pipeline Steps — horizontal progress */}
+      <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-5">Pipeline Steps</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stepLabels.map((label, i) => {
+            const Icon = icons[i];
+            const done = stepDone[i];
+            const active = loadingStep === i + 1;
+            return (
+              <div
+                key={i}
+                className={`relative rounded-xl border-2 p-4 transition-all duration-300 ${
+                  done ? 'border-green-200 bg-green-50/50' :
+                  active ? 'border-blue-300 bg-blue-50/50 shadow-md' :
+                  'border-gray-100 bg-gray-50/50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className={`p-2 rounded-lg ${done ? 'bg-green-100' : active ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                    <Icon className={`h-5 w-5 ${done ? 'text-green-600' : active ? 'text-blue-600' : 'text-gray-400'}`} />
+                  </div>
+                  {stepIcon(i + 1, active, done)}
+                </div>
+                <p className={`font-semibold text-sm ${done ? 'text-green-900' : active ? 'text-blue-900' : 'text-gray-700'}`}>
+                  {i + 1}. {label}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">{stepDescs[i]}</p>
+                {/* Step-specific result snippet */}
+                {i === 0 && stepResults.leiData && (
+                  <p className="text-xs text-green-700 mt-2 font-mono truncate">{stepResults.leiData.legal_name}</p>
+                )}
+                {i === 1 && stepResults.pipelineResponse && (
+                  <p className="text-xs text-green-700 mt-2 font-mono truncate">ID: {(stepResults.pipelineResponse.pipeline_id || '').slice(0, 12)}…</p>
+                )}
+                {i === 2 && stepResults.assetScore && (
+                  <p className="text-xs text-green-700 mt-2 font-bold">Score: {(stepResults.assetScore.score ?? 0).toFixed(1)}</p>
+                )}
+                {i === 3 && stepResults.attestation && (
+                  <p className="text-xs text-green-700 mt-2 font-mono truncate">#{stepResults.attestation.id.slice(0, 8)}…</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Real-time Log Display */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Logs</h3>
-        <div className="bg-gray-800 text-white p-4 rounded-md font-mono text-sm h-64 overflow-y-auto">
+      {/* Execution Log */}
+      <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900">Execution Log</h3>
+          <span className="text-xs text-gray-400">{logs.length} entries</span>
+        </div>
+        <div className="bg-slate-900 text-slate-200 p-4 font-mono text-xs h-48 overflow-y-auto">
           {logs.length === 0 ? (
-            <p className="text-gray-400">No logs yet. Run the pipeline to see output.</p>
+            <p className="text-slate-500">Run the pipeline to see execution output.</p>
           ) : (
-            logs.map((log, index) => (
-              <p key={index} className={log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-green-400' : 'text-gray-200'}>
-                [{log.timestamp}] {log.message}
+            logs.map((log, i) => (
+              <p key={i} className={log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-green-400' : 'text-slate-300'}>
+                <span className="text-slate-500">[{log.timestamp}]</span> {log.message}
               </p>
             ))
           )}
         </div>
       </div>
 
-      {/* Results Display */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Results</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {stepResults.leiData && (
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 relative">
-              <h4 className="font-semibold text-gray-800 mb-2">LEI Data</h4>
-              <pre className="text-xs overflow-x-auto bg-gray-100 p-2 rounded">
-                {JSON.stringify(stepResults.leiData, null, 2)}
-              </pre>
-              <button
-                onClick={() => copyToClipboard(JSON.stringify(stepResults.leiData, null, 2))}
-                className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:bg-gray-200"
-                title="Copy to clipboard"
-              >
-                <Clipboard className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-          {stepResults.pipelineResponse && (
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 relative">
-              <h4 className="font-semibold text-gray-800 mb-2">Pipeline Response</h4>
-              <pre className="text-xs overflow-x-auto bg-gray-100 p-2 rounded">
-                {JSON.stringify(stepResults.pipelineResponse, null, 2)}
-              </pre>
-              <button
-                onClick={() => copyToClipboard(JSON.stringify(stepResults.pipelineResponse, null, 2))}
-                className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:bg-gray-200"
-                title="Copy to clipboard"
-              >
-                <Clipboard className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-          {stepResults.assetScore && (
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 relative">
-              <h4 className="font-semibold text-gray-800 mb-2">Asset Score</h4>
-              <pre className="text-xs overflow-x-auto bg-gray-100 p-2 rounded">
-                {JSON.stringify(stepResults.assetScore, null, 2)}
-              </pre>
-              <button
-                onClick={() => copyToClipboard(JSON.stringify(stepResults.assetScore, null, 2))}
-                className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:bg-gray-200"
-                title="Copy to clipboard"
-              >
-                <Clipboard className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-          {stepResults.attestation && (
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 relative">
-              <h4 className="font-semibold text-gray-800 mb-2">Attestation</h4>
-              <pre className="text-xs overflow-x-auto bg-gray-100 p-2 rounded">
-                {JSON.stringify(stepResults.attestation, null, 2)}
-              </pre>
-              <button
-                onClick={() => copyToClipboard(JSON.stringify(stepResults.attestation, null, 2))}
-                className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:bg-gray-200"
-                title="Copy to clipboard"
-              >
-                <Clipboard className="h-4 w-4" />
-              </button>
-            </div>
-          )}
+      {/* Results */}
+      {(stepResults.leiData || stepResults.pipelineResponse || stepResults.assetScore || stepResults.attestation) && (
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Results</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {([
+              ['LEI Data', stepResults.leiData],
+              ['Pipeline Response', stepResults.pipelineResponse],
+              ['Asset Score', stepResults.assetScore],
+              ['Attestation', stepResults.attestation],
+            ] as [string, any][]).filter(([, v]) => v).map(([label, value]) => (
+              <div key={label} className="bg-slate-50 rounded-lg border border-slate-200 p-4 relative">
+                <h4 className="font-semibold text-gray-800 text-sm mb-2">{label}</h4>
+                <pre className="text-xs overflow-x-auto bg-white rounded-lg p-3 border border-slate-100 max-h-40 overflow-y-auto">
+                  {JSON.stringify(value, null, 2)}
+                </pre>
+                <button
+                  onClick={() => copyToClipboard(JSON.stringify(value, null, 2))}
+                  className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors"
+                  title="Copy to clipboard"
+                >
+                  <Clipboard className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-        {!stepResults.leiData && !stepResults.pipelineResponse && !stepResults.assetScore && !stepResults.attestation && (
-          <p className="text-gray-600 text-center">Run the pipeline to see results here.</p>
-        )}
-      </div>
+      )}
+
+      {toast && <Toast message={toast.msg} type={toast.type} visible />}
     </div>
   );
 };

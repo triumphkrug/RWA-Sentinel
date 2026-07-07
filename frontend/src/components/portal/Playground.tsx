@@ -39,8 +39,8 @@ const endpoints: Endpoint[] = [
 
   // Slashing
   { category: 'Slashing', name: 'Reports', method: 'GET', path: '/api/v1/slashing/reports', description: 'List slashing reports' },
-  { category: 'Slashing', name: 'Report Violation', method: 'POST', path: '/api/v1/slashing/report', body: { oraclePublicKey: '0197cedbd7498429c4c277fc313d8e90574b5d189552c86244deaef3b37fd4c81f', reporterPublicKey: '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79', reason: 'Score manipulation detected', severity: 3 }, description: 'Report oracle misconduct' },
-  { category: 'Slashing', name: 'Challenge Report', method: 'POST', path: '/api/v1/slashing/challenge', body: { reportId: '<paste report ID>', challengerPublicKey: '0197cedbd7498429c4c277fc313d8e90574b5d189552c86244deaef3b37fd4c81f', counterEvidence: 'Scoring was legitimate' }, description: 'Challenge a report' },
+  { category: 'Slashing', name: 'Report Violation', method: 'POST', path: '/api/v1/slashing/report', body: { oracleId: '0197cedbd7498429c4c277fc313d8e90574b5d189552c86244deaef3b37fd4c81f', attestationId: 'att-001', reporterPublicKey: '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79', evidenceHash: 'sha256-evidence-hash' }, description: 'Report oracle misconduct' },
+  { category: 'Slashing', name: 'Challenge Report', method: 'POST', path: '/api/v1/slashing/challenge', body: { reportId: '<paste report ID>', challengerPublicKey: '0197cedbd7498429c4c277fc313d8e90574b5d189552c86244deaef3b37fd4c81f', challengeStakeAmount: 500 }, description: 'Challenge a report' },
 
   // Chain
   { category: 'Chain', name: 'Chain All', method: 'GET', path: '/api/v1/chain/all', description: 'Full chain overview + activity + txs' },

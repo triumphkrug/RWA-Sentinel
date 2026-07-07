@@ -67,8 +67,9 @@ const SBTCard: React.FC<SBTCardProps> = ({
     <div
       className="relative overflow-hidden"
       style={{
-        width: 400,
-        height: 600,
+        width: '100%',
+        maxWidth: 400,
+        aspectRatio: '2/3',
         borderRadius: 6,
         boxShadow: '0 0 0 3px #b8942e, 0 0 0 6px #0d1b3e, 0 0 0 8px #c9a84c, 0 20px 50px rgba(0,0,0,0.45)',
       }}

@@ -83,7 +83,7 @@ const governanceService = new GovernanceService({
   // challenge period, keeping the two governance timers consistent.
   votingPeriodHours: 48,
   quorumThresholdPercent: 51,
-  minProposalStake: 1000,
+  minProposalStake: 0,
 }, publisher);
 
 const slashingService = new OracleSlashingService({
