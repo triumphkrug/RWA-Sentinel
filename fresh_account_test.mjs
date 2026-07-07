@@ -1,10 +1,5 @@
-import {
-  PrivateKey,
-  KeyAlgorithm,
-  NativeTransferBuilder,
-  HttpHandler,
-  RpcClient,
-} from "casper-js-sdk";
+import pkg from "casper-js-sdk";
+const { PrivateKey, KeyAlgorithm, NativeTransferBuilder, HttpHandler, RpcClient } = pkg;
 import fs from "fs";
 
 const NODE_RPC = "https://node.testnet.casper.network/rpc";
@@ -15,7 +10,7 @@ async function main() {
     "/work/skills/projects/ae402_hackathon/keys/deployer_keys/triumphkrug_secret_key.pem",
     "utf8"
   );
-  const deployerKey = PrivateKey.fromPem(deployerPem, KeyAlgorithm.ED25519);
+  const deployerKey = PrivateKey.fromPem(deployerPem, KeyAlgorithm.SECP256K1);
   console.log("deployer pubkey:", deployerKey.publicKey.toHex());
 
   const freshPem = fs.readFileSync(

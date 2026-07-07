@@ -631,3 +631,52 @@ of **17 pages (~1.09MB)**, well under the 64-page cap. Ruled out.
 rounds are now exhausted. Fresh-account rate-limit test remains the only untested hypothesis,
 and it requires funding a new testnet account (faucet + real gas) — not done yet, pending
 explicit go-ahead given cost.
+
+## Update 10 (2026-07-07, ~11:25): ROOT CAUSE FOUND — per-account state issue, not a code/wasm/toolchain bug. RESOLVED via fresh account.
+
+Per requester's go-ahead, tested the fresh-account hypothesis (flagged since Update 4 as the
+last untested theory):
+
+1. Generated a brand-new Ed25519 keypair, never used for any transaction before.
+2. Funded it with 260 CSPR via a direct native transfer from the already-funded deployer account
+   `02029f26...` (avoids faucet captcha friction) — transfer tx
+   `9d937b53125776f71661a736c7fe3a2732b9955476fbc05400192b1d25e9c07a`, confirmed
+   `error_message: null`.
+3. Submitted the **exact same** `oracle-slashing.wasm` (89,941 B, current fixed A1 source) as an
+   install/upgrade `SessionBuilder` transaction from this fresh account, same 250 CSPR payment,
+   same chain (`casper-test`), same entry point/scheduling as every prior failing attempt from
+   the old deployer account.
+
+**Result: `error_message: null`. SUCCESS.** Gas consumed: 102,453,215,377 motes (~102.45 CSPR) —
+a real, variable, content-dependent amount (not the constant ~2.85-3.06M-mote figure seen on
+every failed attempt from the old account). 30 real state effects, including two `AddKeys`
+effects on the account. Confirmed via `state_get_entity` on the new account's `AccountHash`:
+```
+oracle_slashing_contract_hash -> hash-fef80eef2a24c70e6822307b61539ea6f3fd5ba9365b4c0a8738ad326da921a3
+oracle_slashing_package_hash  -> hash-e9c16def2cab30e274858fe6c212ae21e1b0e0c7bd3226416924191665a505f6
+```
+Real, live, on-chain contract — first successful `oracle-slashing` install (with the A1
+purse-slashing fix) this entire project.
+
+**Also deployed `kyc-gate.wasm` (S4, 86,908 B) from the same fresh account as a second
+confirmation** — also succeeded (`error_message: null`, 92,077,249,869 motes consumed, 17
+effects):
+```
+kyc_gate_contract_hash -> hash-6e0dd2dc7673cf5c7c4e99ad5c956320a3f0f19db4cdb2293eab222611aa58d5
+kyc_gate_package_hash  -> hash-f05dd94e189779e87506609ef5afdc74d5da33bcf2c3780bc29cd117cabf3c8a
+```
+
+**Conclusion**: the `ApiError::InvalidArgument [3]` that blocked every install/upgrade attempt
+across 9 investigation rounds was **not** a code, wasm, toolchain, or dependency-version issue —
+it was specific to the **old deployer account's on-chain state** (most likely a per-account
+counter/threshold from 12+ accumulated install attempts this project, though the exact mechanism
+inside casper-node wasn't isolated — the practical fix (fresh account) works regardless of the
+precise internal cause). All 9 rounds of code-level investigation were still valuable due
+diligence (ruled out real risks: CLType::Any, wasm size, toolchain drift, opcode support,
+version gaps) but the actual fix was operational, not a code change.
+
+**Follow-up needed**: the new contract hashes above live on a **different account** than
+`asset-registry`/`attestation-store`/`governance-dao` (still on `02029f26...`). Cross-contract
+calls (if any) and the app's env-configured contract hashes need to point at the right
+account/hash per contract. Update backend config with these two new hashes, then re-verify the
+full pipeline against them before considering this closed.
