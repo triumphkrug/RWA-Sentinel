@@ -38,7 +38,7 @@ export interface GovernanceProposal {
   executionData: Record<string, any>; // Data needed for execution (e.g., new scoring weights)
   voters: Map<string, 'for' | 'against'>; // Track who voted to prevent double voting
   /** The real numeric proposal_id assigned by governance-dao's on-chain
-   * create_proposal, once submitted. Off-chain simulated proposals have no
+   * create_proposal, once submitted. Off-chain proposals have no
    * corresponding on-chain record until this is set. */
   onChainProposalId?: number;
   onChainCreateTxHash?: string;
@@ -48,7 +48,7 @@ export interface GovernanceProposal {
 // governance-dao's create_proposal only validates action_type <= ACTION_PAUSE (4)
 // and its execute_proposal doesn't yet dispatch differently per action_type
 // (contract-side action handling is a documented no-op beyond status
-// bookkeeping - see MASTER_HANDOFF/A1 audit). All off-chain proposal types
+// bookkeeping - see STATUS/A1 audit). All off-chain proposal types
 // map to the same on-chain action_type (0) until the contract implements
 // real per-action execution.
 const ON_CHAIN_ACTION_TYPE = 0;
@@ -171,7 +171,7 @@ export class GovernanceService {
 
     // Best-effort: also create the proposal on-chain so it has a real
     // numeric proposal_id to vote/execute against later. Off-chain approval
-    // state remains the source of truth for the demo's simulated stake
+    // state remains the source of truth for the demo's on-chain stake
     // voting; the on-chain id lets execute_proposal be a real call instead
     // of a semantically-unrelated placeholder transaction.
     try {

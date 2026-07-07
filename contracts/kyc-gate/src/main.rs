@@ -23,7 +23,7 @@
 //! like the reference. An asset-registry/attestation-store integration would
 //! call `is_kyc_proved` before registering a new asset issuer; that wiring
 //! is not done yet (would require an upgrade to those contracts, which hits
-//! the redeploy blocker documented in docs/WASM_INSTALL_DIAGNOSIS.md) — this
+//! the redeploy blocker documented in docs/TECHNICAL_NOTES.md) — this
 //! contract is written, compiles cleanly, and is ready to deploy/wire in
 //! once that blocker is resolved. Real code, not yet live — same
 //! transparency policy as the oracle-slashing purse fix.

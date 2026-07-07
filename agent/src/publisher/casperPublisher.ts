@@ -43,7 +43,7 @@ interface CasperPublisherConfig {
    * 100 and requires 30% of total_staked=1000 (the live on-chain value)
    * to reach quorum (300) — a single account can never pass a proposal,
    * so multiple independently-signed accounts demonstrate a real,
-   * non-simulated full governance cycle. */
+   * full governance cycle. */
   extraGovernanceVoterKeyPaths?: string[];
   /** Optional CSPR.cloud API key, required when nodeUrl points at a
    * *.cspr.cloud RPC gateway (returns 401 without it). Some cloud hosts

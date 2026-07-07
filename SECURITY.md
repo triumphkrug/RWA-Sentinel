@@ -25,7 +25,7 @@ The system assumes:
 
 ## Known issues
 
-Documented in [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md):
+Documented in [docs/STATUS.md](docs/STATUS.md):
 - No contract upgrade mechanism (hackathon scope)
 - Oracle rotation not yet implemented
 - Scoring weight updates require redeployment

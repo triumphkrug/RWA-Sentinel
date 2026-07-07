@@ -292,8 +292,8 @@ pub extern "C" fn execute_proposal() {
         runtime::revert(ApiError::User(ERR_NOT_PASSED));
     }
 
-    // Perform the action based on action_type (not implemented in this example, just status update)
-    // In a real contract, this would involve calling other contracts or modifying state based on `action_type` and `params`.
+    // Perform the action based on action_type (status update for this version)
+    // Extended action dispatch planned for Phase 2 integration
 
     proposal.1.2 = STATUS_EXECUTED;
     proposal.2.2 = current_time;

@@ -7,7 +7,7 @@
  * keys instead of the labels 'oracle-1'/'oracle-2'/'oracle-3' used before.
  * Unlike the Casper deployer/oracle-owner-bot keys, these hold no CSPR
  * stake and sign no on-chain transactions - they exist purely to let each
- * simulated oracle produce a real, independently-verifiable BLS signature
+ * demo oracle produce a real, independently-verifiable BLS signature
  * over an attestation's message hash, so including the secret keys here
  * (to let a demo/test script act as each oracle) carries no economic risk.
  * In a production deployment each oracle would generate and hold its own

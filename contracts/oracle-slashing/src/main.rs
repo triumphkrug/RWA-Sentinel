@@ -143,7 +143,7 @@ pub extern "C" fn register_oracle() {
     // (InvalidAccessRights) for every calling pattern tried (direct ContractCall, and a
     // purpose-built session-wasm doing the textbook-documented
     // `account::get_main_purse()` + `runtime::call_contract()` pattern) — see
-    // docs/KNOWN_LIMITATIONS.md for the full investigation. Redesigned to avoid a URef arg
+    // docs/STATUS.md for the full investigation. Redesigned to avoid a URef arg
     // entirely while staying fully on-chain-enforced (not just a trusted claim):
     //   1. Caller deposits real CSPR into this contract's own `stake_purse` first, via a plain
     //      session that calls `system::transfer_from_purse_to_purse` directly (no stored-contract
@@ -553,7 +553,7 @@ pub extern "C" fn call() {
     // whether the redeploy blocker was caused by the deployer account already owning
     // a same-named package key from the original install. Result: identical
     // `ApiError::InvalidArgument` failure even with a never-before-used name -
-    // disproved that theory. See docs/WASM_INSTALL_DIAGNOSIS.md Update 5. Reverted to
+    // disproved that theory. See docs/TECHNICAL_NOTES.md Update 5. Reverted to
     // the original names since the rename had no effect and would only confuse a
     // future redeploy attempt.
     let (contract_hash, _version) = storage::new_contract(

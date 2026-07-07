@@ -212,7 +212,7 @@ higher-risk directions below with a real, previously-shipped, simple
 pattern instead. It compiles cleanly to WASM but is **not yet deployed or
 wired into `asset-registry`/`attestation-store`** (that wiring needs a
 contract upgrade, which currently hits the redeploy blocker in
-[docs/WASM_INSTALL_DIAGNOSIS.md](docs/WASM_INSTALL_DIAGNOSIS.md)) — tracked
+[docs/TECHNICAL_NOTES.md](docs/TECHNICAL_NOTES.md)) — tracked
 as real, ready code, not a live feature.
 
 Two other directions we researched but deliberately did **not** implement for this
@@ -322,11 +322,11 @@ yet deployed (see [Roadmap: Compliance Attestation](#roadmap-compliance-attestat
 
 Key entry points: `register_asset`, `batch_attest`, `get_attestation`, `register_oracle`, `report_violation`, `execute_slash`, `withdraw_stake`, `dao_invalidate`, `create_proposal`, `vote`, `execute_proposal`, `set_kyc_status`.
 
-Security: 18 findings addressed (risk score reduced from 4/10 to 2/10). See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
+Security: 18 findings addressed (risk score reduced from 4/10 to 2/10). See [docs/STATUS.md](docs/STATUS.md).
 
 A known, documented redeploy limitation for two of these contracts' newest fixes is tracked
-in [docs/WASM_INSTALL_DIAGNOSIS.md](docs/WASM_INSTALL_DIAGNOSIS.md) and
-[docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) — the hashes above are the currently
+in [docs/TECHNICAL_NOTES.md](docs/TECHNICAL_NOTES.md) and
+[docs/STATUS.md](docs/STATUS.md) — the hashes above are the currently
 live, working versions.
 
 ### Live testnet activity
@@ -473,7 +473,7 @@ RWA-Sentinel/
 
 [Apache License 2.0](LICENSE)
 
-> **Security notice:** This project operates on Casper testnet only. Deployer secret keys must never be committed. See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for full risk assessment.
+> **Security notice:** This project operates on Casper testnet only. Deployer secret keys must never be committed. See [docs/STATUS.md](docs/STATUS.md) for full risk assessment.
 
 ---
 

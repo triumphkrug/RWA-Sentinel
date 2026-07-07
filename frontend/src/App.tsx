@@ -9,6 +9,7 @@ import UseCases from './components/UseCases'
 import WhyTimeLimited from './components/WhyTimeLimited'
 import SDKSection from './components/SDKSection'
 import Architecture from './components/Architecture'
+import Advantages from './components/Advantages'
 import FAQ from './components/FAQ'
 import CtaFooter from './components/CtaFooter'
 import Footer from './components/Footer'
@@ -24,6 +25,9 @@ import Contracts from './components/portal/Contracts'
 import Anomalies from './components/portal/Anomalies'
 import AgentDemo from './components/portal/AgentDemo'
 import Playground from './components/portal/Playground'
+import ChainExplorer from './components/portal/ChainExplorer'
+import DataAdapters from './components/portal/DataAdapters'
+import KYCGate from './components/portal/KYCGate'
 
 function Landing() {
   useEffect(() => {
@@ -45,6 +49,7 @@ function Landing() {
       <TrustFactors />
       <UseCases />
       <WhyTimeLimited />
+      <Advantages />
       <Architecture />
       <SDKSection />
       <FAQ />
@@ -78,6 +83,9 @@ export default function App() {
             <Route path="sbt" element={<SBT />} />
             <Route path="sbts" element={<SBT />} />
             <Route path="contracts" element={<Contracts />} />
+            <Route path="chain" element={<ChainExplorer />} />
+            <Route path="data" element={<DataAdapters />} />
+            <Route path="kyc" element={<KYCGate />} />
             <Route path="anomalies" element={<Anomalies />} />
             <Route path="agent-demo" element={<AgentDemo />} />
             <Route path="playground" element={<Playground />} />

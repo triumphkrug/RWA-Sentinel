@@ -10,7 +10,7 @@
  * a placeholder - every signature accepted is checked against its
  * claimed oracle's real public key before being counted toward the
  * threshold, and finalization performs a real elliptic-curve pairing
- * verification of the aggregate signature, not a simulated string.
+ * verification of the aggregate signature, a real cryptographic proof.
  *
  * "Threshold" here means k-of-n signature aggregation (the same model used
  * by e.g. Ethereum's BLS-based consensus attestations), not Shamir secret
