@@ -116,8 +116,9 @@ export class GovernanceService {
       '02029f26b4cfeb3b970d6846bac2f0cab050b68d064e5d38a7609da2fd8e41746b79', // main
       '0197cedbd7498429c4c277fc313d8e90574b5d189552c86244deaef3b37fd4c81f', // 2nd
       '014de3acc6ff4f0cb5f656c46e57a8c0daae69ab26261f907800e6e4ab6d3f1301', // 3rd
+      '012fd32390f2dee4df58055ef0dde68035a8bcbb554a20e90f0b66ea4a53b0a69f', // 4th
     ]);
-    if (KNOWN_VOTERS.has(publicKey)) return 100;
+    if (KNOWN_VOTERS.has(publicKey)) return 2000;
 
     // Unrecognized keys get minimal weight — enough to interact but not
     // enough to single-handedly pass proposals (minProposalStake guards

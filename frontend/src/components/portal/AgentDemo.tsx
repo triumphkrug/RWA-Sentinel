@@ -167,18 +167,22 @@ const AgentDemo: React.FC = () => {
         return assetScore;
       });
       setStepResults((prev) => ({ ...prev, assetScore: scores }));
-      addLog(`Asset scored: ${scores.score?.toFixed(2) ?? 'N/A'}`, 'info');
+      addLog(`Asset scored: ${(scores?.score ?? 0).toFixed(2)}`, 'info');
 
       // Step 4: View attestation
       const attestations = await runStep(4, async () => {
-        const allAttestations = await getAttestations({ limit: 10, status: 'attested' });
-        const attestation = allAttestations.attestations.find((a: Attestation) => a.identifier === lei)
-          || allAttestations.attestations[0];
-        if (!attestation) throw new Error('No attestations found. The pipeline may need more time to process.');
+        // Try with attested status first, then any status
+        let allAttestations = await getAttestations({ limit: 20, status: 'attested' });
+        if (!allAttestations.attestations?.length) {
+          allAttestations = await getAttestations({ limit: 20 });
+        }
+        const attestation = allAttestations.attestations?.find((a: Attestation) => a.identifier === lei)
+          || allAttestations.attestations?.[0];
+        if (!attestation) throw new Error('No attestations found yet. Run the pipeline first to generate attestations.');
         return attestation;
       });
       setStepResults((prev) => ({ ...prev, attestation: attestations }));
-      addLog(`Attestation found: ${(attestations.id || '').substring(0, 12)}...`, 'info');
+      addLog(`Attestation found: ${(attestations?.id || '').substring(0, 12)}…`, 'info');
 
       addLog('Full pipeline demo completed successfully!', 'success');
     } catch (e) {
@@ -307,7 +311,7 @@ const AgentDemo: React.FC = () => {
           <div className={`flex flex-col items-center p-4 rounded-lg border ${loadingStep === 3 ? 'border-blue-500 bg-blue-50' : stepResults.assetScore ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
             <CheckCircle className={`h-8 w-8 ${loadingStep === 3 ? 'text-blue-600' : stepResults.assetScore ? 'text-green-600' : 'text-gray-500'}`} />
             <p className="mt-2 font-medium text-center">3. View Scores</p>
-            {stepResults.assetScore && <p className="text-xs text-gray-600 mt-1">Score: {stepResults.assetScore.score.toFixed(2)}</p>}
+            {stepResults.assetScore && <p className="text-xs text-gray-600 mt-1">Score: {(stepResults.assetScore.score ?? 0).toFixed(2)}</p>}
           </div>
           <div className="flex items-center justify-center">
             <ChevronRight className="h-6 w-6 text-gray-400" />

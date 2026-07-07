@@ -62,6 +62,7 @@ export interface ScoreFactor {
   score: number;
   weight: number;
   details?: string;
+  evidence?: string;
 }
 
 export interface AssetScore {
@@ -71,6 +72,7 @@ export interface AssetScore {
   score: number;
   factors: ScoreFactor[];
   timestamp: string;
+  isAboveThreshold?: boolean;
   metadata?: Record<string, any>;
 }
 
@@ -319,8 +321,23 @@ export const getHealth = () => fetcher<HealthResponse>('/health');
 export const postPipeline = (body: PipelineRunRequest) => fetcher<PipelineRunResponse>('/api/v1/pipeline', 'POST', body);
 export const getScores = async (): Promise<AssetScore[]> => {
   const res = await fetcher<any>('/api/v1/scores');
-  // Backend returns { scores: [...] }
-  return Array.isArray(res) ? res : (res.scores || []);
+  const raw: any[] = Array.isArray(res) ? res : (res.scores || []);
+  // Map backend shape (invoiceId/trustScore/scoredAt) → frontend shape
+  return raw.map((r: any) => ({
+    asset_id: r.asset_id || r.invoiceId || r.id || '',
+    asset_type: r.asset_type || 'invoice',
+    identifier: r.identifier || r.invoiceId || r.asset_id || '',
+    score: r.score ?? r.trustScore ?? 0,
+    factors: (r.factors || []).map((f: any) => ({
+      name: f.name,
+      score: f.score ?? 0,
+      weight: f.weight ?? 0,
+      details: f.details || f.evidence || '',
+    })),
+    timestamp: r.timestamp || r.scoredAt || new Date().toISOString(),
+    isAboveThreshold: r.isAboveThreshold,
+    metadata: r.metadata,
+  }));
 };
 export const getStats = () => fetcher<StatsResponse>('/api/v1/stats');
 export const getAttestations = (params?: { page?: number; limit?: number; status?: AttestationStatus; min_score?: number }) => {
@@ -371,7 +388,20 @@ export const postConsensusInit = (body: { attestationId: string; messageHash: st
 export const getChainAll = () => fetcher<ChainAllResponse>('/api/v1/chain/all');
 
 // Extensions
-export const getExtensionCategories = () => fetcher<{ categories: AssetCategory[] }>('/api/v1/extensions/categories');
+export const getExtensionCategories = async (): Promise<{ categories: AssetCategory[] }> => {
+  const raw = await fetcher<any>('/api/v1/extensions/categories');
+  // Backend returns { categories: string[], weights: { [cat]: { ... } } }
+  const cats: string[] = raw.categories || [];
+  const weights: Record<string, Record<string, number>> = raw.weights || {};
+  return {
+    categories: cats.map((name: string) => ({
+      id: name,
+      name: name.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+      description: `${name.replace(/_/g, ' ')} asset category`,
+      weights: weights[name] || {},
+    })),
+  };
+};
 export const getCategoryCompliance = (category: string) => fetcher<any>(`/api/v1/extensions/categories/${category}/compliance`);
 export const postKycCheck = (submitterPublicKey: string) => fetcher<KycCheckResult>('/api/v1/extensions/kyc/check', 'POST', { submitterPublicKey });
 export const getBridgeChains = () => fetcher<{ chains: BridgeChain[] }>('/api/v1/extensions/bridge/chains');

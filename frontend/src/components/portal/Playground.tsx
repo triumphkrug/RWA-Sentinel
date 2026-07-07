@@ -49,7 +49,7 @@ const endpoints: Endpoint[] = [
   { category: 'Chain', name: 'Chain Transactions', method: 'GET', path: '/api/v1/chain/transactions', description: 'Recent large transactions' },
 
   // Consensus
-  { category: 'Consensus', name: 'Init Consensus', method: 'POST', path: '/api/v1/consensus/init', body: { attestationId: 'att-001', messageHash: 'abc123def456' }, description: 'Initialize BLS 3-of-5 consensus round' },
+  { category: 'Consensus', name: 'Init Consensus', method: 'POST', path: '/api/v1/consensus/init', body: { attestationId: 'att-001', messageHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2' }, description: 'Initialize BLS 3-of-5 consensus round' },
 
   // Extensions
   { category: 'Extensions', name: 'Asset Categories', method: 'GET', path: '/api/v1/extensions/categories', description: '10 asset category profiles' },
@@ -102,8 +102,10 @@ const Playground: React.FC = () => {
     setSelectedEndpoint(endpoint);
     setEditedPath(endpoint.path);
     setRequestBody(endpoint.body ? JSON.stringify(endpoint.body, null, 2) : '');
+    // Always clear previous results on switch
     setResponse(null);
     setError(null);
+    setLoading(false);
   };
 
   const executeRequest = async () => {

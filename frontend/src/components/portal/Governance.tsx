@@ -112,7 +112,7 @@ const Governance: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Gavel className="h-6 w-6 text-blue-600" /> Governance DAO
           </h2>
-          <p className="text-gray-500 mt-1">Create proposals, vote, and execute on-chain governance actions</p>
+          <p className="text-gray-500 mt-1">Create proposals, vote, and execute on-chain governance actions. Proposers must be registered oracle accounts with sufficient stake.</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -135,7 +135,8 @@ const Governance: React.FC = () => {
       {/* Create Proposal Form */}
       {showForm && (
         <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Proposal</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Create New Proposal</h3>
+          <p className="text-sm text-gray-500 mb-4">Requires a connected wallet with registered oracle account (min stake: 1,000 CSPR). Known deployer accounts are pre-authorized.</p>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Proposal Type</label>

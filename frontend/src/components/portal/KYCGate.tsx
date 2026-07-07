@@ -233,7 +233,19 @@ export default function KYCGate() {
             {categories.map(cat => (
               <div key={cat.id} className="bg-white p-4">
                 <p className="font-medium text-gray-900 text-sm">{cat.name}</p>
-                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{cat.description}</p>
+                {cat.weights && Object.keys(cat.weights).length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {Object.entries(cat.weights).slice(0, 3).map(([k, v]) => (
+                      <div key={k} className="flex justify-between text-[11px]">
+                        <span className="text-gray-500 truncate mr-1">{k.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        <span className="text-gray-700 font-medium">{v}%</span>
+                      </div>
+                    ))}
+                    {Object.keys(cat.weights).length > 3 && (
+                      <p className="text-[10px] text-gray-400">+{Object.keys(cat.weights).length - 3} more</p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
