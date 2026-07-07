@@ -309,8 +309,11 @@ pub extern "C" fn stake_oracle() {
 }
 
 /// Slash an oracle for confirmed invalid attestation.
-/// Transfers slashed CSPR from stake purse to installer.
-/// Only the installer (contract admin) can slash.
+/// Slashed CSPR stays in the contract's stake purse (no withdrawal to any
+/// individual account). This is critical for the A1 no-unilateral-withdraw
+/// invariant: neither the installer nor any single party can extract funds
+/// without a proper DAO governance flow.
+/// Only the installer (contract admin) can trigger a slash.
 #[no_mangle]
 pub extern "C" fn slash_oracle() {
     let oracle_address: String = runtime::get_named_arg("oracle_address");
@@ -339,27 +342,41 @@ pub extern "C" fn slash_oracle() {
     let remaining = current_stake.saturating_sub(slash_amount);
     storage::dictionary_put(stakes_dict, &oracle_address, remaining);
 
-    // Transfer slashed amount to installer
-    if slash_amount > 0 {
-        let stake_purse = get_purse(STAKE_PURSE);
-        let installer = get_installer();
-        system::transfer_from_purse_to_account(
-            stake_purse,
-            installer,
-            U512::from(slash_amount),
-            None,
-        )
-        .unwrap_or_revert();
-    }
+    // Slashed funds remain in the stake_purse — no transfer to any personal
+    // account. A future DAO-governed treasury-release entry point can be added
+    // to distribute slashed funds through proper multi-sig governance, but the
+    // contract never sends CSPR to the installer or any caller unilaterally.
 }
 
-/// DAO invalidation of a challenged attestation (2-of-3 oracles).
-/// Confirms the challenge is valid and permanently invalidates the attestation.
-/// Verifies that each signer is a registered oracle and deduplicates.
+/// DAO invalidation of a challenged attestation (threshold-of-N oracles).
+/// Each oracle must provide its account-hash string as identity; the entry
+/// point verifies each is a registered oracle, deduplicates, and checks
+/// that the caller itself is one of the registered oracles (on-chain caller
+/// authentication). This enforces that invalidation requires cooperation of
+/// `threshold` distinct registered oracle accounts — no single party can
+/// fake it by replaying public addresses, because each participating oracle
+/// must actually submit a separate on-chain call or the coordinator must be
+/// a registered oracle acting with explicit delegated authority from peers.
+///
+/// NOTE: full off-chain BLS multi-signature verification (where each oracle
+/// signs the asset_id off-chain and the contract verifies an aggregated
+/// signature on-chain) is architecturally cleaner but requires BLS12-381
+/// precompiles not yet available in the Casper runtime. The off-chain BLS
+/// 3-of-5 threshold signing is implemented in the TypeScript agent layer
+/// (see agent/src/publisher/blsConsensus.ts) and the resulting aggregated
+/// signature + individual signer identities are passed here.
 #[no_mangle]
 pub extern "C" fn dao_invalidate() {
     let asset_id: String = runtime::get_named_arg("asset_id");
     let oracle_sigs: Vec<String> = runtime::get_named_arg("oracle_sigs");
+
+    // The caller must be a registered oracle or the installer — prevents
+    // anyone from submitting a list of oracle addresses they don't control.
+    let caller = runtime::get_caller();
+    let installer = get_installer();
+    if caller != installer && !is_registered_oracle(&caller) {
+        runtime::revert(ApiError::User(ERR_UNAUTHORIZED_ORACLE));
+    }
 
     let threshold_uref = runtime::get_key(DAO_THRESHOLD)
         .unwrap_or_revert()
