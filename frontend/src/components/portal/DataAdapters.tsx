@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Database, Search, RefreshCw, CheckCircle, XCircle, Globe } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || 'https://rwa-sentinel-api.onrender.com'
+const API = import.meta.env.VITE_API_URL || ''
 
 interface AdapterResult {
   source: string
