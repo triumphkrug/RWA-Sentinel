@@ -71,8 +71,17 @@ Last verified against actual deployed contract source: 2026-07-07.
 
 - **No persistent state / scheduler** — the agent runs as a one-shot script; production use
   would need a scheduler or long-running process.
-- **BLS multi-oracle consensus (3-of-5)** — not implemented; single-oracle attestation only
-  today. Roadmap item, not represented as working anywhere in the UI/docs.
+- **BLS multi-oracle consensus (3-of-5)** — the off-chain crypto (`agent/src/crypto/blsThreshold.ts`,
+  real BLS12-381 sign/aggregate/pairing-verify, `/api/v1/consensus/*`) is real and wired in
+  (fixed a stale doc claim of "not implemented" on 2026-07-07 — see README's What Is Real table).
+  What's still not done: the on-chain `attestation-store` contract accepts single-oracle
+  attestation only and doesn't require/verify the aggregated threshold signature on-chain.
+- **KYC gate** — `contracts/kyc-gate/` (new 2026-07-07) is a real contract modeled on the
+  official `casper-ecosystem/kyc-proxy-contract` reference, compiles cleanly, but is not yet
+  deployed or wired into `asset-registry`/`attestation-store` (blocked on the same redeploy
+  issue as everything else needing an upgrade). Replaces the previous TEE/ZK-KYC "future
+  direction" note with real, ready code instead of an invented-from-scratch plan.
 - **TEE-attested compliance / on-chain ZK KYC** — deliberately not implemented for this
-  submission; documented only as a future-direction roadmap note in the README, not claimed as
+  submission (see kyc-gate above for the lower-risk real alternative that was built instead);
+  documented only as a future-direction roadmap note in the README, not claimed as
   a working feature anywhere.
