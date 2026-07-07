@@ -4,6 +4,7 @@ members = [
     "attestation-store",
     "governance-dao",
     "oracle-slashing",
+    "kyc-gate",
     "tests",
 ]
 resolver = "2"

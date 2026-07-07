@@ -196,9 +196,26 @@ The Oracle Panel portal exposes the live DAO vote panel with one-click FOR/AGAIN
 
 ---
 
-## Roadmap: Compliance Attestation (Not Implemented)
+## Roadmap: Compliance Attestation
 
-Two directions we researched but deliberately did **not** implement for this
+### KYC gate — real reference-pattern contract, written and compiled, not yet deployed
+
+`contracts/kyc-gate/` is a new contract modeled directly on the official
+[casper-ecosystem/kyc-proxy-contract](https://github.com/casper-ecosystem/kyc-proxy-contract)
+reference (adapted to this project's newer addressable-entity API): an
+on-chain allow-list of trusted KYC-provider contracts plus an
+`is_kyc_proved(account) -> bool` entry point that asks each active provider
+in turn and returns true on the first confirmation, exactly like the
+reference. `add_provider`/`ban_provider`/`unban_provider` are
+installer-gated. No invented cryptography — this replaces the two
+higher-risk directions below with a real, previously-shipped, simple
+pattern instead. It compiles cleanly to WASM but is **not yet deployed or
+wired into `asset-registry`/`attestation-store`** (that wiring needs a
+contract upgrade, which currently hits the redeploy blocker in
+[docs/WASM_INSTALL_DIAGNOSIS.md](docs/WASM_INSTALL_DIAGNOSIS.md)) — tracked
+as real, ready code, not a live feature.
+
+Two other directions we researched but deliberately did **not** implement for this
 submission, to avoid shipping a shallow, easily-broken version of either:
 
 - **TEE-attested compliance checks (Intel SGX / AMD SEV)** — running the
@@ -292,7 +309,8 @@ docker-compose up
 
 ## Smart Contracts
 
-All four deployed on Casper testnet.
+Four deployed on Casper testnet; a fifth (`kyc-gate`) is written and compiles cleanly but not
+yet deployed (see [Roadmap: Compliance Attestation](#roadmap-compliance-attestation) below).
 
 | Contract | Hash | Testnet Explorer |
 |---|---|---|
@@ -300,6 +318,7 @@ All four deployed on Casper testnet.
 | **attestation-store** | `53c9e877...` | [View on cspr.live](https://testnet.cspr.live/contract/53c9e87755a94e1b1efe38e23c83a50f6ffe77e200937dd0c1f923fe2976dce8) |
 | **governance-dao** | `154d32b5...` | [View on cspr.live](https://testnet.cspr.live/contract/154d32b56aa334a5f454b90292c829f994db24e998cf8a702c88c0b8034ceec4) |
 | **oracle-slashing** | `a6aad9bf...` | [View on cspr.live](https://testnet.cspr.live/contract/a6aad9bfe842c32de65d68f35f07301f0a4c7b89ab7e741ea390e5c73ebac87a) |
+| **kyc-gate** | *not deployed yet* | Source: [`contracts/kyc-gate/`](contracts/kyc-gate/) |
 
 Key entry points: `register_asset`, `batch_attest`, `get_attestation`, `challenge`, `stake_oracle`, `slash_oracle`, `dao_invalidate`, `invalidate_nft`.
 
@@ -339,7 +358,7 @@ clearly-labeled stand-ins, so reviewers don't have to guess:
 | Portal "Agent Demo" page | **Real pipeline, guided UI** | Despite the name, this calls the real backend API (`getLEIData`, `postPipeline`, `getScores`, `getAttestationById`) end-to-end. The only synthetic part is a 3-second UI sleep standing in for async pipeline completion (would be a webhook in production) |
 | Oracle latency figures on the portal | **Labeled simulated** | e.g. "~2 seconds (simulated)" — shown as an estimate, not measured production telemetry, and explicitly marked as such in the UI text |
 | BLS multi-oracle consensus (3-of-5 threshold) | **Real crypto, off-chain only** | `agent/src/crypto/blsThreshold.ts` performs genuine BLS12-381 keygen/sign/aggregate/pairing-verification (via `@noble/curves`, audited), exposed at `/api/v1/consensus/*` and covered by real tests. It aggregates real oracle signatures and finalizes with a real elliptic-curve pairing check — **not** a placeholder. What's *not* yet real: the on-chain `attestation-store` contract itself still accepts single-oracle attestation and doesn't require/verify a BLS-aggregated threshold signature on-chain — that wiring is the remaining Tier B work |
-| TEE-attested compliance / on-chain ZK KYC | **Not implemented** | See [Roadmap section](#roadmap-compliance-attestation-not-implemented) above — deliberately not built for this submission, called out as future work only |
+| TEE-attested compliance / on-chain ZK KYC | **Not implemented** | Deliberately not built (high risk for the time available) — see [Roadmap section](#roadmap-compliance-attestation) for the real, lower-risk `kyc-gate` contract built instead |
 
 If you find anything in the UI or docs that looks real but isn't labeled as simulated, please
 open an issue — that's a bug in our labeling, not intended behavior.
