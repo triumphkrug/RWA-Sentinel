@@ -6,10 +6,12 @@
  */
 
 import Fastify from 'fastify';
+import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { loadConfig } from './config.js';
 import { InvoiceCollector } from './collector/invoiceCollector.js';
 import { generateDemoInvoices } from './collector/invoiceGenerator.js';
+import type { RawInvoice } from './collector/types.js';
 import { LocalScorer } from './validator/localScorer.js';
 import { CrossRefChecker } from './validator/crossRef.js';
 import { FallbackCache } from './fallback/cache.js';
@@ -168,8 +170,44 @@ app.get('/health', async () => ({
   db: store ? 'connected' : 'memory-only',
 }));
 
-app.post('/api/v1/pipeline', async () => {
-  const rawInvoices = generateDemoInvoices(config.batchSize);
+// S2 (2026-07-07): explicit Real/Demo data-source toggle for the pipeline.
+// Real is the default in the sense that if the caller supplies their own
+// invoice data, it is used as-is (source: 'upload') and run through the
+// exact same real scoring/cross-ref/Merkle/on-chain-attestation pipeline as
+// demo data - nothing about the pipeline itself is different or weaker for
+// real input. If no invoices are supplied, falls back to the existing
+// synthetic generator (source: 'generator'), and the response always
+// reports which one actually happened via `dataSource`, so nothing is
+// silently mislabeled.
+const lineItemSchema = z.object({
+  description: z.string().min(1),
+  quantity: z.number().positive(),
+  unitPriceCents: z.number().int().nonnegative(),
+});
+const rawInvoiceSchema = z.object({
+  invoiceId: z.string().min(1),
+  issuer: z.string().min(1),
+  debtor: z.string().min(1),
+  amountCents: z.number().int().positive(),
+  currencyCode: z.string().length(3),
+  issuedAt: z.coerce.date(),
+  dueAt: z.coerce.date(),
+  lineItems: z.array(lineItemSchema).min(1),
+  metadata: z.record(z.string()).default({}),
+});
+const pipelineRequestSchema = z.object({
+  invoices: z.array(rawInvoiceSchema).min(1).max(config.batchSize).optional(),
+});
+
+app.post('/api/v1/pipeline', async (request, reply) => {
+  const parsed = pipelineRequestSchema.safeParse(request.body ?? {});
+  if (!parsed.success) {
+    reply.code(400);
+    return { error: 'invalid_request', message: 'Invalid `invoices` payload', issues: parsed.error.issues };
+  }
+
+  const dataSource: 'real-upload' | 'demo' = parsed.data.invoices ? 'real-upload' : 'demo';
+  const rawInvoices: RawInvoice[] = parsed.data.invoices ?? generateDemoInvoices(config.batchSize);
   const collected = collector.collectBatch(rawInvoices);
   const scores = scorer.scoreBatch(collected);
   const passing = scores.filter((s) => s.isAboveThreshold);
@@ -252,6 +290,7 @@ app.post('/api/v1/pipeline', async () => {
   }
 
   return {
+    dataSource,
     generated: rawInvoices.length,
     collected: collected.length,
     scored: scores.length,
