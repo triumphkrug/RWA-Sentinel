@@ -422,6 +422,18 @@ pub extern "C" fn withdraw_stake() {
     );
 
     storage::dictionary_put(oracle_dict, &oracle_id, updated_oracle);
+
+    // Transfer CSPR back from stake_purse to the caller's account
+    let stake_purse = runtime::get_key(STAKE_PURSE)
+        .unwrap_or_revert()
+        .into_uref()
+        .unwrap_or_revert();
+    system::transfer_from_purse_to_account(stake_purse, caller, amount, None)
+        .unwrap_or_revert();
+
+    // Keep total_staked in sync
+    let total_staked = read_uref::<U512>(TOTAL_STAKED_KEY);
+    write_uref(TOTAL_STAKED_KEY, total_staked.saturating_sub(amount));
 }
 
 #[no_mangle]
@@ -494,7 +506,7 @@ pub extern "C" fn call() {
         "report_violation",
         vec![
             Parameter::new("oracle_id", CLType::String),
-            Parameter::new("reason", CLType::String),
+            Parameter::new("severity", CLType::U64),
             Parameter::new("evidence", CLType::String),
         ],
         CLType::Unit,
@@ -507,7 +519,7 @@ pub extern "C" fn call() {
         "challenge_report",
         vec![
             Parameter::new("report_id", CLType::String),
-            Parameter::new("evidence", CLType::String),
+            Parameter::new("counter_evidence", CLType::String),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -518,7 +530,7 @@ pub extern "C" fn call() {
     entry_points.add_entry_point(EntityEntryPoint::new(
         "execute_slash",
         vec![
-            Parameter::new("oracle_id", CLType::String),
+            Parameter::new("report_id", CLType::String),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
