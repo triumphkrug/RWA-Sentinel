@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Fingerprint, TrendingUp, Clock, GitBranch, ShieldAlert, Database } from 'lucide-react'
 
 const factors = [
-  { icon: Fingerprint, name: 'Provenance', score: 92, desc: 'Traces asset origin through verified registries and ownership chains.' },
-  { icon: TrendingUp, name: 'Market Consistency', score: 87, desc: 'Cross-checks asset value against current market data and comparable sales.' },
-  { icon: Clock, name: 'Temporal Freshness', score: 95, desc: 'Ensures data was collected within the required recency window.' },
-  { icon: GitBranch, name: 'Cross-Reference', score: 88, desc: 'Validates data against 3+ independent sources for consistency.' },
-  { icon: ShieldAlert, name: 'Anomaly Detection', score: 91, desc: 'Pattern analysis flags statistical outliers and fraud signals.' },
-  { icon: Database, name: 'Source Reliability', score: 94, desc: 'Rates data sources by historical accuracy, uptime, and trust track record.' },
+  { icon: Fingerprint, name: 'Issuer History', score: 92, desc: 'Track record and reliability of the invoicing entity. More history → higher trust (25% weight).' },
+  { icon: TrendingUp, name: 'Debtor Rating', score: 87, desc: 'Counterparty payment reliability and historical repayment track record (20% weight).' },
+  { icon: GitBranch, name: 'Cross-Reference', score: 88, desc: 'Corroboration against GLEIF LEI registry and external data sources (15% weight).' },
+  { icon: ShieldAlert, name: 'Amount Plausibility', score: 91, desc: 'Validates whether the amount falls within expected bounds for the asset class (15% weight).' },
+  { icon: Clock, name: 'Temporal Consistency', score: 95, desc: 'Freshness of issue date and validity of due date proximity (15% weight).' },
+  { icon: Database, name: 'Invoice Detail Level', score: 94, desc: 'Granularity and completeness of submitted line items (10% weight).' },
 ]
 
 export default function TrustFactors() {

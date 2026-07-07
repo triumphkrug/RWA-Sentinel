@@ -20,14 +20,27 @@ Base URL: `https://rwa-sentinel-api.onrender.com`
 
 ### POST /api/v1/pipeline
 
+Run the full scoring pipeline. If `invoices` are omitted, demo invoices are generated automatically (`dataSource: "demo"`). Supply real invoices for live scoring (`dataSource: "real-upload"`).
+
 ```json
 {
-  "lei": "5493001KJTIIGC8Y1R12",
-  "invoices": [{ "invoiceId": "inv-001", "issuer": "...", "amountCents": 125000, ... }]
+  "invoices": [
+    {
+      "invoiceId": "inv-001",
+      "issuer": "Acme Corp",
+      "debtor": "BuildCo Ltd",
+      "amountCents": 125000,
+      "currencyCode": "USD",
+      "issuedAt": "2026-06-01T00:00:00Z",
+      "dueAt": "2026-08-01T00:00:00Z",
+      "lineItems": [{ "description": "Service", "quantity": 1, "unitPriceCents": 125000 }],
+      "metadata": {}
+    }
+  ]
 }
 ```
 
-Response: `{ pipeline_id, status, scored, attested, dataSource }`
+Response: `{ dataSource, generated, collected, scored, passing, crossRefResults, publishHash, provenanceRoot }`
 
 ## Attestations
 
@@ -56,6 +69,7 @@ Response: `{ pipeline_id, status, scored, attested, dataSource }`
 | POST | `/api/v1/governance/propose` | Create proposal |
 | POST | `/api/v1/governance/vote` | Vote on proposal |
 | POST | `/api/v1/governance/execute` | Execute approved proposal |
+| DELETE | `/api/v1/governance/proposals/:id` | Delete proposal (proposer only, requires `requesterPublicKey` in body) |
 
 ### POST /api/v1/governance/propose
 

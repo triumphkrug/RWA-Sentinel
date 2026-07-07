@@ -13,10 +13,10 @@
 | Oracle Portal | https://rwa-sentinel.xyz/portal |
 | API Endpoint | https://rwa-sentinel-api.onrender.com |
 | Asset Registry | [eac01f54…bd48c3](https://testnet.cspr.live/contract/eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) |
-| Attestation Store (v2 — security patch) | [cffc53be…9f0a](https://testnet.cspr.live/contract/cffc53be1c57d4dc64a74ee1ba38c20b3f9a6d5a7e8c1b2d3f4a5b6c7d8e9f0a) |
+| Attestation Store (v2 — security patch) | [cffc53be…46a5](https://testnet.cspr.live/contract/cffc53be1c57d4dc04c01515114a8e8cc8237e4ab12314e9fa0eabb7bac846a5) |
 | Governance DAO | [847a8016…bd48c3](https://testnet.cspr.live/contract/847a8016434662fa70c0ff7467f0a4c4358baffd3a53e2a403c75b35c8c31138) |
-| Oracle Slashing | [cf0e671c…9f0a](https://testnet.cspr.live/contract/cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df) |
-| KYC Gate | [6e0dd2dc…bd48c3](https://testnet.cspr.live/contract/6e0dd2dce99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3) |
+| Oracle Slashing | [cf0e671c…37df](https://testnet.cspr.live/contract/cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df) |
+| KYC Gate | [6e0dd2dc…58d5](https://testnet.cspr.live/contract/6e0dd2dc7673cf5c7c4e99ad5c956320a3f0f19db4cdb2293eab222611aa58d5) |
 | Video Walkthrough | _TBD_ |
 
 ## Category

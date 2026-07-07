@@ -163,21 +163,30 @@ app.get('/', async () => ({
   ],
 }));
 
-app.get('/health', async () => ({
-  status: 'ok',
-  uptime: process.uptime(),
-  timestamp: new Date().toISOString(),
-  chain: 'casper-test',
-  contracts: {
-    asset_registry: 'eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3',
-    attestation_store: 'cffc53be1c57d4dc04c01515114a8e8cc8237e4ab12314e9fa0eabb7bac846a5',
-    governance_dao: '847a8016434662fa70c0ff7467f0a4c4358baffd3a53e2a403c75b35c8c31138',
-    oracle_slashing: 'cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df',
-    kyc_gate: '6e0dd2dc7673cf5c7c4e99ad5c956320a3f0f19db4cdb2293eab222611aa58d5',
-  },
-  totalScored: cache.size,
-  db: store ? 'connected' : 'memory-only',
-}));
+app.get('/health', async () => {
+  let totalScored = cache.size;
+  if (store) {
+    try {
+      const stats = await store.getStats();
+      totalScored = stats.totalScored;
+    } catch { /* fallback to cache size */ }
+  }
+  return {
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    chain: 'casper-test',
+    contracts: {
+      asset_registry: 'eac01f54e99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3',
+      attestation_store: 'cffc53be1c57d4dc04c01515114a8e8cc8237e4ab12314e9fa0eabb7bac846a5',
+      governance_dao: '847a8016434662fa70c0ff7467f0a4c4358baffd3a53e2a403c75b35c8c31138',
+      oracle_slashing: 'cf0e671c550c3cf3a320f99b0f04be161b3b6946fb1ad6d397b8f9f21f9237df',
+      kyc_gate: '6e0dd2dc7673cf5c7c4e99ad5c956320a3f0f19db4cdb2293eab222611aa58d5',
+    },
+    totalScored,
+    db: store ? 'connected' : 'memory-only',
+  };
+});
 
 // S2 (2026-07-07): explicit Real/Demo data-source toggle for the pipeline.
 // Real is the default in the sense that if the caller supplies their own

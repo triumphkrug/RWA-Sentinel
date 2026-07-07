@@ -35,20 +35,20 @@ export interface OracleScore {
 /** Matches the 6-factor scoring pipeline in agent/src/validator/scoringFactors.ts */
 export interface ScoringFactors {
   issuerHistory: number;
-  documentIntegrity: number;
+  debtorRating: number;
   crossReference: number;
-  amountPlausibility: number;
-  temporalConsistency: number;
-  networkReputation: number;
+  amountReasonableness: number;
+  timeValidity: number;
+  invoiceDetailLevel: number;
 }
 
 export interface ScoringWeights {
-  issuerHistory: number;       // 25%
-  documentIntegrity: number;   // 20%
-  crossReference: number;      // 15%
-  amountPlausibility: number;  // 15%
-  temporalConsistency: number; // 15%
-  networkReputation: number;   // 10%
+  issuerHistory: number;          // 25%
+  debtorRating: number;           // 20%
+  crossReference: number;         // 15%
+  amountReasonableness: number;   // 15%
+  timeValidity: number;           // 15%
+  invoiceDetailLevel: number;     // 10%
 }
 
 export interface OracleQuery {

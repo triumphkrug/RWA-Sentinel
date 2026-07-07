@@ -162,10 +162,10 @@ export class RWASentinelClient {
   // === Governance ===
 
   async createProposal(proposal: ProposalInput): Promise<Proposal> {
-    if (!proposal.title || !proposal.description || !proposal.type) {
-      throw new SentinelError('title, description, and type are required', 400, 'VALIDATION');
+    if (!proposal.description || !proposal.type) {
+      throw new SentinelError('description and type are required', 400, 'VALIDATION');
     }
-    return this.request<Proposal>('POST', '/api/v1/governance/proposals', proposal);
+    return this.request<Proposal>('POST', '/api/v1/governance/propose', proposal);
   }
 
   async getProposals(params?: {
@@ -173,22 +173,17 @@ export class RWASentinelClient {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResult<Proposal>> {
-    const query = new URLSearchParams();
-    if (params?.status) query.set('status', params.status);
-    if (params?.page) query.set('page', String(params.page));
-    if (params?.limit) query.set('limit', String(params.limit));
-    const qs = query.toString();
     return this.request<PaginatedResult<Proposal>>(
       'GET',
-      `/api/v1/governance/proposals${qs ? `?${qs}` : ''}`
+      '/api/v1/governance/proposals'
     );
   }
 
-  async vote(proposalId: string, vote: VoteType): Promise<VoteResult> {
+  async vote(proposalId: string, voterPublicKey: string, choice: VoteType): Promise<VoteResult> {
     return this.request<VoteResult>(
       'POST',
-      `/api/v1/governance/proposals/${encodeURIComponent(proposalId)}/vote`,
-      { vote }
+      '/api/v1/governance/vote',
+      { proposalId, voterPublicKey, choice }
     );
   }
 
@@ -198,28 +193,21 @@ export class RWASentinelClient {
     if (!report.oracleId || !report.reason) {
       throw new SentinelError('oracleId and reason are required', 400, 'VALIDATION');
     }
-    return this.request<SlashingReport>('POST', '/api/v1/slashing/reports', report);
+    return this.request<SlashingReport>('POST', '/api/v1/slashing/report', report);
   }
 
-  async challengeSlashing(reportId: string, evidence: string): Promise<ChallengeResult> {
+  async challengeSlashing(reportId: string, challengerPublicKey: string, reason: string): Promise<ChallengeResult> {
     return this.request<ChallengeResult>(
       'POST',
-      `/api/v1/slashing/reports/${encodeURIComponent(reportId)}/challenge`,
-      { evidence }
+      '/api/v1/slashing/challenge',
+      { reportId, challengerPublicKey, reason }
     );
   }
 
-  async getSlashingReports(params?: {
-    status?: string;
-    page?: number;
-  }): Promise<PaginatedResult<SlashingReport>> {
-    const query = new URLSearchParams();
-    if (params?.status) query.set('status', params.status);
-    if (params?.page) query.set('page', String(params.page));
-    const qs = query.toString();
-    return this.request<PaginatedResult<SlashingReport>>(
+  async getSlashingReports(): Promise<SlashingReport[]> {
+    return this.request<SlashingReport[]>(
       'GET',
-      `/api/v1/slashing/reports${qs ? `?${qs}` : ''}`
+      '/api/v1/slashing/reports'
     );
   }
 
