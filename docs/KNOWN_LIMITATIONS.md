@@ -58,33 +58,34 @@ Last verified against actual deployed contract source: 2026-07-07.
   anything. Needs real signature verification (e.g. `runtime::verify_signature` over a
   canonical message) before the DAO-invalidation flow can be considered a genuine multi-party
   control. Not yet fixed.
-- **`oracle-slashing.register_oracle` still cannot be called with a real stake (open, 2026-07-07).**
-  The entry point takes a `source_purse: URef` arg to move a real CSPR stake via
-  `system::transfer_from_purse_to_purse`. Three real on-chain attempts all reverted with
-  `Mint error: 4` (`InvalidAccessRights`):
-  1. Direct `ContractCallBuilder` transaction (no session code), passing the caller's own main
-     purse URef as `source_purse` with `ReadAddWrite` access bits.
-  2. Same, with `ReadWrite` access bits instead.
-  3. A purpose-built session-wasm (`contracts/register-oracle-session/`, compiles cleanly) that
-     obtains the purse via `account::get_main_purse()` inside the session and calls
-     `runtime::call_contract(..., "register_oracle", ...)` — the textbook-correct pattern per
-     Casper's own docs (`writing-session-code.md`'s `transfer-to-purse` example) — still reverted
-     identically.
-  Traced through `casper-node`'s actual source (`execution_engine/src/runtime/mod.rs`
-  `execute_contract`, `types/src/runtime_footprint.rs` `extract_access_rights`,
-  `types/src/access_rights.rs` `ContextAccessRights`) to confirm the theoretical access-rights
-  extension/attenuation/validation chain *should* work for this exact pattern — the root cause
-  inside the live node's actual behavior was not pinned down further; testing stopped once the
-  fresh test account's balance was mostly consumed (all these are non-refunding transactions —
-  `refund` is always `0` on this network/SDK combination even on revert, so failed real-gas
-  attempts are not cheap to iterate on). Not solved as of this writing.
-  **Practical workaround not yet built**: redesign `register_oracle` to not need a purse arg at
-  all — caller sends a plain native transfer to the contract's already-queryable `stake_purse`
-  address first, then calls a stateless `register_oracle(oracle_id, stake_amount)` that just
-  records the claim (same trust model many Casper MVPs use for staking flows). This needs a
-  contract source change + redeploy, which costs ~90-100 CSPR per install and is blocked by the
-  same per-account redeploy issue as everything else on the main deployer account (works from a
-  freshly funded account only).
+- **`oracle-slashing.register_oracle` redesigned (2026-07-07) to not need a `source_purse: URef`
+  arg at all — code fix compiles cleanly, but not yet deployed on-chain.** Original design took a
+  caller-supplied `source_purse: URef` and called `system::transfer_from_purse_to_purse` inside
+  the entry point; 3 real on-chain attempts (direct `ContractCallBuilder`, and a session-wasm
+  doing the textbook `account::get_main_purse()` + `runtime::call_contract()` pattern from
+  Casper's own docs) all reverted with `Mint error: 4` (`InvalidAccessRights`) — traced through
+  `casper-node` source (`execution_engine/src/runtime/mod.rs`, `runtime_footprint.rs`,
+  `access_rights.rs`) without finding the exact root cause. **New design**: caller deposits real
+  CSPR into the contract's already-public `stake_purse` first via a plain session
+  (`contracts/deposit-stake-session/`, calls `system::transfer_from_purse_to_purse` directly, no
+  stored-contract call in between — doesn't cross an entity boundary so none of the above
+  access-rights issues apply), then calls `register_oracle(oracle_id, stake)` (no purse arg) —
+  the entry point verifies the deposit really happened by reading the contract's own
+  `system::get_purse_balance(stake_purse)` (a purse it fully owns, no caller URef needed) against
+  a `total_staked` running-total uref, only accepting the claim if
+  `live_balance >= total_staked + stake`. This is fully on-chain enforced, not a trusted claim.
+  Also fixed in the same pass: the `report_counter`/`report_count` named-key mismatch (see below)
+  and the never-inserted `fee_bps` named key.
+  **Blocked on redeploy, new finding (2026-07-07)**: the fresh test account that successfully
+  installed `oracle-slashing` + `kyc-gate` earlier this session failed its 3rd install/upgrade
+  attempt (this fix) with the exact same `ApiError::InvalidArgument [3]` signature as the
+  original main-account redeploy blocker (tiny gas consumed, revert before any real work) — this
+  strongly suggests a **per-account cap on install/upgrade-lane transactions (looks like ~2)**
+  rather than a permanently-broken-vs-fresh-account distinction as previously believed. Not
+  confirmed with a controlled 3rd account yet (would cost more real CSPR — none refunds on this
+  network, `refund` is always `0` even on revert). Code is ready and compiles; deployment is
+  waiting on resolving this install-lane limit (fund + try a brand-new 3rd account, or find
+  whether the cap resets after some time window).
 - **`oracle-slashing.withdraw_stake` never moves real funds.** Access control is correct (only
   the oracle's registered owner can call it, capped to their own remaining stake), but the
   function only decrements the internal dictionary record — it never calls

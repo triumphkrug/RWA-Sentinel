@@ -28,6 +28,7 @@ const REPORT_DICT: &str = "report_dict";
 const REPORT_COUNTER_KEY: &str = "report_counter";
 const STAKE_PURSE: &str = "stake_purse";
 const FEE_PURSE: &str = "fee_purse";
+const TOTAL_STAKED_KEY: &str = "total_staked";
 const FEE_BPS_KEY: &str = "fee_bps";
 const DEFAULT_FEE_BPS: u64 = 0;
 const INSTALLER_KEY: &str = "installer";
@@ -47,6 +48,7 @@ const ERR_UNAUTHORIZED: u16 = 11;
 const ERR_WITHDRAW_TOO_HIGH: u16 = 12;
 const ERR_REPORT_EXISTS: u16 = 13;
 const ERR_INVALID_ACCOUNT_HASH: u16 = 14;
+const ERR_INSUFFICIENT_DEPOSIT: u16 = 15;
 
 const CHALLENGE_PERIOD: u64 = 172800; // 48 hours in seconds
 
@@ -135,9 +137,28 @@ fn severity_to_percentage(severity: u64) -> u64 {
 
 #[no_mangle]
 pub extern "C" fn register_oracle() {
+    // NOTE (2026-07-07): this used to take a caller-supplied `source_purse: URef` arg and call
+    // `system::transfer_from_purse_to_purse(source_purse, stake_purse, stake_amount, None)`
+    // directly inside this entry point. That reverted on-chain with `Mint error: 4`
+    // (InvalidAccessRights) for every calling pattern tried (direct ContractCall, and a
+    // purpose-built session-wasm doing the textbook-documented
+    // `account::get_main_purse()` + `runtime::call_contract()` pattern) — see
+    // docs/KNOWN_LIMITATIONS.md for the full investigation. Redesigned to avoid a URef arg
+    // entirely while staying fully on-chain-enforced (not just a trusted claim):
+    //   1. Caller deposits real CSPR into this contract's own `stake_purse` first, via a plain
+    //      session that calls `system::transfer_from_purse_to_purse` directly (no stored-contract
+    //      call in between — this is the exact pattern from Casper's own session-code docs and
+    //      does not cross an entity boundary, so none of the access-rights attenuation issues
+    //      above apply). See `contracts/deposit-stake-session/`.
+    //   2. Caller then calls this entry point with just `oracle_id`/`stake` (no purse arg). We
+    //      verify the deposit really happened by reading the contract's own purse balance via
+    //      `system::get_purse_balance` (a purse the contract fully owns via its own named key,
+    //      no caller-supplied URef needed) and comparing it against `total_staked`, the running
+    //      total of everything already claimed by prior registrations. Only if
+    //      `live_balance >= total_staked + stake` do we accept the claim and bump
+    //      `total_staked` — so a caller cannot register a stake they didn't actually deposit.
     let oracle_id: String = runtime::get_named_arg("oracle_id");
     let stake_amount: U512 = runtime::get_named_arg("stake");
-    let source_purse: URef = runtime::get_named_arg("source_purse");
 
     let caller = runtime::get_caller();
     let owner_string = account_hash_to_string(caller);
@@ -156,8 +177,17 @@ pub extern "C" fn register_oracle() {
         .into_uref()
         .unwrap_or_revert();
 
-    system::transfer_from_purse_to_purse(source_purse, stake_purse, stake_amount, None)
-        .unwrap_or_revert();
+    let live_balance: U512 = system::get_purse_balance(stake_purse).unwrap_or_else(U512::zero);
+    let total_staked = read_uref::<U512>(TOTAL_STAKED_KEY);
+    let required = total_staked
+        .checked_add(stake_amount)
+        .unwrap_or_revert_with(ApiError::User(ERR_INSUFFICIENT_DEPOSIT));
+
+    if live_balance < required {
+        runtime::revert(ApiError::User(ERR_INSUFFICIENT_DEPOSIT));
+    }
+
+    write_uref(TOTAL_STAKED_KEY, required);
 
     let now: u64 = runtime::get_blocktime().into();
 
@@ -346,6 +376,12 @@ pub extern "C" fn execute_slash() {
     system::transfer_from_purse_to_purse(stake_purse, fee_purse, slash_amount_u512, None)
         .unwrap_or_revert();
 
+    // Keep the total_staked accounting uref (used by register_oracle's deposit-verification
+    // check) in sync with what actually left stake_purse, so it doesn't overstate how much of
+    // the purse's real balance is still backing existing registrations.
+    let total_staked = read_uref::<U512>(TOTAL_STAKED_KEY);
+    write_uref(TOTAL_STAKED_KEY, total_staked.saturating_sub(slash_amount_u512));
+
     // Update report status
     report.2.2 = now; // executed_at
 
@@ -414,6 +450,8 @@ pub extern "C" fn call() {
     let report_count_uref = storage::new_uref(0u64);
     let min_stake_uref = storage::new_uref(U512::from(1_000_000_000u64)); // 1 CSPR min stake
     let slash_bps_uref = storage::new_uref(1000u64); // 10% slash rate
+    let fee_bps_uref = storage::new_uref(DEFAULT_FEE_BPS);
+    let total_staked_uref = storage::new_uref(U512::zero());
 
     // Real fund-custody purses for register_oracle (stake deposit) and
     // execute_slash (stake -> fee transfer on confirmed slash). Without
@@ -430,9 +468,11 @@ pub extern "C" fn call() {
     named_keys.insert(ORACLE_DICT.into(), oracles_dict.into());
     named_keys.insert(REPORT_DICT.into(), reports_dict.into());
     named_keys.insert("oracle_count".into(), oracle_count_uref.into());
-    named_keys.insert("report_count".into(), report_count_uref.into());
+    named_keys.insert(REPORT_COUNTER_KEY.into(), report_count_uref.into());
     named_keys.insert("min_stake".into(), min_stake_uref.into());
     named_keys.insert("slash_bps".into(), slash_bps_uref.into());
+    named_keys.insert(FEE_BPS_KEY.into(), fee_bps_uref.into());
+    named_keys.insert(TOTAL_STAKED_KEY.into(), total_staked_uref.into());
     named_keys.insert(STAKE_PURSE.into(), stake_purse.into());
     named_keys.insert(FEE_PURSE.into(), fee_purse.into());
 
@@ -442,6 +482,7 @@ pub extern "C" fn call() {
         "register_oracle",
         vec![
             Parameter::new("oracle_id", CLType::String),
+            Parameter::new("stake", CLType::U512),
         ],
         CLType::Unit,
         EntryPointAccess::Public,

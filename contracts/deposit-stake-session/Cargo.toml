@@ -1,5 +1,5 @@
 [package]
-name = "register-oracle-session"
+name = "deposit-stake-session"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ casper-contract = "5.1"
 casper-types = "6.0"
 
 [[bin]]
-name = "register-oracle-session"
+name = "deposit-stake-session"
 path = "src/main.rs"
 
 [features]
