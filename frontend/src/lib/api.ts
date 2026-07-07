@@ -1,6 +1,6 @@
 
 
-const BASE_URL = 'https://rwa-sentinel-api.onrender.com';
+const BASE_URL = '';
 
 // --- General Types ---
 export interface HealthResponse {

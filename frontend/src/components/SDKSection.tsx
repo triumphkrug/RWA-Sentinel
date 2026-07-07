@@ -9,7 +9,7 @@ const tools = [
     code: `import { Sentinel } from '@rwa-sentinel/sdk'
 
 const sentinel = new Sentinel({
-  endpoint: 'https://rwa-sentinel-api.onrender.com',
+  endpoint: 'https://rwa-sentinel.xyz',
   casperRPC: 'https://casper.nownodes.io/rpc'  // Powered by NOWNodes
 })
 
@@ -31,7 +31,7 @@ console.log(result.passing, 'assets verified')`,
     icon: Cpu,
     name: 'REST API',
     desc: 'Direct HTTP endpoints for custom integrations. Run pipelines, query scores, check cache, and verify attestations.',
-    install: 'curl https://rwa-sentinel-api.onrender.com/health',
+    install: 'curl https://rwa-sentinel.xyz/health',
     code: `POST /api/v1/pipeline     — run verification
 GET  /api/v1/scores       — fetch scored invoices
 GET  /api/v1/cache/stats   — cache health

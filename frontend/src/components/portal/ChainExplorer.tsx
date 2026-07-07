@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link2, Activity, ArrowUpRight, RefreshCw, Layers } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || 'https://rwa-sentinel-api.onrender.com'
+const API = import.meta.env.VITE_API_URL || ''
 
 interface ChainOverview {
   network?: string
