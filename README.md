@@ -23,8 +23,7 @@
 
 ---
 
-> [!IMPORTANT]
-> **Fully deployed.** 6 smart contracts live on Casper testnet. 338+ real on-chain transactions. AI scoring pipeline runs end-to-end. BLS 3-of-5 multi-oracle consensus. DAO governance with challenge-and-slash. 12-page interactive portal. TypeScript SDK + 24-tool MCP server.
+> **🟢 Fully deployed.** 6 smart contracts live on Casper testnet. 338+ real on-chain transactions. AI scoring pipeline runs end-to-end. BLS 3-of-5 multi-oracle consensus. DAO governance with challenge-and-slash. 12-page interactive portal. TypeScript SDK + 24-tool MCP server.
 
 ---
 
@@ -598,7 +597,7 @@ Full reference: [docs/SDK.md](docs/SDK.md)
 
 ```mermaid
 flowchart TB
-    subgraph VERTICAL["📊 Vertical Expansion"]
+    subgraph ASSETS["📊 Asset Class Coverage"]
         direction TB
         V1["Trade Finance"] --> V2["Real Estate"]
         V2 --> V3["Commodities"]
@@ -606,7 +605,7 @@ flowchart TB
         V4 --> V5["Insurance"]
     end
 
-    subgraph HORIZONTAL["🌐 Horizontal Expansion"]
+    subgraph REACH["🌐 Network Reach"]
         direction TB
         H1["Casper Native"] --> H2["EVM Bridges"]
         H2 --> H3["Cross-Chain"]
@@ -614,7 +613,7 @@ flowchart TB
         H4 --> H5["Institutional APIs"]
     end
 
-    subgraph SDK_EXPAND["🔧 SDK/MCP Platform"]
+    subgraph PLATFORM["🔧 Agent Platform"]
         direction TB
         S1["24 MCP Tools"] --> S2["LLM Agent Integration"]
         S2 --> S3["Autonomous Portfolio Mgmt"]
@@ -622,11 +621,11 @@ flowchart TB
         S4 --> S5["White-Label Oracle"]
     end
 
-    VERTICAL --- HORIZONTAL --- SDK_EXPAND
+    ASSETS --- REACH --- PLATFORM
 
-    style VERTICAL fill:#ecfdf5,stroke:#059669
-    style HORIZONTAL fill:#eff6ff,stroke:#3b82f6
-    style SDK_EXPAND fill:#fef3c7,stroke:#d97706
+    style ASSETS fill:#ecfdf5,stroke:#059669
+    style REACH fill:#eff6ff,stroke:#3b82f6
+    style PLATFORM fill:#fef3c7,stroke:#d97706
 ```
 
 **Why this architecture scales:**
@@ -707,14 +706,14 @@ flowchart TB
 
 ### SDK/MCP Expansion Potential
 
-The SDK and MCP server provide a **foundation for vertical and horizontal expansion**:
+The SDK and MCP server provide a **foundation for expansion across asset classes and ecosystems**:
 
-**Vertical (deeper RWA):**
-- Custom scoring factors for new asset classes (real estate, commodities, bonds)
+**New asset classes:**
+- Custom scoring factors for real estate, commodities, bonds
 - Multi-jurisdiction compliance adapters (SEC, FCA, MAS)
 - Institutional-grade reporting and audit trail export
 
-**Horizontal (new use cases):**
+**New ecosystems:**
 - Insurance claims verification MCP tools
 - Supply chain provenance tracking
 - Carbon credit marketplace integration
@@ -758,11 +757,10 @@ npm start
 
 ```bash
 docker-compose up
-# Portal at http://localhost:3000
+# API at http://localhost:10000
 ```
 
-> [!TIP]
-> To connect to Casper testnet, set `NODE_URL` and `DEPLOYER_KEY_PATH` in `.env`. See [Configuration](#configuration) in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+> **💡 Tip:** To connect to Casper testnet, set `NODE_URL` and `DEPLOYER_KEY_PATH` in `.env`. See [Configuration](#configuration) in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 <div align="right">
 

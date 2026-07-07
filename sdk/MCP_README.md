@@ -82,12 +82,13 @@ Or configure in your MCP client:
 
 ```typescript
 // In an AI agent workflow:
-const result = await mcp.callTool('rwa_run_pipeline', {
-  lei: '5493001KJTIIGC8Y1R12'
-})
+// Run the pipeline with demo data (no args needed):
+const result = await mcp.callTool('rwa_run_pipeline', {})
 
+// Get all scored assets:
 const scores = await mcp.callTool('rwa_get_scores', {})
 
+// Check KYC status:
 const kyc = await mcp.callTool('rwa_kyc_check', {
   submitterPublicKey: '0197cedb...'
 })

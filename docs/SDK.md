@@ -5,7 +5,7 @@
 ```ts
 import { SentinelClient } from './sdk';
 
-const client = new SentinelClient('http://localhost:3000');
+const client = new SentinelClient('https://rwa-sentinel-api.onrender.com');
 
 // Register an asset
 const asset = await client.registerAsset({
