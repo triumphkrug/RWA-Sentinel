@@ -4,7 +4,7 @@
 
 ## Deployment Summary
 
-**6 smart contracts deployed** across 3 testnet accounts with **123+ on-chain transactions**.
+**6 smart contracts deployed** across 3 testnet accounts with **251+ on-chain transactions**.
 
 | Contract | Hash | Status |
 |---|---|---|
@@ -44,7 +44,7 @@ These items are documented transparently and planned for Phase 2:
 | Component | Status |
 |---|---|
 | 6 smart contracts on testnet | ✅ Real, deployed, verifiable on explorer |
-| 123+ testnet transactions | ✅ Real, with documented deploy hashes |
+| 251+ testnet transactions | ✅ Real, with documented deploy hashes |
 | BLS12-381 cryptography | ✅ Real (noble-curves library, not simulation) |
 | GLEIF / CoinGecko / Companies House APIs | ✅ Real API calls to live services |
 | Allium chain analytics | ✅ Real API with rate-limit handling |

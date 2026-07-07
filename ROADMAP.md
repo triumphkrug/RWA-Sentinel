@@ -6,7 +6,7 @@
 
 ## Done (Hackathon Release)
 
-- [x] 6 smart contracts deployed on Casper testnet (123+ transactions)
+- [x] 6 smart contracts deployed on Casper testnet (251+ transactions)
   - Asset Registry — trust scores and evidence hashes
   - Attestation Store (v2) — time-limited NFTs with oracle staking and slashing (security-patched: A1 slash fund fix + caller auth on dao_invalidate)
   - Governance DAO — on-chain proposals, weighted voting, veto mechanism
