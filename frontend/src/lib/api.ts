@@ -176,7 +176,7 @@ export interface ProposeRequest {
 export interface VoteRequest {
   proposalId: string;
   voterPublicKey: string;
-  support: 'for' | 'against';
+  choice: 'for' | 'against';
 }
 
 export interface ExecuteRequest {
