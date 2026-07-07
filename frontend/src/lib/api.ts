@@ -84,7 +84,7 @@ export interface StatsResponse {
   assetTypes: Record<string, number>;
 }
 
-export type AttestationStatus = 'pending' | 'attested' | 'challenged' | 'slashed' | 'expired';
+export type AttestationStatus = 'pending' | 'attested' | 'active' | 'below_threshold' | 'challenged' | 'slashed' | 'expired';
 
 export interface Attestation {
   id: string;
@@ -203,6 +203,7 @@ export interface ReportRequest {
   oracle_id: string;
   reason: string;
   evidence?: string;
+  /* Backend also accepts: oracleId, attestationId, reporterPublicKey, evidenceHash */
 }
 
 export interface ChallengeRequest {
@@ -210,6 +211,7 @@ export interface ChallengeRequest {
   challenger: string;
   reason: string;
   evidence?: string;
+  /* Backend also accepts: reportId, challengerPublicKey, challengeStakeAmount */
 }
 
 export interface ValidateRequest {

@@ -29,7 +29,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: 'Overview', path: '/portal', icon: BarChart3 },
+  { name: 'Overview', path: '/portal/overview', icon: BarChart3 },
   { name: 'Assets', path: '/portal/assets', icon: Building },
   { name: 'Oracles', path: '/portal/oracles', icon: GitFork },
   { name: 'Governance', path: '/portal/governance', icon: Gavel },
@@ -39,7 +39,7 @@ const navItems: NavItem[] = [
   { name: 'Data Adapters', path: '/portal/data', icon: Database },
   { name: 'KYC Gate', path: '/portal/kyc', icon: Shield },
   { name: 'Anomalies', path: '/portal/anomalies', icon: AlertTriangle },
-  { name: 'Agent Demo', path: '/portal/agent-demo', icon: FlaskConical },
+  { name: 'Scoring Pipeline', path: '/portal/scoring-pipeline', icon: FlaskConical },
   { name: 'API Playground', path: '/portal/playground', icon: Puzzle },
 ];
 
@@ -52,6 +52,17 @@ const PortalLayout: React.FC = () => {
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
+
+  // Auto-collapse sidebar on narrow screens
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1024px)');
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (e.matches) setCollapsed(true);
+    };
+    handler(mq);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // Prevent body scroll when mobile sidebar is open
   useEffect(() => {
@@ -96,7 +107,6 @@ const PortalLayout: React.FC = () => {
             <li key={item.name}>
               <NavLink
                 to={item.path}
-                end={item.path === '/portal'}
                 className={({ isActive }) =>
                   `flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors duration-150 ${
                     !isMobile && collapsed ? 'justify-center' : ''
@@ -146,7 +156,7 @@ const PortalLayout: React.FC = () => {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed top-3 left-3 z-50 p-2 bg-white border border-gray-200 rounded-lg shadow-sm md:hidden"
+        className="fixed top-3 left-3 z-50 p-2 bg-white border border-gray-200 rounded-lg shadow-sm lg:hidden"
         aria-label="Open menu"
       >
         <Menu size={20} className="text-gray-600" />
@@ -154,10 +164,10 @@ const PortalLayout: React.FC = () => {
 
       {/* Mobile sidebar overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobileOpen(false)}>
-          <div className="absolute inset-0 bg-black/30" />
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMobileOpen(false)}>
+          <div className="absolute inset-0 bg-black/30 animate-fade-in" />
           <aside
-            className="absolute inset-y-0 left-0 w-64 bg-white flex flex-col shadow-xl"
+            className="absolute inset-y-0 left-0 w-64 bg-white flex flex-col shadow-xl animate-slide-in-left"
             onClick={(e) => e.stopPropagation()}
           >
             {sidebarContent(true)}
@@ -167,7 +177,7 @@ const PortalLayout: React.FC = () => {
 
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex fixed inset-y-0 left-0 z-30 bg-white border-r border-gray-200 flex-col transition-all duration-200 ease-in-out ${
+        className={`hidden lg:flex fixed inset-y-0 left-0 z-30 bg-white border-r border-gray-200 flex-col transition-all duration-300 ease-in-out ${
           collapsed ? 'w-16' : 'w-60'
         }`}
       >
@@ -175,9 +185,9 @@ const PortalLayout: React.FC = () => {
       </aside>
 
       {/* Main content */}
-      <div className={`flex-1 flex flex-col transition-all duration-200 ${collapsed ? 'md:ml-16' : 'md:ml-60'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${collapsed ? 'lg:ml-16' : 'lg:ml-60'}`}>
         {/* Content Area */}
-        <main className="flex-1 p-4 md:p-6 pt-14 md:pt-6 overflow-y-auto">
+        <main className="flex-1 p-4 lg:p-6 pt-14 lg:pt-6 overflow-x-hidden overflow-y-auto">
           <ErrorBoundary resetKey={location.pathname}>
             <Outlet />
           </ErrorBoundary>

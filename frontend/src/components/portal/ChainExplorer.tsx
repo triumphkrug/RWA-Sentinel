@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link2, Activity, ArrowUpRight, RefreshCw, Layers, Loader2 } from 'lucide-react'
 import { getChainAll, ChainAllResponse } from '../../lib/api'
+import PageInfo from './PageInfo'
 
 export default function ChainExplorer() {
   const [data, setData] = useState<ChainAllResponse | null>(null)
@@ -46,6 +47,11 @@ export default function ChainExplorer() {
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </button>
       </div>
+
+      <PageInfo title="What is the Chain Explorer?">
+        <p>Live analytics from the Casper testnet, aggregated via <strong>Allium SQL API</strong>. Shows the latest block height, current era, total transaction count, and active validator count. The "Sentinel Network Health" section computes chain reliability from block finality times, transaction throughput, and an oracle-readiness score.</p>
+        <p className="mt-1">Recent transactions are pulled from on-chain deploy data — including RWA-Sentinel's own attestation deploys. Daily activity reflects testnet transaction volume; zero values are normal during low-activity periods on the Casper testnet.</p>
+      </PageInfo>
 
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">{error}</div>

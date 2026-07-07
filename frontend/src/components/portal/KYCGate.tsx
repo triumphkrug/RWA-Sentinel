@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Shield, CheckCircle, XCircle, ExternalLink, Lock, Users, FileCheck, Search, Loader2, ArrowRight, Layers } from 'lucide-react'
 import { postKycCheck, KycCheckResult, getExtensionCategories, AssetCategory, ErrorResponse } from '../../lib/api'
+import PageInfo from './PageInfo'
 
 const CONTRACT_HASH = '6e0dd2dce99db58d328e672d2ce5c40a6677cab577cc2bc3b9f8bbe277bd48c3'
 
@@ -98,6 +99,11 @@ export default function KYCGate() {
           On-chain compliance proxy for KYC verification — integrated into the scoring pipeline
         </p>
       </div>
+
+      <PageInfo title="How does KYC Gate integrate with the pipeline?">
+        <p>The KYC Gate is an on-chain compliance proxy deployed as a Casper smart contract. It maintains a registry of trusted KYC provider contracts and stores boolean verification status for each account. During every scoring pipeline run, the agent automatically queries this contract — verified submitters receive a <strong>+15 trust score bonus</strong>, while unverified accounts incur a <strong>−10 penalty</strong>.</p>
+        <p className="mt-1">Use the live checker below to query the on-chain <code>kyc_registry</code> dictionary. This is the same check that runs automatically during asset scoring.</p>
+      </PageInfo>
 
       {/* Live KYC Check */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">

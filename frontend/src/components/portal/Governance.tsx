@@ -5,6 +5,7 @@ import {
 } from '../../lib/api';
 import { useClickRef } from '../../lib/click';
 import { Loader2, XCircle, Gavel, Plus, ThumbsUp, ThumbsDown, Play, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import PageInfo from './PageInfo';
 
 const Governance: React.FC = () => {
   const { publicKey: walletKey } = useClickRef();
@@ -121,6 +122,11 @@ const Governance: React.FC = () => {
           <Plus className="h-4 w-4" /> New Proposal
         </button>
       </div>
+
+      <PageInfo title="How does Governance DAO work?">
+        <p>The Governance DAO allows registered oracle accounts to propose, vote on, and execute parameter changes to the RWA-Sentinel system. Proposals go through a <strong>48-hour voting period</strong> with a 51% quorum threshold. Supported proposal types: parameter changes (e.g., scoring weights), contract upgrades, and treasury spends.</p>
+        <p className="mt-1">Each proposal is created both off-chain (for the demo UI) and on-chain via the <code>governance-dao</code> Casper smart contract. Votes are weighted by stake — registered oracle accounts have higher voting power. Connect your wallet or use a known deployer key to create proposals.</p>
+      </PageInfo>
 
       {actionError && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-center gap-2 text-sm">

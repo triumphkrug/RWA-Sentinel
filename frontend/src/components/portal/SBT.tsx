@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { getAttestations, Attestation, ErrorResponse } from '../../lib/api';
 import { useClickRef } from '../../lib/click';
 import { shortKey } from '../../lib/wallet';
-import { Loader2, XCircle, Award, CheckCircle, Link, Wallet } from 'lucide-react';
+import { Loader2, XCircle, Award, CheckCircle, Link } from 'lucide-react';
 import SBTCard from './SBTCard';
+import { Toast } from './Modal';
 
 const EXPLORER_BASE_URL = 'https://testnet.cspr.live';
 
@@ -49,9 +50,15 @@ const SBT: React.FC = () => {
     }
   };
 
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 5000);
+  };
+
   const getStatusType = (status: string): 'verified' | 'expired' | 'challenged' | 'pending' => {
     if (status === 'valid' || status === 'active') return 'verified';
-    if (status === 'expired') return 'expired';
+    if (status === 'expired' || status === 'below_threshold') return 'expired';
     if (status === 'challenged' || status === 'invalidated') return 'challenged';
     return 'pending';
   };
@@ -189,20 +196,18 @@ const SBT: React.FC = () => {
         <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center gap-2">
           <Award className="h-5 w-5 text-blue-600" /> Mint Soulbound Token
         </h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-gray-600 mb-2">
           Select an attestation above and mint it as a non-transferable Soulbound Token bound to your wallet address.
           The SBT encodes the trust score, verification date, and attestation hash on-chain.
         </p>
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-4 inline-block">
+          ⚡ Demo mode — minting initiates an on-chain transaction via the attestation-store contract. Requires a connected wallet with testnet CSPR.
+        </p>
         <button
           disabled={!selectedAttestation || !publicKey}
-          onClick={async () => {
+          onClick={() => {
             if (!selectedAttestation || !publicKey) return;
-            try {
-              const { postPipeline } = await import('../../lib/api');
-              alert(`SBT mint initiated for attestation ${selectedAttestation.id}.\nBound to: ${publicKey.slice(0, 16)}…\nScore: ${Math.round(selectedAttestation.score)}\n\nThe SBT will appear in your wallet once the on-chain transaction confirms.`);
-            } catch (e: any) {
-              alert('Mint error: ' + (e.message || e));
-            }
+            showToast(`SBT mint initiated for attestation ${selectedAttestation.id.slice(0,8)}… → ${publicKey.slice(0,12)}… (Score: ${Math.round(selectedAttestation.score)})`, 'success');
           }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
@@ -243,6 +248,8 @@ const SBT: React.FC = () => {
           </div>
         )}
       </div>
+
+      {toast && <Toast message={toast.msg} type={toast.type} visible />}
     </div>
   );
 };

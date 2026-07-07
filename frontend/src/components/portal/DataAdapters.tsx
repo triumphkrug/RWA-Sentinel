@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Database, Search, RefreshCw, CheckCircle, XCircle, Globe, Landmark, BarChart3, Building2 } from 'lucide-react'
+import PageInfo from './PageInfo'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -92,6 +93,11 @@ export default function DataAdapters() {
           Live external data sources used in the 6-factor scoring pipeline for cross-reference validation
         </p>
       </div>
+
+      <PageInfo title="What are Data Adapters?">
+        <p>Data adapters are the external data sources powering the <strong>cross-reference validation factor</strong> in the 6-factor scoring pipeline. Each adapter queries a real third-party API to independently verify asset claims against authoritative registries.</p>
+        <p className="mt-1"><strong>GLEIF:</strong> Validates legal entity identity via the Global LEI Foundation. <strong>CoinGecko:</strong> Cross-references market pricing data. <strong>Companies House:</strong> Verifies UK corporate registry status. Results are cached for 15 minutes to reduce API load. Individual adapter failures gracefully degrade the cross-reference score rather than blocking the pipeline.</p>
+      </PageInfo>
 
       {/* Adapter cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

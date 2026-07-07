@@ -72,7 +72,6 @@ function AppContent() {
   return (
     <div className="min-h-screen flex flex-col">
       <ScrollToTop />
-      {/* Hide landing navbar on portal pages — portal has its own sidebar */}
       {!isPortal && <Navbar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />}
       <main className="flex-1" onClick={mobileOpen ? closeMobile : undefined}>
         <Routes>
@@ -84,13 +83,14 @@ function AppContent() {
             <Route path="oracles" element={<Oracles />} />
             <Route path="governance" element={<Governance />} />
             <Route path="sbt" element={<SBT />} />
-            <Route path="sbts" element={<SBT />} />
             <Route path="contracts" element={<Contracts />} />
             <Route path="chain" element={<ChainExplorer />} />
             <Route path="data" element={<DataAdapters />} />
             <Route path="kyc" element={<KYCGate />} />
             <Route path="anomalies" element={<Anomalies />} />
-            <Route path="agent-demo" element={<AgentDemo />} />
+            <Route path="scoring-pipeline" element={<AgentDemo />} />
+            {/* Legacy redirect */}
+            <Route path="agent-demo" element={<Navigate to="/portal/scoring-pipeline" replace />} />
             <Route path="playground" element={<Playground />} />
           </Route>
           <Route path="*" element={<NotFound />} />
