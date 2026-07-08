@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -21,7 +22,7 @@ export default function Modal({ open, onClose, title, children, maxWidth = 'max-
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" />
       <div
@@ -39,7 +40,8 @@ export default function Modal({ open, onClose, title, children, maxWidth = 'max-
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -57,9 +59,10 @@ export function Toast({ message, type = 'info', visible }: ToastProps) {
     error: 'bg-red-50 border-red-200 text-red-800',
     info: 'bg-blue-50 border-blue-200 text-blue-800',
   }
-  return (
+  return createPortal(
     <div className={`fixed bottom-6 right-6 z-[200] px-4 py-3 rounded-xl border shadow-lg text-sm font-medium animate-modal-in ${colors[type]}`}>
       {message}
-    </div>
+    </div>,
+    document.body
   )
 }
