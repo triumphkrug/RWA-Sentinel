@@ -385,10 +385,33 @@ Full deploy-hash log with explorer links: [docs/TESTNET_ACTIVITY.md](docs/TESTNE
 
 ### Landing Page
 
-- Hero section with animated gradient
-- **"Why RWA-Sentinel"** section: 8 competitive advantage cards with live metrics
-- Architecture diagram (6 contracts)
-- Feature highlights
+<p align="center">
+  <img src="docs/screenshots/landing-hero.png" alt="RWA Sentinel — Landing Page" width="800" />
+</p>
+
+### Portal Overview
+
+<p align="center">
+  <img src="docs/screenshots/portal-overview.png" alt="Portal Overview — Dashboard" width="800" />
+</p>
+
+### Asset Trust Scores
+
+<p align="center">
+  <img src="docs/screenshots/portal-assets.png" alt="Asset Trust Scores" width="800" />
+</p>
+
+### Oracle Network
+
+<p align="center">
+  <img src="docs/screenshots/portal-oracles.png" alt="Oracle Network — BLS 3-of-5 Consensus" width="800" />
+</p>
+
+### Smart Contracts
+
+<p align="center">
+  <img src="docs/screenshots/portal-contracts.png" alt="Smart Contracts — 6 Deployed on Casper Testnet" width="800" />
+</p>
 
 <div align="right">
 

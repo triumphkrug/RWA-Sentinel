@@ -1,15 +1,18 @@
 # Screenshots
 
-Screenshots captured from rwa-sentinel.xyz (June 30, 2026)
+Live screenshots captured from [rwa-sentinel.xyz](https://rwa-sentinel.xyz)
 
-## 01-homepage.png
-Landing page with 6-factor scoring pipeline overview and trust oracle concept
+## landing-hero.png
+Landing page with animated hero, 6-factor scoring callout, and smart contract stats
 
-## 02-oracle-portal.png
-Oracle panel showing trust scores table with weighted factor breakdown
+## portal-overview.png
+Portal dashboard — system health, scoring factors, asset type distribution, extensions
 
-## 03-dao-vote.png
-DAO governance panel with FOR/AGAINST voting buttons for challenged attestations
+## portal-assets.png
+Asset trust scores table with sortable columns and score filter
 
-## 04-attestation-detail.png
-Individual attestation NFT detail view showing composite score, factor hash, expiry countdown, and on-chain evidence link
+## portal-oracles.png
+Oracle network — BLS 3-of-5 consensus status, oracle lifecycle, slashing mechanism
+
+## portal-contracts.png
+All 6 deployed smart contracts with entry points and Casper Explorer links
