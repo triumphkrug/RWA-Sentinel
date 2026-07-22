@@ -1,6 +1,6 @@
 # RWA-Sentinel — Status & Roadmap
 
-> Living document · Last updated 2026-07-07
+> Living document · Last updated 2026-07-22 (hygiene refresh; core state unchanged since 2026-07-07)
 
 ## ✅ What's Live
 
